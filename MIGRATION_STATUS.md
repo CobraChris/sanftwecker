@@ -4,9 +4,9 @@ Stand: 07.11.2026. Ziel ist die Trennung von `CobraChris/app-fabrik-template` in
 
 - [x] Automatisiertes öffentliches Repository mit README erstellt, GitHub Actions #42384045324 erfolgreich
 - [x] Quellcode und Tests in isolierten Migrationszweig kopiert (kein Cutover)
-- [ ] GitHub-CI, Unit-Tests, Lint und unsignierten Build des kopierten Projekts prüfen
+- [x] GitHub-CI, Unit-Tests, Lint und unsignierten Build des kopierten Projekts prüfen – erfolgreich vor und nach Merge, letzter Hauptzweig-Run #42384995807
 - [ ] Quellstand und alte Releases vor Übergabe erneut abgleichen
-- [ ] Signiermigration **ausschließlich im privaten Controller** entwickeln und separat genehmigen; vorhandenes verschlüsseltes Backup und **identisches** Zertifikat nutzen, niemals neuen Keystore erzeugen
+- [ ] Signiermigration: technischer Workflow in [Controller-PR #14](https://github.com/CobraChris/github-app-fabrik-control/pull/14) erstellt, Tests erfolgreich; gesonderte Sicherheits-/Mergefreigabe und anschließender einmaliger GitOps-Auftrag fehlen noch. Verwendet vorhandenes Backup und identisches Zertifikat; **kein neuer Keystore**.
 - [ ] Ersten signierten neuen Build anhand des SHA-256-Zertifikatsfingerprints gegen Alt-Release verifizieren; neuer `versionCode` **größer als 19**
 - [ ] Bisherige Release-URL im In-App-Updater mittels verifiziertem Brückenrelease kompatibel halten oder bewusst eingeführte sichere Dual-Repo-Updateprüfung testen
 - [ ] Zwei signierte In-place-Upgrades auf Samsung prüfen, inklusive Wecker/Timer/Stoppuhr, Galaxy Watch, Bildschirmfreigabe und Sperrbildschirm-Alarm
