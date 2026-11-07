@@ -32,6 +32,13 @@ jobs:
           "$SDK" 'platforms;android-35' 'build-tools;35.0.0' >/dev/null
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug
+      - name: Build unsigned release APK for migration preflight
+        run: gradle --no-daemon :alarm:assembleRelease
+      - name: Verify legacy APK certificates, digests and updater compatibility
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/verify-migration-baseline.sh
       - name: Verify Android application identity
         shell: bash
         run: |
