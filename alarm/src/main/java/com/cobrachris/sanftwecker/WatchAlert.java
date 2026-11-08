@@ -56,7 +56,7 @@ public final class WatchAlert {
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle("Sanftwecker: "+p.name)
                 .setContentText("Aufwachen – Impuls "+(index+1)+" von "+p.watchPulses)
-                .setCategory(Notification.CATEGORY_REMINDER)
+                .setCategory(Notification.CATEGORY_ALARM)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setContentIntent(openIntent)
                 .addAction(new Notification.Action.Builder(
