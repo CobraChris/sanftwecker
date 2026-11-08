@@ -4,7 +4,9 @@
 set -euo pipefail
 repo="CobraChris/app-fabrik-template"
 apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+aapt="$ANDROID_HOME/build-tools/35.0.0/aapt"
 test -x "$apksigner" || { echo "Android apksigner 35.0.0 missing" >&2; exit 1; }
+test -x "$aapt" || { echo "Android aapt 35.0.0 missing" >&2; exit 1; }
 command -v gh >/dev/null || { echo "GitHub CLI missing" >&2; exit 1; }
 command -v sha256sum >/dev/null
 test -n "$GH_TOKEN" || { echo "Read-only GitHub API token missing" >&2; exit 1; }
@@ -29,16 +31,28 @@ verify_old_release() {
     "$archive/verified-certificate.txt" | head -n1)"
   test -n "$fingerprint"
   printf '%s' "$fingerprint" > "$archive/fingerprint"
+  # Exact Android package/version check is independent of release tags and filenames.
+  "$aapt" dump badging "$archive/sanftwecker-release.apk" > "$archive/badging.txt"
+  grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='$code'" \
+    "$archive/badging.txt" || {
+    echo "BLOCKED: signed v$code APK package or version is not expected" >&2
+    exit 1
+  }
 }
 
 verify_old_release 18 'c0812ea9bb96520f9f5be1aa9daa1c4feffb3b1580be3aab7761fda0513cbaed'
 verify_old_release 19 '04ae0383d9faf1868a41ee1970c2038e5a52970e10e71b32c2832d15cf2f5f50'
+verify_old_release 20 '0c4e56c55b04d720768f60c3c8b35cad212212df470bdfdeb265715b747909eb'
 cmp -s "$work/v18/fingerprint" "$work/v19/fingerprint" || {
-  echo "BLOCKED: certificate identity changed between legacy v18 and v19" >&2
+  echo "BLOCKED: certificate identity changed between signed v18 and v19" >&2
   exit 1
 }
-echo "PASS: signed legacy v18 and v19 APK checksums and certificate identity match."
-echo "This does NOT certify a new-repository signing key or an in-place device update."
+cmp -s "$work/v19/fingerprint" "$work/v20/fingerprint" || {
+  echo "BLOCKED: certificate identity changed between signed v19 and v20 bridge" >&2
+  exit 1
+}
+echo "PASS: signed v18-v19-v20 APK SHA-256 digests, package/version, and original signing certificate all match."
+echo "This is read-only CI; it does NOT install the bridge or prove a Samsung in-place update."
 
 # Ensure release build remains unsigned, update URL remains legacy, and
 # package identity/version have not been reset by the repository migration.
