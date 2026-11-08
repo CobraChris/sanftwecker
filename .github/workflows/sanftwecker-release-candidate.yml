@@ -133,8 +133,9 @@ jobs:
               | awk -F': ' '{print $2}' > "legacy/v$code/fingerprint"
             test -s "legacy/v$code/fingerprint"
             "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
-              "legacy/v$code/sanftwecker-release.apk" | head -n 1 \
-              | grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='$code'"
+              "legacy/v$code/sanftwecker-release.apk" > "legacy/v$code/badging.txt"
+            grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='$code'" \
+              "legacy/v$code/badging.txt"
           done
           printf '%s  %s\n' \
             04ae0383d9faf1868a41ee1970c2038e5a52970e10e71b32c2832d15cf2f5f50 \
@@ -177,7 +178,9 @@ jobs:
             echo "::error::Original signature mismatch"; exit 1;
           }
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging signed/sanftwecker-release.apk \
-            | head -n 1 | grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='21'"
+            > signed/badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='21'" \
+            signed/badging.txt
           (cd signed && sha256sum sanftwecker-release.apk > SHA256SUMS.txt)
       - name: Publish signed v21 prerelease only after v20 bridge verified
         shell: bash
