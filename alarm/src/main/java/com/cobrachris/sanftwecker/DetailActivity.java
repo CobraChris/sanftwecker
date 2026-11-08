@@ -178,13 +178,13 @@ public final class DetailActivity extends Activity {
         volume=slider(music,95);
         audibleWhenMuted=UiKit.toggle(this);
         audibleWhenMuted.setOnCheckedChangeListener((b,on)->changed());
-        rowSwitch(music,"Trotz stummem Android-Weckerpegel hörbar",audibleWhenMuted);
+        rowSwitch(music,"Niedrigen Android-Weckerpegel beim Alarm anheben",audibleWhenMuted);
         music.addView(UiKit.label(this,
-                "Optional: Ist die Android-Weckerlautstärke auf 0, wird sie beim "+
-                "Klingeln vorübergehend auf etwa 75 % gestellt und danach "+
-                "wiederhergestellt. Der sanfte Tonanstieg bleibt aktiv. "+
-                "Gilt nur für diesen Wecker und übergeht nicht 'Nicht stören'. "+
-                "Die Funktion kann von Android blockiert werden.",
+                "Optional, nur für diesen Wecker: Wenn die Android-Weckerlautstärke "+
+                "stumm oder sehr niedrig ist, wird sie während des Alarms "+
+                "vorübergehend auf etwa 75 % angehoben und danach wiederhergestellt. "+
+                "Der sanfte Tonanstieg bleibt aktiv. Das übergeht 'Nicht stören' nicht: "+
+                "Bitte Alarme und Sanftwecker in den Android-Ausnahmen erlauben.",
                 13,UiKit.MUTED));
         Button preview=UiKit.button(this,"Tonprobe starten (20 Sek.)",false);
         music.addView(preview);
@@ -473,7 +473,7 @@ public final class DetailActivity extends Activity {
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle("Sanftwecker – Watch-Test")
                 .setContentText("Bitte prüfen, ob deine Galaxy Watch vibriert.")
-                .setCategory(Notification.CATEGORY_REMINDER).setAutoCancel(true).build();
+                .setCategory(Notification.CATEGORY_ALARM).setAutoCancel(true).build();
         try{
             m.notify((int)(System.currentTimeMillis()&0x7fffffff),n);
             AlarmRepository.diagnostic(this,"Watch-Einzeltest an Android übergeben");
@@ -500,6 +500,8 @@ public final class DetailActivity extends Activity {
             boolean notifications=m!=null&&m.areNotificationsEnabled();
             boolean watchChannel=channel!=null&&
                     channel.getImportance()!=NotificationManager.IMPORTANCE_NONE;
+            boolean doNotDisturb=m!=null &&
+                    m.getCurrentInterruptionFilter()!=NotificationManager.INTERRUPTION_FILTER_ALL;
             long testTime=AlarmScheduler.testWhen(this);
             advanced.setText("Exakte Alarme: "+(AlarmScheduler.canSchedule(this)?"OK":"FEHLEN")+
                     "\nAndroid-Benachrichtigungen: "+(notifications?"OK":"BLOCKIERT")+
@@ -507,7 +509,11 @@ public final class DetailActivity extends Activity {
                     "\nVibrationsmuster: "+
                     VibrationPresets.LABELS[vibration.getSelectedItemPosition()]+
                     "\nSystem-Weckerlautstärke: "+level+" / "+maximum+
-                    (level==0?" – STUMM!":"")+
+                    (level==0?" – STUMM!":maximum>0&&level<=maximum/3?
+                    " – sehr niedrig":"")+
+                    "\nNicht stören: "+(doNotDisturb?"AKTIV – Alarm-Ausnahmen prüfen":"aus")+
+                    "\nWatch: Alarmbenachrichtigungen können durch Watch-DND "+
+                    "unterdrückt werden"+
                     "\nVollbild-Wecker: "+(Build.VERSION.SDK_INT<34||
                     (m!=null&&m.canUseFullScreenIntent())?"OK":"prüfen")+
                     "\nKurztest geplant: "+(testTime>System.currentTimeMillis()?

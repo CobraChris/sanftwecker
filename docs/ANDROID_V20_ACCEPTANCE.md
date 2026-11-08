@@ -1,6 +1,6 @@
 # Sanftwecker – Samsung-/Galaxy-Watch-Abnahme nach v20
 
-**Gerätetest steht aus.** Dieser Plan ist für den späteren Test der bereits veröffentlichten signierten v20-APK gedacht. Keine Deinstallation, kein Rücksetzen von App-Daten und keine manuelle Token- oder GitHub-Konfiguration nötig.
+**Teilweise getestet (08.11.2026):** v20 wurde über v19 installiert, gespeicherte Daten, Vollbild/Stoppen/Schlummern und Grundfunktionen funktionieren. **Nachzubessern:** sehr leiser Ton ohne klaren Anstieg und keine Ton-/Watch-Warnung bei Bitte nicht stören. Die Watch-Impulse fühlen sich möglicherweise etwas kürzer/schwächer an. Neustart wird später in Deutschland geprüft. **Kein vollständiger Gerätetest und keine Freigabe für v21.** Dieser Plan ist für den späteren Test der bereits veröffentlichten signierten v20-APK gedacht. Keine Deinstallation, kein Rücksetzen von App-Daten und keine manuelle Token- oder GitHub-Konfiguration nötig.
 
 ## Vorbereitung: Bestand unverändert dokumentieren
 
