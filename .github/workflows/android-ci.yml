@@ -38,11 +38,13 @@ jobs:
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug
       - name: Build unsigned release APK for migration preflight
         run: gradle --no-daemon :alarm:assembleRelease
-      - name: Verify legacy APK certificates, digests and updater compatibility
+      - name: Verify published v18-v20 signed bridge digests and certificate lineage
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash scripts/verify-migration-baseline.sh
+        run: |
+          bash -n scripts/verify-migration-baseline.sh
+          bash scripts/verify-migration-baseline.sh
       - name: Verify Android application identity
         shell: bash
         run: |

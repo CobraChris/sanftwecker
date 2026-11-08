@@ -55,6 +55,8 @@ test('workflow requires verified old v20 bridge and pins v19 signer digest',()=>
     'sanftwecker-v19',
     'sanftwecker-v20',
     BASE_APK_SHA256,
+    '0c4e56c55b04d720768f60c3c8b35cad212212df470bdfdeb265715b747909eb',
+    'legacy/v20/sanftwecker-release.apk | sha256sum --check',
     'gh release download "$TAG"',
     'apksigner',
     'APP_SIGNING_KEYSTORE_BASE64'
@@ -63,4 +65,10 @@ test('workflow requires verified old v20 bridge and pins v19 signer digest',()=>
     flow.indexOf('Read original signing key only for signature'));
   assert.doesNotMatch(flow,/workflow_dispatch:|pull_request_target:|git push|genkeypair/);
   assert.doesNotMatch(flow,/uses:\s*[^\s]+@v[0-9]+\s*$/m);
+  const baseline=readFileSync(new URL('../scripts/verify-migration-baseline.sh',import.meta.url),'utf8');
+  for(const release of ['verify_old_release 18','verify_old_release 19','verify_old_release 20'])
+    assert.ok(baseline.includes(release),release);
+  assert.ok(baseline.includes('cmp -s "$work/v19/fingerprint" "$work/v20/fingerprint"'));
+  assert.ok(baseline.includes('0c4e56c55b04d720768f60c3c8b35cad212212df470bdfdeb265715b747909eb'));
+  assert.ok(baseline.includes('versionCode='));
 });

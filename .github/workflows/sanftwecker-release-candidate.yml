@@ -140,6 +140,9 @@ jobs:
           printf '%s  %s\n' \
             04ae0383d9faf1868a41ee1970c2038e5a52970e10e71b32c2832d15cf2f5f50 \
             legacy/v19/sanftwecker-release.apk | sha256sum --check
+          printf '%s  %s\n' \
+            0c4e56c55b04d720768f60c3c8b35cad212212df470bdfdeb265715b747909eb \
+            legacy/v20/sanftwecker-release.apk | sha256sum --check
           cmp -s legacy/v19/fingerprint legacy/v20/fingerprint || {
             echo "::error::v20 bridge is incompatible with v19"; exit 1;
           }
