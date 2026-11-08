@@ -33,7 +33,7 @@ public final class AlarmEnvelopeTest {
     @Test public void regularAlarmGrowsSoonerAtConfiguredVolume(){
         AlarmProfile p=delayed();
         assertEquals(0f,AlarmEnvelope.gain(p,false,20_000),0f);
-        assertEquals(.01925f,AlarmEnvelope.gain(p,false,80_000),.00001f);
+        assertEquals(.042f,AlarmEnvelope.gain(p,false,80_000),.00001f);
         assertTrue(AlarmEnvelope.gain(p,false,120_000)>
                    AlarmEnvelope.gain(p,false,80_000));
         assertEquals(.35f,AlarmEnvelope.gain(p,false,320_000),.00001f);
