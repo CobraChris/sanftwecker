@@ -3,7 +3,7 @@
   "intent": "sanftwecker-original-signed-v21",
   "request_id": "2026-11-08-sanftwecker-v21-release",
   "expected_version_code": 21,
-  "source_sha": "d7c59caf86456891e5770e01d2f4e200a809b2b9",
+  "source_sha": "5968615fc3a0cdcaf6abbcd9b25656d8f6c7760f",
   "old_bridge_tag": "sanftwecker-v20",
   "confirmation": "REUSE_ORIGINAL_SIGNER_AND_REQUIRE_V20_BRIDGE"
 }
