@@ -1,0 +1,213 @@
+name: "Sanftwecker: Originalsignatur v21 nur nach v20-Bruecke"
+on:
+  push:
+    branches: [main]
+    paths: ['requests/sanftwecker-release.json']
+permissions:
+  contents: read
+concurrency:
+  group: sanftwecker-v21-original-signature
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'CobraChris/sanftwecker' && github.actor == 'CobraChris' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.repository.fork == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    outputs:
+      source_sha: ${{ steps.approve.outputs.source_sha }}
+      version_code: ${{ steps.approve.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Validate exact release gate without signing secrets
+        run: |
+          node --check scripts/sanftwecker-release-request.mjs
+          node --test tests/sanftwecker-release-request.test.mjs
+      - name: Approve only newly added v21 request
+        id: approve
+        env:
+          REQUEST_BEFORE: ${{ github.event.before }}
+        run: node scripts/sanftwecker-release-request.mjs
+
+  build:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    outputs:
+      version_name: ${{ steps.metadata.outputs.version_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' >/dev/null
+      - name: Unit tests, lint and unsigned release build
+        run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleRelease
+      - name: Verify unchanged Android package and versionCode 21
+        id: metadata
+        env:
+          EXPECTED: ${{ needs.validate.outputs.version_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$EXPECTED" "$GITHUB_OUTPUT" <<'PY'
+          import json,re,sys
+          expected,out=sys.argv[1:]
+          d=json.load(open('alarm/build/outputs/apk/release/output-metadata.json',encoding='utf8'))
+          assert d['applicationId']=='com.cobrachris.sanftwecker'
+          assert len(d['elements'])==1
+          e=d['elements'][0]
+          assert str(e['versionCode'])==expected=='21'
+          assert e['outputFile']=='alarm-release-unsigned.apk'
+          name=e['versionName']
+          assert isinstance(name,str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,64}',name)
+          with open(out,'a',encoding='utf8') as f:f.write('version_name='+name+'\n')
+          PY
+          test -s alarm/build/outputs/apk/release/alarm-release-unsigned.apk
+          cp alarm/build/outputs/apk/release/alarm-release-unsigned.apk unsigned-sanftwecker.apk
+      - name: Upload only unsigned APK, no keystore
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sanftwecker-v21-unsigned
+          path: unsigned-sanftwecker.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  sign-and-publish:
+    needs: [validate, build]
+    if: needs.validate.result == 'success' && needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    environment: android-releases
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sanftwecker-v21-unsigned
+          path: unsigned
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install signing verification tools
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;35.0.0' >/dev/null
+      - name: Verify both legacy APKs before secrets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Verify sanftwecker-v19 and sanftwecker-v20 before revealing any key.
+          mkdir -p legacy/v19 legacy/v20
+          for code in 19 20; do
+            TAG="sanftwecker-v$code"
+            gh release download "$TAG" --repo CobraChris/app-fabrik-template \
+              --pattern 'sanftwecker-release.apk' --dir "legacy/v$code"
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+              --min-sdk-version 30 --print-certs "legacy/v$code/sanftwecker-release.apk" \
+              > "legacy/v$code/cert.txt"
+            grep -m1 'Signer #1 certificate SHA-256 digest:' "legacy/v$code/cert.txt" \
+              | awk -F': ' '{print $2}' > "legacy/v$code/fingerprint"
+            test -s "legacy/v$code/fingerprint"
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
+              "legacy/v$code/sanftwecker-release.apk" > "legacy/v$code/badging.txt"
+            grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='$code'" \
+              "legacy/v$code/badging.txt"
+          done
+          printf '%s  %s\n' \
+            04ae0383d9faf1868a41ee1970c2038e5a52970e10e71b32c2832d15cf2f5f50 \
+            legacy/v19/sanftwecker-release.apk | sha256sum --check
+          cmp -s legacy/v19/fingerprint legacy/v20/fingerprint || {
+            echo "::error::v20 bridge is incompatible with v19"; exit 1;
+          }
+          if gh release view sanftwecker-v21 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v21 already published"; exit 1
+          fi
+          echo 'Verified original v19 certificate and signed legacy v20 bridge.'
+      - name: Read original signing key only for signature
+        shell: bash
+        env:
+          STORE_B64: ${{ secrets.APP_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.APP_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.APP_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.APP_SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$STORE_B64" && test -n "$STORE_PASSWORD"
+          test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          test -s unsigned/unsigned-sanftwecker.apk
+          umask 077
+          printf '%s' "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/sanftwecker-old-key.p12"
+          keytool -list -keystore "$RUNNER_TEMP/sanftwecker-old-key.p12" \
+            -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          mkdir -p signed
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$RUNNER_TEMP/sanftwecker-old-key.p12" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:STORE_PASSWORD --key-pass env:KEY_PASSWORD \
+            --out signed/sanftwecker-release.apk unsigned/unsigned-sanftwecker.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+            --min-sdk-version 30 --print-certs signed/sanftwecker-release.apk \
+            > signed/cert.txt
+          grep -m1 'Signer #1 certificate SHA-256 digest:' signed/cert.txt \
+            | awk -F': ' '{print $2}' > signed/fingerprint
+          test -s signed/fingerprint
+          cmp -s signed/fingerprint legacy/v19/fingerprint || {
+            echo "::error::Original signature mismatch"; exit 1;
+          }
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging signed/sanftwecker-release.apk \
+            > signed/badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='21'" \
+            signed/badging.txt
+          (cd signed && sha256sum sanftwecker-release.apk > SHA256SUMS.txt)
+      - name: Publish signed v21 prerelease only after v20 bridge verified
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ needs.build.outputs.version_name }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          TAG='sanftwecker-v21'
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release exists"; exit 1
+          fi
+          cat > signed/RELEASE_INFO.txt <<EOF
+          App: Sanftwecker
+          Package: com.cobrachris.sanftwecker
+          Version: $VERSION_NAME
+          Android versionCode: 21
+          Certificate: original signed v19/v20 identity
+          Approved source: $SOURCE_SHA
+          EOF
+          gh release create "$TAG" \
+            signed/sanftwecker-release.apk signed/SHA256SUMS.txt signed/RELEASE_INFO.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+            --title "Sanftwecker $VERSION_NAME (Originalsignatur)" \
+            --notes 'Signed prerelease. In-place Android update requires separate user installation and Samsung/Galaxy Watch acceptance.' \
+            --prerelease
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sanftwecker-old-key.p12"
