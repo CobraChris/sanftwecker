@@ -120,6 +120,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Verify sanftwecker-v19 and sanftwecker-v20 before revealing any key.
           mkdir -p legacy/v19 legacy/v20
           for code in 19 20; do
             TAG="sanftwecker-v$code"
