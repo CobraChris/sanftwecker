@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 import android.media.AudioManager;
 
 /**
- * Explicitly opted-in mute fallback; only manipulates STREAM_ALARM, never the
+ * Explicitly opted-in low-volume fallback; only manipulates STREAM_ALARM, never the
  * ringer mode or Do Not Disturb. Stores restoration metadata before changing
  * volume, then restores on stop/snooze, service destruction, app reopen, reboot.
  * If the user changed volume during the alarm, that new choice is preserved.
@@ -32,9 +32,9 @@ public final class AlarmVolumeGuard {
         if(a==null || a.isVolumeFixed())return false;
         try {
             int old=a.getStreamVolume(AudioManager.STREAM_ALARM);
-            if(old!=0)return false;
-            int target=AlarmVolumePolicy.temporaryLevel(
-                    a.getStreamMaxVolume(AudioManager.STREAM_ALARM));
+            int max=a.getStreamMaxVolume(AudioManager.STREAM_ALARM);
+            if(!AlarmVolumePolicy.shouldRaise(old,max))return false;
+            int target=AlarmVolumePolicy.temporaryLevel(max);
             if(!prefs(c).edit().putBoolean(PENDING,true)
                     .putInt(ORIGINAL,old).putInt(BOOSTED,target).commit())
                 return false;

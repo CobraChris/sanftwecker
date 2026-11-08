@@ -10,11 +10,19 @@ public class GentleGainTest {
     }
 
     @Test public void gentleStartAndPeak() {
-        assertEquals(0.0035f, GentleGain.level(60_000L, 0, 600, 35), 0.00001f);
+        assertEquals(0.01925f, GentleGain.level(60_000L, 0, 600, 35), 0.00001f);
         assertEquals(0.35f, GentleGain.level(600_000L, 0, 600, 35), 0.00001f);
         assertEquals(0.35f, GentleGain.level(900_000L, 0, 600, 35), 0.00001f);
     }
 
+    @Test public void longRampIsAudibleEarlierButStillStartsFromSilence(){
+        assertEquals(0f,GentleGain.level(0,0,600,35),0f);
+        assertEquals(0.01925f,GentleGain.level(60_000,0,600,35),0.00001f);
+        assertEquals(0.13125f,GentleGain.level(300_000,0,600,35),0.00001f);
+        assertEquals(0.35f,GentleGain.level(600_000,0,600,35),0.00001f);
+        assertEquals(0.35f,GentleGain.level(900_000,0,600,35),0.00001f);
+        assertEquals(0f,GentleGain.level(59_999,60,600,35),0f);
+    }
     @Test public void monotoneAndBounded() {
         float last = 0f;
         for (long millis=0; millis<2_000_000L; millis += 4000L) {

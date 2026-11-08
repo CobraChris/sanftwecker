@@ -141,14 +141,32 @@ public final class RingingService extends Service {
             } catch (RuntimeException e) {
                 Log.w("Sanftwecker", "WakeLock unavailable; continue with active service", e);
             }
-            // Opt-in only: temporarily lift muted ALARM stream, never ringer mode / DND.
+            // Diagnose routing without ever silently changing Do Not Disturb.
+            try {
+                android.media.AudioManager system=(android.media.AudioManager)
+                        getSystemService(AUDIO_SERVICE);
+                if(system!=null){
+                    int level=system.getStreamVolume(android.media.AudioManager.STREAM_ALARM);
+                    int max=system.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM);
+                    if(max>0&&level<=max/3)
+                        AlarmRepository.diagnostic(this,
+                                "HINWEIS: Android-Weckerpegel sehr niedrig: "+level+"/"+max);
+                }
+                if(manager!=null && manager.getCurrentInterruptionFilter()!=
+                        NotificationManager.INTERRUPTION_FILTER_ALL)
+                    AlarmRepository.diagnostic(this,
+                            "HINWEIS: Nicht stören aktiv – Alarm-Ausnahmen auf Handy/Uhr prüfen");
+            }catch(RuntimeException error){
+                Log.w("Sanftwecker","System routing diagnostics unavailable",error);
+            }
+            // Explicit opt-in: temporarily raise a very low ALARM stream, never DND.
             if(profile.audibleWhenMuted) {
                 if(AlarmVolumeGuard.ensureAudible(this))
                     AlarmRepository.diagnostic(this,
-                            "Weckerlautstärke für Alarm vorübergehend angehoben");
+                            "Niedrigen Android-Weckerpegel vorübergehend angehoben");
                 else
                     AlarmRepository.diagnostic(this,
-                            "Weckerlautstärke unverändert – Android-Alarmpegel prüfen");
+                            "Weckerlautstärke unverändert – Android-Alarmpegel / DND prüfen");
             }
             // Direct handset vibration begins immediately, independently of delayed audio.
             if(!toneOnlyPreview) PhoneVibration.start(this,profile.vibrationMode);
