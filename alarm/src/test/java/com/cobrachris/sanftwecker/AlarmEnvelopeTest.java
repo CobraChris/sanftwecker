@@ -30,6 +30,14 @@ public final class AlarmEnvelopeTest {
         assertEquals(.35f,AlarmEnvelope.gain(p,false,320_000),.00001f);
     }
 
+    @Test public void regularAlarmGrowsSoonerAtConfiguredVolume(){
+        AlarmProfile p=delayed();
+        assertEquals(0f,AlarmEnvelope.gain(p,false,20_000),0f);
+        assertEquals(.01925f,AlarmEnvelope.gain(p,false,80_000),.00001f);
+        assertTrue(AlarmEnvelope.gain(p,false,120_000)>
+                   AlarmEnvelope.gain(p,false,80_000));
+        assertEquals(.35f,AlarmEnvelope.gain(p,false,320_000),.00001f);
+    }
     @Test public void previewUsesUserHigherLimitWhenRequested() {
         AlarmProfile loud=new AlarmProfile(3,"Probe",false,8,30,127,
                 0,600,70,6,20,5,0);
