@@ -30,6 +30,10 @@ jobs:
           SDK="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           test -x "$SDK"
           "$SDK" 'platforms;android-35' 'build-tools;35.0.0' >/dev/null
+      - name: Validate release request safety gates, without secrets
+        run: |
+          node --check scripts/sanftwecker-release-request.mjs
+          node --test tests/sanftwecker-release-request.test.mjs
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug
       - name: Build unsigned release APK for migration preflight
