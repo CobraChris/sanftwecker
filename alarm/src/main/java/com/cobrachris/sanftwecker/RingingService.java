@@ -19,8 +19,8 @@ import android.os.SystemClock;
 import android.util.Log;
 
 /**
- * Audible alarm plus separate Samsung-mirrorable notifications.
- * No direct watch access. This does not guarantee watch vibration during DND.
+ * Audible alarm plus direct Wear OS alarm commands with notification fallback.
+ * Native Watch vibrates with USAGE_ALARM; Samsung's user DND policy remains sovereign.
  */
 public final class RingingService extends Service {
     public static final String START = "com.cobrachris.sanftwecker.START";
@@ -43,6 +43,7 @@ public final class RingingService extends Service {
     private long startedAt;
     private int pulseCount;
     private int ringId = 1;
+    private long ringWhen;
     private AlarmProfile profile;
     private boolean toneOnlyPreview;
     private boolean quickTest;
@@ -92,6 +93,11 @@ public final class RingingService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
         if (STOP.equals(action) || SNOOZE.equals(action)) {
+            // Watch-originated stops must match the active alarm occurrence.
+            long expectedWhen=intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
+            if(expectedWhen>0&&(!active||expectedWhen!=ringWhen||
+                    intent.getIntExtra(AlarmScheduler.EXTRA_ID,-1)!=ringId))
+                return START_NOT_STICKY;
             int id = ringId;
             int minutes = profile == null ? 5 : profile.snoozeMinutes;
             boolean snoozing = SNOOZE.equals(action) && active && !toneOnlyPreview &&
@@ -124,6 +130,7 @@ public final class RingingService extends Service {
             stopPlaying();
         }
         ringId = requestedId;
+        ringWhen = intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
         profile = AlarmRepository.get(this, ringId);
         toneOnlyPreview = intent.getBooleanExtra("tone_only_preview", false);
         quickTest = intent.getBooleanExtra(EXTRA_QUICK_TEST, false);
@@ -305,7 +312,11 @@ public final class RingingService extends Service {
 
     private void stopPlaying(boolean removeWatchNotifications) {
         boolean wasActive=active;
-        if (wasActive) AlarmRepository.diagnostic(this, "Ton und Watch-Impulse beendet");
+        if (wasActive) {
+            AlarmRepository.diagnostic(this, "Ton und Watch-Impulse beendet");
+            if(!toneOnlyPreview&&ringWhen>0)
+                WearAlarmBridge.alarmStopped(this,ringId,ringWhen);
+        }
         active = false;
         PhoneVibration.stop();
         AlarmVolumeGuard.restore(this);
