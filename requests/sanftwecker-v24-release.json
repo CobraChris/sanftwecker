@@ -1,0 +1,7 @@
+{
+  "intent": "signed-phone-only-v24",
+  "expected_version_code": 24,
+  "source_sha": "61bdc97b7c13d7248f73713d643f985c0888f8f5",
+  "request_id": "2026-11-09-phone-ringtones",
+  "confirmation": "SIGN_PHONE_V24_WITH_EXISTING_V23_CERTIFICATE"
+}
