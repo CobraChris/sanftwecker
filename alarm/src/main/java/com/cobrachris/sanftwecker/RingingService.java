@@ -19,8 +19,8 @@ import android.os.SystemClock;
 import android.util.Log;
 
 /**
- * Audible alarm plus separate Samsung-mirrorable notifications.
- * No direct watch access. This does not guarantee watch vibration during DND.
+ * Audible alarm plus direct Wear OS alarm commands with notification fallback.
+ * Native Watch vibrates with USAGE_ALARM; Samsung's user DND policy remains sovereign.
  */
 public final class RingingService extends Service {
     public static final String START = "com.cobrachris.sanftwecker.START";
@@ -43,6 +43,7 @@ public final class RingingService extends Service {
     private long startedAt;
     private int pulseCount;
     private int ringId = 1;
+    private long ringWhen;
     private AlarmProfile profile;
     private boolean toneOnlyPreview;
     private boolean quickTest;
@@ -124,6 +125,7 @@ public final class RingingService extends Service {
             stopPlaying();
         }
         ringId = requestedId;
+        ringWhen = intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
         profile = AlarmRepository.get(this, ringId);
         toneOnlyPreview = intent.getBooleanExtra("tone_only_preview", false);
         quickTest = intent.getBooleanExtra(EXTRA_QUICK_TEST, false);
@@ -305,7 +307,11 @@ public final class RingingService extends Service {
 
     private void stopPlaying(boolean removeWatchNotifications) {
         boolean wasActive=active;
-        if (wasActive) AlarmRepository.diagnostic(this, "Ton und Watch-Impulse beendet");
+        if (wasActive) {
+            AlarmRepository.diagnostic(this, "Ton und Watch-Impulse beendet");
+            if(!toneOnlyPreview&&ringWhen>0)
+                WearAlarmBridge.alarmStopped(this,ringId,ringWhen);
+        }
         active = false;
         PhoneVibration.stop();
         AlarmVolumeGuard.restore(this);

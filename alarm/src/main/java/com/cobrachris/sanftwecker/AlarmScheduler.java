@@ -52,6 +52,7 @@ public final class AlarmScheduler {
         cancel(c, ACTION_WEEKLY, weeklyCode(id), id);
         if (p == null || !p.enabled || !canSchedule(c)) {
             AlarmRepository.next(c, id, 0L);
+            WearAlarmBridge.schedule(c,id,id,0);
             return;
         }
         long now = System.currentTimeMillis();
@@ -59,6 +60,7 @@ public final class AlarmScheduler {
         try {
             schedule(c, when, ACTION_WEEKLY, weeklyCode(id), id);
             AlarmRepository.next(c, id, when);
+            WearAlarmBridge.schedule(c,id,id,when);
         } catch (RuntimeException ex) {
             AlarmRepository.next(c, id, 0L);
             throw ex;
@@ -77,6 +79,7 @@ public final class AlarmScheduler {
     public static void cancelWeekly(Context c, int id) {
         cancel(c, ACTION_WEEKLY, weeklyCode(id), id);
         AlarmRepository.next(c, id, 0L);
+        WearAlarmBridge.schedule(c,id,id,0);
     }
 
     public static void toggle(Context c, int id, boolean on) {
@@ -140,6 +143,7 @@ public final class AlarmScheduler {
         schedule(c, when, ACTION_TEST, TEST_REQUEST, id);
         c.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
                 .putLong(TEST_WHEN, when).apply();
+        WearAlarmBridge.schedule(c,WearAlarmBridge.TEST_SLOT,id,when);
         return when;
     }
 
@@ -147,6 +151,7 @@ public final class AlarmScheduler {
         cancel(c, ACTION_TEST, TEST_REQUEST, 1);
         c.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
                 .putLong(TEST_WHEN, 0L).apply();
+        WearAlarmBridge.schedule(c,WearAlarmBridge.TEST_SLOT,1,0);
     }
 
     public static long testWhen(Context c) {
@@ -158,11 +163,13 @@ public final class AlarmScheduler {
         long when = System.currentTimeMillis() + minutes * 60_000L;
         schedule(c, when, ACTION_SNOOZE, SNOOZE_REQUEST, id);
         AlarmRepository.diagnostic(c, "Schlummern für " + minutes + " Minuten");
+        WearAlarmBridge.schedule(c,WearAlarmBridge.SNOOZE_SLOT,id,when);
         return when;
     }
 
     public static void cancelSnooze(Context c) {
         cancel(c, ACTION_SNOOZE, SNOOZE_REQUEST, 1);
+        WearAlarmBridge.schedule(c,WearAlarmBridge.SNOOZE_SLOT,1,0);
     }
 
     public static void delete(Context c, int id) {

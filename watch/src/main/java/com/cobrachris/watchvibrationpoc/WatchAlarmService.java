@@ -86,6 +86,15 @@ public final class WatchAlarmService extends Service {
         if(STOP.equals(i.getAction())){
             long when=i.getLongExtra("when",0);
             int id=i.getIntExtra("id",-1);
+            if(i.getBooleanExtra("stop_all",false)){
+                if(activeWhen>0){
+                    if(i.getBooleanExtra("user",false))
+                        sendToPhone(WatchAlarmProtocol.STOP,
+                                activeId+":"+activeWhen+":1");
+                    stopHaptics(true);stopSelf();
+                }
+                return START_NOT_STICKY;
+            }
             if(activeWhen==when&&activeId==id&&when>0){
                 if(i.getBooleanExtra("user",false))sendToPhone(
                         WatchAlarmProtocol.STOP,id+":"+when+":1");
