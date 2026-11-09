@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v23",
+  "request_id": "2026-11-09-phone-watch-release",
+  "expected_version_code": 23,
+  "source_sha": "73c5ee68f4a451db2bf88345f04f73523ff1ef57",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_WITH_EXISTING_V21_CERTIFICATE"
+}
