@@ -1,6 +1,6 @@
 # Sanftwecker v24 – bündiger Stopp-Slider und Klingeltonauswahl
 
-**Stand: 09.11.2026: Entwicklungsstand.** Noch keine signierte v24-APK, keine Installation auf dem Samsung und kein Eingriff in die signierte, funktionierende v23. Die native Galaxy-Watch-v23-App bleibt unverändert.
+**Stand: 09.11.2026: v24 als [signierte Handy-Beta](https://github.com/CobraChris/sanftwecker/releases/tag/sanftwecker-v24) veröffentlicht.** Der geschützte [Release-Lauf #42624926345](https://github.com/CobraChris/sanftwecker/actions/runs/42624926345) ist erfolgreich, die Originalsignatur gegen v23 geprüft. Noch keine bestätigte Installation oder Geräteabnahme auf dem Samsung. Die native Galaxy-Watch-v23-App bleibt unverändert.
 
 ## Umsetzung
 
