@@ -3,9 +3,11 @@ package com.cobrachris.sanftwecker;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -20,8 +22,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
- * Opt-in update checker. Opens a verified GitHub RELEASE APK in the user's browser.
- * No background download, no install permission, no silent installation.
+ * Opt-in update checker and verified in-app APK installer (only on user tap).
+ * Android still requires source authorization and a visible confirmation dialog.
  *
  * A true in-place update additionally requires a stable private signing key,
  * which CI must receive through GitHub Actions secrets; never bundle keys here.
@@ -38,8 +40,11 @@ public final class UpdateActivity extends Activity {
     };
     private static final String ASSET_NAME = "sanftwecker-release.apk";
     private TextView status;
-    private Button check, download;
-    private String apkUrl;
+    private static final int INSTALL_SOURCE_REQUEST=721;
+    private Button check, install, browser;
+    private Candidate candidate;
+    private boolean downloading=false;
+    private boolean waitingForSourceApproval=false;
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -60,28 +65,23 @@ public final class UpdateActivity extends Activity {
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
         p.topMargin=UiKit.dp(this,18);p.bottomMargin=UiKit.dp(this,14);
         root.addView(status,p);
-        check=UiKit.button(this,"Nach Update suchen",true);
+        install=UiKit.button(this,"Update installieren",true);
+        install.setEnabled(false);
+        root.addView(install);
+        install.setOnClickListener(v->installUpdate());
+        check=UiKit.button(this,"Nach Update suchen",false);
         root.addView(check);
         check.setOnClickListener(v->checkUpdates());
-        download=UiKit.button(this,"APK im Browser herunterladen",false);
-        download.setEnabled(false);
-        root.addView(download);
-        download.setOnClickListener(v->{
-            if(apkUrl==null)return;
-            try{
-                startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(apkUrl))
-                        .addCategory(Intent.CATEGORY_BROWSABLE));
-            }catch(ActivityNotFoundException e){
-                new AlertDialog.Builder(this)
-                        .setMessage("Kein Browser verfügbar.")
-                        .setPositiveButton("OK",null).show();
-            }
-        });
+        browser=UiKit.button(this,"Alternativ im Browser herunterladen",false);
+        browser.setEnabled(false);
+        root.addView(browser);
+        browser.setOnClickListener(v->openBrowser());
         root.addView(UiKit.label(this,
-                "Android verlangt eventuell eine Bestätigung für die Installation. "+
-                "Der Update-Button deinstalliert oder löscht die bestehende App niemals. "+
-                "Wird die Installation wegen einer anderen Signatur verweigert, "+
-                "nicht vorschnell deinstallieren: Dabei gehen die Weckerdaten verloren.",
+                "„Update installieren“ lädt die geprüfte APK direkt in der App herunter "+
+                "und öffnet den Android-Installationsdialog. Beim ersten Mal muss "+
+                "Android eventuell die Installation aus Sanftwecker erlauben. "+
+                "Es wird niemals automatisch bestätigt, deinstalliert oder gelöscht. "+
+                "Bei einer Signaturfehlermeldung bitte abbrechen, nicht deinstallieren.",
                 13,UiKit.MUTED));
         setContentView(UiKit.scroll(this,root));
     }
@@ -97,11 +97,13 @@ public final class UpdateActivity extends Activity {
     }
 
     private static final class Candidate {
-        final long code; final String url;
-        Candidate(long code,String url){this.code=code;this.url=url;}
+        final long code; final String url; final String sha256;
+        Candidate(long code,String url,String sha256){
+            this.code=code;this.url=url;this.sha256=sha256;
+        }
     }
 
-    /** Pure parser also used by unit tests. Rejects prerelease artifact links and other assets. */
+    /** GitHub releases (including prereleases) need exact filenames, tags and SHA-256. */
     static Candidate newestSignedAsset(String raw,String repository){
         try{
             JSONArray releases=new JSONArray(raw);
@@ -119,7 +121,11 @@ public final class UpdateActivity extends Activity {
                     if(!ASSET_NAME.equals(asset.optString("name","")))continue;
                     String url=asset.optString("browser_download_url","");
                     if(!UpdateUrlPolicy.isForTagFromRepository(url,tag,repository))continue;
-                    if(best==null||code>best.code)best=new Candidate(code,url);
+                    String sha256=VerifiedUpdatePolicy.parseSha256(
+                            asset.optString("digest",""));
+                    if(sha256==null)continue; // No unsigned/unverifiable download.
+                    if(best==null||code>best.code)
+                        best=new Candidate(code,url,sha256);
                 }
             }
             return best;
@@ -152,9 +158,99 @@ public final class UpdateActivity extends Activity {
         }finally{if(conn!=null)conn.disconnect();}
     }
 
+    private void openBrowser(){
+        Candidate selected=candidate;
+        if(selected==null||downloading)return;
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(selected.url))
+                    .addCategory(Intent.CATEGORY_BROWSABLE));
+        }catch(ActivityNotFoundException e) {
+            new AlertDialog.Builder(this).setMessage("Kein Browser verfügbar.")
+                    .setPositiveButton("OK",null).show();
+        }
+    }
+
+    private void installUpdate(){
+        Candidate selected=candidate;
+        if(selected==null||downloading)return;
+        if(!VerifiedUpdatePolicy.isNewerApprovedUpdate(
+                selected.url,selected.sha256,selected.code,getCurrentVersion())){
+            status.setText("Updatequelle ist nicht mehr gültig. Bitte erneut prüfen.");
+            return;
+        }
+        // System consent is mandatory; do not silently grant install privileges.
+        if(!getPackageManager().canRequestPackageInstalls()){
+            waitingForSourceApproval=true;
+            status.setText("Einmalig „Aus dieser Quelle zulassen“ für Sanftwecker aktivieren.");
+            try {
+                startActivityForResult(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:"+getPackageName())),INSTALL_SOURCE_REQUEST);
+            }catch(ActivityNotFoundException e){
+                waitingForSourceApproval=false;
+                status.setText("Android-Einstellung nicht gefunden. Bitte Browser nutzen.");
+            }
+            return;
+        }
+        downloading=true;
+        install.setEnabled(false);
+        check.setEnabled(false);
+        browser.setEnabled(false);
+        status.setText("Lade geprüfte APK herunter …");
+        new Thread(()->{
+            try{
+                Uri verified=VerifiedApkDownloader.download(
+                        getApplicationContext(),selected.url,selected.sha256,selected.code,
+                        percent->runOnUiThread(()->{
+                            if(!isFinishing()&&!isDestroyed())
+                                status.setText("APK herunterladen und prüfen: "+percent+" %");
+                        }));
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    downloading=false;
+                    install.setEnabled(true);
+                    check.setEnabled(true);
+                    browser.setEnabled(true);
+                    try{
+                        Intent intent=new Intent(Intent.ACTION_VIEW);
+                        intent.setDataAndType(verified,VerifiedApkDownloader.mimeType());
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        intent.setClipData(ClipData.newUri(getContentResolver(),
+                                "Geprüftes Sanftwecker-Update",verified));
+                        startActivity(intent);
+                        status.setText("APK geprüft. Bitte Android-Update bestätigen.");
+                    }catch(ActivityNotFoundException|SecurityException e){
+                        status.setText("Android-Installer nicht verfügbar. "+
+                                "Alternativ im Browser herunterladen.");
+                    }
+                });
+            }catch(Exception e){
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    downloading=false;
+                    install.setEnabled(true);
+                    check.setEnabled(true);
+                    browser.setEnabled(true);
+                    status.setText("Update nicht gestartet: "+e.getMessage()+
+                            ". Bitte erneut prüfen oder Browser verwenden.");
+                });
+            }
+        },"Sanftwecker-Verified-Apk-Download").start();
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=INSTALL_SOURCE_REQUEST||!waitingForSourceApproval)return;
+        waitingForSourceApproval=false;
+        if(getPackageManager().canRequestPackageInstalls())installUpdate();
+        else status.setText("Installation aus dieser Quelle nicht erlaubt. "+
+                "Du kannst das Update auch über den Browser herunterladen.");
+    }
+
     private void checkUpdates(){
+        if(downloading)return;
         status.setText("Prüfe GitHub-Veröffentlichungen …");
-        apkUrl=null;download.setEnabled(false);check.setEnabled(false);
+        candidate=null;install.setEnabled(false);browser.setEnabled(false);
+        check.setEnabled(false);
         new Thread(()->{
             Candidate best=null;
             int checked=0;
@@ -185,8 +281,9 @@ public final class UpdateActivity extends Activity {
                 }else{
                     status.setText("Update verfügbar: Build "+selected.code+
                             ". Android installiert es erst nach deiner Bestätigung.");
-                    apkUrl=selected.url;
-                    download.setEnabled(true);
+                    candidate=selected;
+                    install.setEnabled(true);
+                    browser.setEnabled(true);
                 }
             });
         },"Sanftwecker-Update-Check").start();
