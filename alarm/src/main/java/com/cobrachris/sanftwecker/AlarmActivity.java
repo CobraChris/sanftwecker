@@ -141,7 +141,8 @@ public final class AlarmActivity extends Activity {
 
         FrameLayout stopTrack=new FrameLayout(this);
         stopTrack.setBackground(rounded(0x20030e13,0xff71dacc,40));
-        LinearLayout.LayoutParams trackParams=new LinearLayout.LayoutParams(-1,dp(82));
+        LinearLayout.LayoutParams trackParams=new LinearLayout.LayoutParams(-1,
+                dp(StopSliderGeometry.TRACK_HEIGHT_DP));
         page.addView(stopTrack,trackParams);
         TextView stopLabel=text("WECKER ABSTELLEN  →",15,Color.WHITE);
         stopLabel.setLetterSpacing(.04f);
@@ -153,7 +154,7 @@ public final class AlarmActivity extends Activity {
         swipe.setMax(100);
         swipe.setProgress(0);
         swipe.setSplitTrack(false);
-        swipe.setMinHeight(dp(82));
+        swipe.setMinHeight(dp(StopSliderGeometry.TRACK_HEIGHT_DP));
         swipe.setContentDescription("Wecker abstellen: Schieber ganz nach rechts bewegen");
         swipe.setProgressTintList(ColorStateList.valueOf(Color.TRANSPARENT));
         swipe.setProgressBackgroundTintList(ColorStateList.valueOf(Color.TRANSPARENT));

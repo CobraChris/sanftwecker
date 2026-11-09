@@ -97,6 +97,7 @@ public final class RingingService extends Service {
         if (STOP_PREVIEW.equals(action)) {
             // A picker must NEVER stop a real alarm that started during its preview.
             if(active && toneOnlyPreview){stopPlaying();stopSelf();}
+            else if(!active)stopSelf(); // Never retain an idle started service.
             return START_NOT_STICKY;
         }
         if (STOP.equals(action) || SNOOZE.equals(action)) {
