@@ -140,13 +140,13 @@ public final class AlarmActivity extends Activity {
         page.addView(instruction,ip);
 
         FrameLayout stopTrack=new FrameLayout(this);
-        stopTrack.setBackground(rounded(0x20030e13,0x88e4f7f5,40));
+        stopTrack.setBackground(rounded(0x20030e13,0xff71dacc,40));
         LinearLayout.LayoutParams trackParams=new LinearLayout.LayoutParams(-1,dp(82));
         page.addView(stopTrack,trackParams);
         TextView stopLabel=text("WECKER ABSTELLEN  →",15,Color.WHITE);
         stopLabel.setLetterSpacing(.04f);
         FrameLayout.LayoutParams textPos=new FrameLayout.LayoutParams(-1,-1);
-        textPos.leftMargin=dp(53);
+        textPos.leftMargin=dp(75);
         stopTrack.addView(stopLabel,textPos);
 
         SeekBar swipe=new SeekBar(this);
@@ -157,7 +157,10 @@ public final class AlarmActivity extends Activity {
         swipe.setContentDescription("Wecker abstellen: Schieber ganz nach rechts bewegen");
         swipe.setProgressTintList(ColorStateList.valueOf(Color.TRANSPARENT));
         swipe.setProgressBackgroundTintList(ColorStateList.valueOf(Color.TRANSPARENT));
-        swipe.setThumb(new StopThumb(dp(66)));
+        swipe.setThumb(new StopThumb(dp(StopSliderGeometry.THUMB_DIAMETER_DP)));
+        swipe.setThumbOffset(dp(StopSliderGeometry.THUMB_OFFSET_DP));
+        swipe.setPadding(dp(StopSliderGeometry.PADDING_HORIZONTAL_DP),0,
+                dp(StopSliderGeometry.PADDING_HORIZONTAL_DP),0);
         FrameLayout.LayoutParams sliderParams=new FrameLayout.LayoutParams(-1,-1);
         stopTrack.addView(swipe,sliderParams);
         swipe.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
@@ -258,9 +261,11 @@ public final class AlarmActivity extends Activity {
         @Override public int getIntrinsicHeight(){return size;}
         @Override public void draw(Canvas canvas){
             Rect b=getBounds();
-            float x=b.centerX(),y=b.centerY(),r=Math.min(b.width(),b.height())*.47f;
-            paint.setColor(Color.WHITE);
+            float x=b.centerX(),y=b.centerY(),r=Math.min(b.width(),b.height())*.46f;
             paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0x7054dec9);
+            canvas.drawCircle(x,y,r*1.045f,paint);
+            paint.setColor(0xffdcf7f3);
             canvas.drawCircle(x,y,r,paint);
             paint.setColor(0xff123d47);
             paint.setStrokeWidth(r*.12f);

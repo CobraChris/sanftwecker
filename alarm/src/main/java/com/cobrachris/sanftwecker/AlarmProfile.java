@@ -65,7 +65,7 @@ public final class AlarmProfile {
                 || delaySeconds < 0 || delaySeconds > 300 || rampSeconds < 60
                 || rampSeconds > 1800 || maxVolume < 1 || maxVolume > 100
                 || watchPulses < 0 || watchPulses > 12 || !WatchIntervals.isSupported(watchIntervalSeconds) || snoozeMinutes < 1 || snoozeMinutes > 30
-                || tone < 0 || tone > 2 || autoStopMinutes < 1
+                || !ToneCatalog.valid(tone) || autoStopMinutes < 1
                 || autoStopMinutes > 30 || vibrationMode < 0 || vibrationMode > 4 || skipAt < 0 || oneTimeAt < 0 || replacedAt < 0) {
             throw new IllegalArgumentException("Invalid alarm configuration");
         }

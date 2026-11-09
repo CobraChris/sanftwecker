@@ -25,6 +25,7 @@ import android.util.Log;
 public final class RingingService extends Service {
     public static final String START = "com.cobrachris.sanftwecker.START";
     public static final String STOP = "com.cobrachris.sanftwecker.STOP";
+    public static final String STOP_PREVIEW = "com.cobrachris.sanftwecker.STOP_PREVIEW";
     public static final String SNOOZE = "com.cobrachris.sanftwecker.SNOOZE";
     public static final String RING_FINISHED = "com.cobrachris.sanftwecker.RING_FINISHED";
     public static final String WATCH_CHANNEL = "sanftwecker_watch_v3";
@@ -46,6 +47,7 @@ public final class RingingService extends Service {
     private long ringWhen;
     private AlarmProfile profile;
     private boolean toneOnlyPreview;
+    private int activeTone;
     private boolean quickTest;
 
     private final Runnable gainTick = new Runnable() {
@@ -92,6 +94,11 @@ public final class RingingService extends Service {
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
+        if (STOP_PREVIEW.equals(action)) {
+            // A picker must NEVER stop a real alarm that started during its preview.
+            if(active && toneOnlyPreview){stopPlaying();stopSelf();}
+            return START_NOT_STICKY;
+        }
         if (STOP.equals(action) || SNOOZE.equals(action)) {
             // Watch-originated stops must match the active alarm occurrence.
             long expectedWhen=intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
@@ -125,6 +132,11 @@ public final class RingingService extends Service {
                 AlarmRepository.get(this,requestedId)==null) {
             stopSelf(); return START_NOT_STICKY;
         }
+        boolean previewRequested=intent.getBooleanExtra("tone_only_preview",false);
+        if(active && !toneOnlyPreview && previewRequested){
+            AlarmRepository.diagnostic(this,"Tonprobe blockiert: echter Alarm klingelt");
+            return START_NOT_STICKY; // User-facing preview must never interrupt a real alarm.
+        }
         if (active) {
             // An overlapping alarm replaces the earlier ringtone, not a second audio stream.
             stopPlaying();
@@ -132,7 +144,9 @@ public final class RingingService extends Service {
         ringId = requestedId;
         ringWhen = intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
         profile = AlarmRepository.get(this, ringId);
-        toneOnlyPreview = intent.getBooleanExtra("tone_only_preview", false);
+        toneOnlyPreview = previewRequested;
+        activeTone = toneOnlyPreview ? ToneCatalog.safe(
+                intent.getIntExtra("tone_preview_index",profile.tone)):profile.tone;
         quickTest = intent.getBooleanExtra(EXTRA_QUICK_TEST, false);
         final long ringDuration = toneOnlyPreview ? 20_000L :
                 quickTest ? 30_000L : profile.autoStopMinutes * 60_000L;
@@ -280,23 +294,14 @@ public final class RingingService extends Service {
         audio.setVolume(0f);
         audio.play();
         AudioTrack sink = audio;
-        int tone = profile.tone;
+        int tone = activeTone;
         writer = new Thread(() -> {
             short[] buffer = new short[2205];
             long sampleIndex = 0;
             while (active && !Thread.currentThread().isInterrupted()) {
                 for (int i = 0; i < buffer.length; i++, sampleIndex++) {
                     double t = sampleIndex / (double) rate;
-                    double oscillation;
-                    if (tone == 1) {
-                        oscillation = Math.sin(2 * Math.PI * 392.0 * t);
-                    } else if (tone == 2) {
-                        oscillation = 0.60 * Math.sin(2 * Math.PI * 262.0 * t)
-                                + 0.40 * Math.sin(2 * Math.PI * 330.0 * t);
-                    } else {
-                        oscillation = 0.65 * Math.sin(2 * Math.PI * 392.0 * t)
-                                + 0.35 * Math.sin(2 * Math.PI * 523.25 * t);
-                    }
+                    double oscillation = ToneCatalog.sample(tone,t);
                     // Slowly breathe to avoid a sharp onset, but preserve a smooth continuous waveform.
                     double breathe = 0.75 + 0.25 * Math.cos(2 * Math.PI * 0.24 * t);
                     buffer[i] = (short) (Short.MAX_VALUE * 0.36 * breathe * oscillation);
