@@ -521,7 +521,10 @@ public final class DetailActivity extends Activity {
                             .format(new Date(testTime)):"nein")+
                     "\nLetzte Ereignisse (neueste zuerst):\n"+
                     AlarmRepository.history(this)+
-                    "\nUhr-Empfang: nicht messbar; Schlafmodus ungeprüft.");
+                    "\nDirekte Uhr-Bestätigung: "+getSharedPreferences(
+                    "sanftwecker_watch_native",MODE_PRIVATE).getString(
+                    "last_status","Noch keine Rückmeldung der neuen Uhr-App")+
+                    "\nWatch-DND: Betriebssystem entscheidet über tatsächliche Vibration.");
         }
     }
 

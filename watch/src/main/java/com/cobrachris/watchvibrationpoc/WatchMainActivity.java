@@ -45,7 +45,7 @@ public final class WatchMainActivity extends Activity {
         });
         setContentView(layout);
         refresh();
-        WatchDataBootstrap.refresh(this);
+        WatchDataBootstrap.refresh(this,()->runOnUiThread(this::refresh));
     }
     @Override protected void onResume(){super.onResume();refresh();}
 }

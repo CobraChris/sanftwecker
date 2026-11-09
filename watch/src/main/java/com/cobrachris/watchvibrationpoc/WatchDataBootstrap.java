@@ -10,13 +10,17 @@ import com.google.android.gms.wearable.Wearable;
 /** First-install/reboot recovery: read existing synchronized data without user clicks. */
 public final class WatchDataBootstrap {
     private WatchDataBootstrap(){}
-    public static void refresh(Context context){
+    public static void refresh(Context context){refresh(context,null);}
+    public static void refresh(Context context,Runnable completed){
         Context app=context.getApplicationContext();
         try{
             Wearable.getDataClient(app).getDataItems().addOnSuccessListener(buffer->{
                 try{
                     for(DataItem item:buffer) apply(app,item);
-                }finally{buffer.release();}
+                }finally{
+                    buffer.release();
+                    if(completed!=null)completed.run();
+                }
             }).addOnFailureListener(e->Log.w("SanftweckerWatch","Plan sync pending",e));
         }catch(RuntimeException e){
             Log.w("SanftweckerWatch","Play Services unavailable; saved local alarms retained",e);
