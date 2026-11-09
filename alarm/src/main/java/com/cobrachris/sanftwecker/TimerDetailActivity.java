@@ -146,6 +146,13 @@ public final class TimerDetailActivity extends Activity {
         overview.addView(controls);
         reset.setOnClickListener(v->runAction(0));
         primary.setOnClickListener(v->runAction(1));
+        Button restart=UiKit.button(this,"↻  Sofort neu starten",false);
+        restart.setContentDescription("Timer sofort von vorne starten");
+        LinearLayout.LayoutParams restartParams=
+                new LinearLayout.LayoutParams(-1,UiKit.dp(this,52));
+        restartParams.topMargin=UiKit.dp(this,8);
+        overview.addView(restart,restartParams);
+        restart.setOnClickListener(v->runAction(2));
         state=UiKit.label(this,"",14,UiKit.MUTED);
         state.setGravity(Gravity.CENTER);
         overview.addView(state);
@@ -518,6 +525,9 @@ public final class TimerDetailActivity extends Activity {
             if(current==null)return;
             if(action==0){
                 TimerScheduler.reset(this,timerId);
+            }else if(action==2){
+                if(!canStart())return;
+                TimerScheduler.restartNow(this,timerId);
             }else if(current.state==TimerEntry.RUNNING ||
                     current.state==TimerEntry.WAITING){
                 TimerScheduler.pause(this,timerId);

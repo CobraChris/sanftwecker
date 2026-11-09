@@ -71,6 +71,13 @@ public final class TimerEntry {
     public TimerEntry reset(){
         return new TimerEntry(id,name,durationMs,durationMs,READY,0,0,0,favorite);
     }
+    /** Manual one-tap restart, regardless of running/paused/waiting/finished.
+     * Unlike startDelayed(), this deliberately skips any configured start delay.
+     * The newly scheduled due time is always now + the ORIGINAL duration.
+     */
+    public TimerEntry restartNow(long wallNow,long elapsedNow){
+        return reset().start(wallNow,elapsedNow);
+    }
     public TimerEntry edit(String title,long duration){
         return new TimerEntry(id,title,duration,duration,READY,0,0,0,favorite);
     }
