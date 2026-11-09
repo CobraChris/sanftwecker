@@ -12,6 +12,7 @@
         android:allowBackup="false"
         android:label="Sanftwecker Uhr"
         android:theme="@android:style/Theme.Material.NoActionBar">
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="false" />
         <activity android:name=".WatchMainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
