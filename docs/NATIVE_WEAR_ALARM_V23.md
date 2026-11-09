@@ -1,6 +1,6 @@
 # Sanftwecker v23 – eigenständige Uhralarme statt Benachrichtigungs-Spiegelung
 
-**Stand: 09.11.2026. Entwicklungsstand, noch kein signierter v23-Release und kein Geräte-Endtest.**
+**Stand: 09.11.2026. Signierter [v23-Prerelease](https://github.com/CobraChris/sanftwecker/releases/tag/sanftwecker-v23) für Handy und Uhr veröffentlicht (GitHub Actions [#42584113643](https://github.com/CobraChris/sanftwecker/actions/runs/42584113643): SUCCESS); Geräte-Endtest noch offen.**
 
 ## Ausgangslage und Annahme
 
