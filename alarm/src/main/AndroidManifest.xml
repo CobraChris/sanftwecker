@@ -51,7 +51,7 @@
         <service android:name=".WearPhoneListener" android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
-                <data android:scheme="wear" android:host="*" android:path="/sanftwecker/alarm/v1/ack"/>
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sanftwecker/alarm/v1"/>
             </intent-filter>
         </service>
         <service android:name=".RingingService" android:exported="false"

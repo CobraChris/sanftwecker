@@ -35,9 +35,9 @@ jobs:
           node --check scripts/sanftwecker-release-request.mjs
           node --test tests/sanftwecker-release-request.test.mjs
       - name: Tests, lint and unsigned debug build
-        run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug
+        run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug :watch:testDebugUnitTest :watch:lintDebug :watch:assembleDebug
       - name: Build unsigned release APK for migration preflight
-        run: gradle --no-daemon :alarm:assembleRelease
+        run: gradle --no-daemon :alarm:assembleRelease :watch:assembleRelease
       - name: Verify published v18-v20 signed bridge digests and certificate lineage
         shell: bash
         env:
@@ -51,3 +51,10 @@ jobs:
           set -euo pipefail
           grep -q "applicationId 'com.cobrachris.sanftwecker'" alarm/build.gradle
           test -s alarm/build/outputs/apk/debug/alarm-debug.apk
+          test -s watch/build/outputs/apk/debug/watch-debug.apk
+          grep -q "applicationId 'com.cobrachris.sanftwecker'" watch/build.gradle
+          grep -q "applicationId 'com.cobrachris.sanftwecker'" alarm/build.gradle
+          grep -q "play-services-wearable" alarm/build.gradle
+          grep -q "play-services-wearable" watch/build.gradle
+          grep -q "FOREGROUND_SERVICE_SPECIAL_USE" watch/src/main/AndroidManifest.xml
+          test -s watch/build/outputs/apk/release/watch-release-unsigned.apk

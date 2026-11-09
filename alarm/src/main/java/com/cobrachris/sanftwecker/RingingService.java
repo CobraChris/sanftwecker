@@ -93,6 +93,11 @@ public final class RingingService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
         if (STOP.equals(action) || SNOOZE.equals(action)) {
+            // Watch-originated stops must match the active alarm occurrence.
+            long expectedWhen=intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
+            if(expectedWhen>0&&(!active||expectedWhen!=ringWhen||
+                    intent.getIntExtra(AlarmScheduler.EXTRA_ID,-1)!=ringId))
+                return START_NOT_STICKY;
             int id = ringId;
             int minutes = profile == null ? 5 : profile.snoozeMinutes;
             boolean snoozing = SNOOZE.equals(action) && active && !toneOnlyPreview &&
