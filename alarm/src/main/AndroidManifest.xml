@@ -48,6 +48,12 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/>
             </intent-filter>
         </receiver>
+        <service android:name=".WearPhoneListener" android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
+                <data android:scheme="wear" android:host="*" android:path="/sanftwecker/alarm/v1/ack"/>
+            </intent-filter>
+        </service>
         <service android:name=".RingingService" android:exported="false"
             android:foregroundServiceType="mediaPlayback"
             android:stopWithTask="false"/>
