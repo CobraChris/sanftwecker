@@ -1,5 +1,13 @@
 # Sanftwecker-Migration – sichere Etappen
 
+## Signierte v24-Handy-Beta veröffentlicht – 09.11.2026 (Endtest am Samsung offen)
+
+- Nach **ausdrücklicher Nutzerfreigabe** wurde der zuvor geprüfte, einzige Releaseauftrag aus [PR #16](https://github.com/CobraChris/sanftwecker/pull/16) gemergt: `8069fae588cb7d1858649ab3a9226015462f7c32`. Die PR-CI [#42624144626](https://github.com/CobraChris/sanftwecker/actions/runs/42624144626) war erfolgreich, der freigegebene Quell-SHA `61bdc97b7c13d7248f73713d643f985c0888f8f5` blieb unverändert.
+- [Geschützter v24-Release-Run #42624926345](https://github.com/CobraChris/sanftwecker/actions/runs/42624926345) **SUCCESS** in `validate`, `build`, `sign-and-publish`. Nur die Handy-APK (VersionCode **24**, VersionName **0.9.5-beta**) wurde mit dem ursprünglichen Zertifikat signiert und dessen Fingerprint gegenüber v23 geprüft. Kein neuer Keystore.
+- [**Signierte v24-APK**](https://github.com/CobraChris/sanftwecker/releases/download/sanftwecker-v24/sanftwecker-release.apk), [Release-Seite](https://github.com/CobraChris/sanftwecker/releases/tag/sanftwecker-v24), **5.933.303 Bytes**, SHA-256 `4090a245318b54c39ab188e8a30b2aba412891b36360b55bee16441ce246fff9`. Enthält neun Klingeltöne mit Hörprobe und das bündigere Stopp-Schloss.
+- Die eigenständige **Watch-v23-App bleibt unverändert** und muss für dieses Update nicht neu installiert werden. Kein automatischer Installationsversuch, kein alter Release überschrieben.
+- **Geräte-Abnahme ausstehend:** Nutzer installiert das v24-APK selbst über die bestehende App ohne Deinstallation; testet Tonwahl, Hörprobe, Stopp-Schloss und Grundalarm. Bis dahin keine Aussage über den Erfolg auf dem Gerät oder Samsung-DND.
+
 ## Signierte v23 veröffentlicht – 09.11.2026 (Samsung-/Watch-Abnahme offen)
 
 - **Explizite Freigabe vom Nutzer:** „Ja“ zur Veröffentlichung der nächsten signierten Sanftwecker-Beta nach unveränderter Signatur und Release-Sicherheitsprüfungen. [Release-Auftrag PR #11](https://github.com/CobraChris/sanftwecker/pull/11) enthielt ausschließlich die neue `requests/sanftwecker-v23-release.json`, fest an den geprüften Quell-SHA `73c5ee68f4a451db2bf88345f04f73523ff1ef57` gebunden. PR-CI [#42583850151](https://github.com/CobraChris/sanftwecker/actions/runs/42583850151) **SUCCESS**, Merge `dfec2a7fd6973e4a9f613f540677baf92090a5cd`.
