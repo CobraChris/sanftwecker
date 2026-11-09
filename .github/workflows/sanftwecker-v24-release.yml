@@ -1,0 +1,204 @@
+name: "Sanftwecker: owner-approved phone v24 original-signer release"
+on:
+  push:
+    branches: [main]
+    paths: ['requests/sanftwecker-v24-release.json']
+permissions:
+  contents: read
+concurrency:
+  group: sanftwecker-v24-phone-original-signer
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'CobraChris/sanftwecker' && github.actor == 'CobraChris' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.repository.fork == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    outputs:
+      source_sha: ${{ steps.approval.outputs.source_sha }}
+      version_code: ${{ steps.approval.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Validate one-time source-pinned owner authorization
+        run: |
+          set -euo pipefail
+          node --check scripts/sanftwecker-v24-release-request.mjs
+          node --test tests/sanftwecker-v24-release-request.test.mjs
+      - name: Confirm only one newly added approval file on main
+        id: approval
+        env:
+          REQUEST_BEFORE: ${{ github.event.before }}
+        run: node scripts/sanftwecker-v24-release-request.mjs
+
+  build:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android 35 tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' >/dev/null
+      - name: Test and lint both modules, build only unsigned phone v24 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :alarm:testDebugUnitTest :watch:testDebugUnitTest \
+            :alarm:lintDebug :watch:lintDebug :alarm:assembleRelease :watch:assembleDebug
+      - name: Inspect signed-update metadata before any secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          info=json.load(open('alarm/build/outputs/apk/release/output-metadata.json'))
+          assert info['applicationId']=='com.cobrachris.sanftwecker'
+          assert len(info['elements'])==1
+          item=info['elements'][0]
+          assert item['versionCode']==24
+          assert item['outputFile']=='alarm-release-unsigned.apk'
+          PY
+          test -s alarm/build/outputs/apk/release/alarm-release-unsigned.apk
+          test -s watch/build/outputs/apk/debug/watch-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
+            alarm/build/outputs/apk/release/alarm-release-unsigned.apk > phone.badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='24'" phone.badging.txt
+          mkdir -p unsigned
+          cp alarm/build/outputs/apk/release/alarm-release-unsigned.apk unsigned/phone.apk
+      - name: Hand off unsigned phone only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sanftwecker-v24-original-key-unsigned-phone-only
+          path: unsigned/phone.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  sign-and-publish:
+    needs: [validate,build]
+    if: needs.validate.result == 'success' && needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    environment: android-releases
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sanftwecker-v24-original-key-unsigned-phone-only
+          path: unsigned
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android 35 signing inspection tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;35.0.0' >/dev/null
+      - name: Verify original v23 before secrets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s unsigned/phone.apk
+          mkdir -p legacy
+          gh release download sanftwecker-v23 --repo CobraChris/sanftwecker \
+            --pattern 'sanftwecker-release.apk' --dir legacy
+          printf '%s  %s\n' \
+            213a3488e11326f17c1e52fc7da1853ab1db87dad3fe83d1be3d2824477e586f \
+            legacy/sanftwecker-release.apk | sha256sum --check
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 30 --print-certs \
+            legacy/sanftwecker-release.apk > legacy/cert.txt
+          grep -m1 'Signer #1 certificate SHA-256 digest:' legacy/cert.txt \
+            | awk -F': ' '{print $2}' > legacy/cert.sha
+          test -s legacy/cert.sha
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
+            legacy/sanftwecker-release.apk > legacy/badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='23'" \
+            legacy/badging.txt
+          if gh release view sanftwecker-v24 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v24 already exists. Refuse any overwrite."; exit 1
+          fi
+      - name: Sign original-certificate phone APK
+        shell: bash
+        env:
+          STORE_B64: ${{ secrets.APP_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.APP_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.APP_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.APP_SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$STORE_B64" && test -n "$STORE_PASSWORD"
+          test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          umask 077
+          printf '%s' "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/sanftwecker-original.p12"
+          keytool -list -keystore "$RUNNER_TEMP/sanftwecker-original.p12" \
+            -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          mkdir -p signed
+          SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$SIGNER" sign --ks "$RUNNER_TEMP/sanftwecker-original.p12" \
+            --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD --out signed/sanftwecker-release.apk \
+            unsigned/phone.apk
+          "$SIGNER" verify --min-sdk-version 30 --print-certs \
+            signed/sanftwecker-release.apk > signed/phone.cert.txt
+          grep -m1 'Signer #1 certificate SHA-256 digest:' signed/phone.cert.txt \
+            | awk -F': ' '{print $2}' > signed/phone.cert.sha
+          test -s signed/phone.cert.sha
+          cmp -s signed/phone.cert.sha legacy/cert.sha || {
+            echo "::error::v24 signing fingerprint differs from existing v23"; exit 1;
+          }
+          "$AAPT" dump badging signed/sanftwecker-release.apk > signed/phone.badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='24'" \
+            signed/phone.badging.txt
+          (cd signed && sha256sum sanftwecker-release.apk > SHA256SUMS.txt)
+      - name: Publish owner-approved same-signer phone-only v24 prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if gh release view sanftwecker-v24 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v24 already published"; exit 1
+          fi
+          cat > signed/RELEASE_INFO.txt <<EOF
+          Sanftwecker v24 phone-only design and ringtone release
+          Android phone package: com.cobrachris.sanftwecker (versionCode 24)
+          Uses original v23 phone signing certificate.
+          Watch companion unchanged: retain already-installed v23.
+          Existing phone app: update in place; do not uninstall.
+          Owner-approved exact source: $SOURCE_SHA
+          EOF
+          gh release create sanftwecker-v24 \
+            signed/sanftwecker-release.apk signed/SHA256SUMS.txt signed/RELEASE_INFO.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+            --title "Sanftwecker 0.9.5-beta: nine tones and refined slider (v24)" \
+            --notes 'Original-signed phone-only v24 prerelease. Nine local tones, selection with preview, and inset lock slider. Update v23 in place; leave the paired watch v23 installed.' \
+            --prerelease
+      - name: Always remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sanftwecker-original.p12"
