@@ -57,6 +57,53 @@ public final class TimerScheduler {
             throw e;
         }
     }
+    /**
+     * Restarts the selected timer immediately at its full original duration.
+     * This is intentionally different from reset() (which leaves it stopped)
+     * and start() (which can respect a configured start delay).
+     * Old finish broadcasts cannot complete this new countdown because
+     * fired() compares the expected deadline with the current timer.
+     */
+    public static synchronized void restartNow(Context c,int id){
+        TimerEntry before=TimerRepository.get(c,id);
+        if(before==null)return;
+        TimerEntry after=before.restartNow(
+                System.currentTimeMillis(),SystemClock.elapsedRealtime());
+        try{
+            // Same PendingIntent identity replaces the old finish deadline.
+            // Schedule before persisting so a denied exact-alarm permission
+            // does not erase the running countdown's stored state.
+            arm(c,after);
+            TimerRepository.put(c,after);
+        }catch(RuntimeException error){
+            // A failed storage write or scheduling attempt must not leave an
+            // orphan new alarm or a stale pending intent pointing to it.
+            try{
+                if((before.state==TimerEntry.RUNNING ||
+                        before.state==TimerEntry.WAITING) &&
+                        before.dueWallMs>System.currentTimeMillis()){
+                    arm(c,before);
+                }else{
+                    cancelPending(c,id);
+                }
+            }catch(RuntimeException rollback){
+                AlarmRepository.diagnostic(c,
+                        "WARNUNG: Timer-Neustart fehlgeschlagen; alten Alarm prüfen");
+            }
+            throw error;
+        }
+        // Reschedule all interval/preparation cues against the NEW deadline.
+        // An outstanding one-time start is superseded by this manual restart.
+        TimerMilestoneScheduler.reschedule(c,id);
+        if(TimerStartSchedule.get(c,id)>0){
+            try{TimerStartSchedule.cancel(c,id);}
+            catch(RuntimeException error){
+                AlarmRepository.diagnostic(c,
+                        "WARNUNG: Geplanten Timerstart nicht entfernt");
+            }
+        }
+        TimerAlerts.dismiss(c,id);
+    }
     public static synchronized void pause(Context c,int id){
         TimerMilestoneScheduler.cancel(c,id);
         TimerEntry before=TimerRepository.get(c,id);
