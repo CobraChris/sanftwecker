@@ -208,6 +208,13 @@ public final class TimerActivity extends Activity {
                 "Timer pausieren":t.state==TimerEntry.FINISHED?"Timer neu starten":"Timer starten");
         actions.addView(start,new LinearLayout.LayoutParams(0,UiKit.dp(this,54),1));
         card.addView(actions);
+        Button restart=UiKit.button(this,"↻ Sofort neu starten",false);
+        restart.setContentDescription("Timer sofort von vorne starten");
+        LinearLayout.LayoutParams restartParams=
+                new LinearLayout.LayoutParams(-1,UiKit.dp(this,52));
+        restartParams.topMargin=UiKit.dp(this,8);
+        card.addView(restart,restartParams);
+        restart.setOnClickListener(v->restartNow(t.id));
         reset.setOnClickListener(v->{
             TimerScheduler.reset(this,t.id);render();
         });
@@ -230,6 +237,16 @@ public final class TimerActivity extends Activity {
             render();
         }catch(SecurityException e){allowExactAlarm();}
         catch(RuntimeException e){message("Timer konnte nicht gestartet werden: "+e.getMessage());}
+    }
+    private void restartNow(int id){
+        try{
+            if(!canAlert())return;
+            TimerScheduler.restartNow(this,id);
+            render();
+        }catch(SecurityException e){allowExactAlarm();}
+        catch(RuntimeException e){
+            message("Timer konnte nicht neu gestartet werden: "+e.getMessage());
+        }
     }
     private boolean canAlert(){
         if(Build.VERSION.SDK_INT>=33 &&
