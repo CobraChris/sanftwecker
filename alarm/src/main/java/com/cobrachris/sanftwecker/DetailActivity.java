@@ -17,17 +17,18 @@ import java.util.*;
 /** Dark alarm details screen. Input state is only saved through explicit action. */
 public final class DetailActivity extends Activity {
     private static final int NOTIFY_REQ=18;
+    private static final int TONE_PICKER_REQ=24;
     private final String[] weekdays={"Mo","Di","Mi","Do","Fr","Sa","So"};
-    private int id,hour,minute;
+    private int id,hour,minute,selectedTone;
     private boolean loading,dirty,advancedOpen;
     private AlarmProfile saved;
     private EditText name;
     private TextView clock,status,advanced,nextDisplay,fullScreenPermissionStatus;
-    private Button fullScreenPermissionButton;
+    private Button fullScreenPermissionButton,tonePicker;
     private final TextView[] chips=new TextView[7];
     private final boolean[] days=new boolean[7];
     private Switch enabled,rising,watch,snoozeEnabled,audibleWhenMuted;
-    private Spinner tone, vibration;
+    private Spinner vibration;
     private SeekBar delay,ramp,volume,pulses,interval,snooze,autoStop;
     private TextView delayLabel,rampLabel,volumeLabel,pulsesLabel,intervalLabel,snoozeLabel,stopLabel;
 
@@ -157,13 +158,14 @@ public final class DetailActivity extends Activity {
                     if(pulses.getProgress()==0) pulses.setProgress(6);
                     changed();
                 }).show());
-        tone=new Spinner(this);
-        tone.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,
-                new String[]{"Sanftes Glockenspiel","Reiner weicher Ton","Tiefe Harmonie"}));
-        music.addView(tone);
-        tone.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-            public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long key){changed();}
-            public void onNothingSelected(android.widget.AdapterView<?> p){}
+        tonePicker=UiKit.button(this,"Klingelton auswählen",false);
+        tonePicker.setContentDescription("Klingelton auswählen und anhören");
+        music.addView(tonePicker);
+        tonePicker.setOnClickListener(v->{
+            Intent choose=new Intent(this,TonePickerActivity.class)
+                    .putExtra(TonePickerActivity.EXTRA_ALARM_ID,id)
+                    .putExtra(TonePickerActivity.EXTRA_SELECTED,selectedTone);
+            startActivityForResult(choose,TONE_PICKER_REQ);
         });
         rising=UiKit.toggle(this);
         rising.setOnCheckedChangeListener((b,value)->{
@@ -362,7 +364,8 @@ public final class DetailActivity extends Activity {
             days[i]=(p.days&(1<<i))!=0;
             UiKit.setChip(this,chips[i],days[i]);
         }
-        tone.setSelection(p.tone);
+        selectedTone=ToneCatalog.safe(p.tone);
+        tonePicker.setText("Klingelton: "+ToneCatalog.LABELS[selectedTone]+"  ›");
         vibration.setSelection(p.vibrationMode);
         rising.setChecked(p.rampEnabled);
         delay.setProgress(p.delaySeconds/10);ramp.setProgress(p.rampSeconds/60-1);
@@ -385,7 +388,7 @@ public final class DetailActivity extends Activity {
         return new AlarmProfile(id,name.getText().toString(),enabled.isChecked(),hour,minute,mask,
                 delay.getProgress()*10,(ramp.getProgress()+1)*60,volume.getProgress()+5,
                 watch.isChecked()?pulses.getProgress():0,WatchIntervals.secondsAt(interval.getProgress()),
-                snooze.getProgress()+1,tone.getSelectedItemPosition(),rising.isChecked(),
+                snooze.getProgress()+1,selectedTone,rising.isChecked(),
                 autoStop.getProgress()+1,changedTime?0:saved.skipAt,
                 changedTime?0:saved.oneTimeAt,changedTime?0:saved.replacedAt,
                 snoozeEnabled.isChecked(),vibration.getSelectedItemPosition(),
@@ -449,15 +452,25 @@ public final class DetailActivity extends Activity {
     }
 
     private void previewTone(){
-        if(!save())return;
         try{
             startForegroundService(new Intent(this,RingingService.class)
                     .setAction(RingingService.START).putExtra(AlarmScheduler.EXTRA_ID,id)
-                    .putExtra("tone_only_preview",true));
-            notice("Tonprobe läuft 20 Sekunden: Start bei 0 %, ohne Tonverzögerung, "+
-                    "innerhalb von 8 Sekunden ansteigend. "+
+                    .putExtra("tone_only_preview",true)
+                    .putExtra("tone_preview_index",selectedTone));
+            notice("Tonprobe für "+ToneCatalog.LABELS[selectedTone]+
+                    " (max. 20 Sekunden), ohne Einstellungen zu speichern. "+
                     "Über die Alarmbenachrichtigung stoppen.");
         }catch(RuntimeException e){notice("Tonprobe fehlgeschlagen.");}
+    }
+
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(request!=TONE_PICKER_REQ||result!=RESULT_OK||data==null)return;
+        int choice=data.getIntExtra(TonePickerActivity.EXTRA_SELECTED,selectedTone);
+        if(!ToneCatalog.valid(choice))return;
+        selectedTone=choice;
+        tonePicker.setText("Klingelton: "+ToneCatalog.LABELS[selectedTone]+"  ›");
+        changed(); // Apply changes only after the user's existing Save action.
     }
 
     private void watchTest(){

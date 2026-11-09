@@ -47,6 +47,21 @@ public class AlarmProfileTest {
         assertEquals(p.rampSeconds, q.rampSeconds);
         assertEquals(p.days, q.days);
     }
+    @Test public void nineToneProfilesKeepTheirIdsOnCopyAndEdit() {
+        for(int index=0;index<ToneCatalog.count();index++){
+            AlarmProfile old=AlarmProfile.defaults(1);
+            AlarmProfile chosen=new AlarmProfile(old.id,old.name,old.enabled,old.hour,old.minute,
+                    old.days,old.delaySeconds,old.rampSeconds,old.maxVolume,old.watchPulses,
+                    old.watchIntervalSeconds,old.snoozeMinutes,index);
+            assertEquals(index,chosen.tone);
+            assertEquals(index,chosen.duplicateAs(7).tone);
+            assertEquals(index,chosen.withEnabled(true).tone);
+        }
+    }
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsUnknownToneIndex() {
+        new AlarmProfile(1,"Unsicher",true,7,0,127,10,60,55,6,5,5,ToneCatalog.count());
+    }
     @Test(expected=IllegalArgumentException.class)
     public void rejectsNoWeekday() {
         new AlarmProfile(1, "X", true, 7, 0, 0, 0, 300, 30, 5, 20, 5, 0);
