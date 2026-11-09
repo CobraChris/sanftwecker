@@ -93,6 +93,7 @@ public final class WatchAlarmService extends Service {
                                 activeId+":"+activeWhen+":1");
                     stopHaptics(true);stopSelf();
                 }
+                stopSelf();
                 return START_NOT_STICKY;
             }
             if(activeWhen==when&&activeId==id&&when>0){
@@ -105,18 +106,16 @@ public final class WatchAlarmService extends Service {
         if(!START.equals(i.getAction()))return START_NOT_STICKY;
         final int id=i.getIntExtra("id",-1);
         final long when=i.getLongExtra("when",0);
-        if(id<1||id>1000||!WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))
+        if(id<1||id>1000||!WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis())){
+            stopSelf();
             return START_NOT_STICKY;
+        }
         if(activeWhen==when&&activeId==id)return START_NOT_STICKY;
         long last=getSharedPreferences("watch_last_start",MODE_PRIVATE)
                 .getLong("alarm_"+id,0);
         if(last==when)return START_NOT_STICKY;
         if(activeWhen!=0)stopHaptics(false);
         activeWhen=when;activeId=id;
-        if(!getSharedPreferences("watch_last_start",MODE_PRIVATE).edit()
-                .putLong("alarm_"+id,when).commit()){
-            stopSelf();return START_NOT_STICKY;
-        }
         int minutes=Math.max(1,Math.min(15,i.getIntExtra("minutes",5)));
         try{
             foreground(i.getStringExtra("title"));
@@ -145,6 +144,8 @@ public final class WatchAlarmService extends Service {
                             .setUsage(AudioAttributes.USAGE_ALARM).build();
                     vibrator.vibrate(effect,attrs);
                 }
+                getSharedPreferences("watch_last_start",MODE_PRIVATE).edit()
+                        .putLong("alarm_"+id,when).commit();
                 sendAck("STARTED",id);
             }
             handler.removeCallbacks(finish);

@@ -43,7 +43,9 @@ public final class WatchMainActivity extends Activity {
                     .putExtra("user",true).putExtra("stop_all",true);
             startService(i);
         });
-        setContentView(layout);refresh();
+        setContentView(layout);
+        refresh();
+        WatchDataBootstrap.refresh(this);
     }
     @Override protected void onResume(){super.onResume();refresh();}
 }
