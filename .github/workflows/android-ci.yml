@@ -36,6 +36,8 @@ jobs:
           node --test tests/sanftwecker-release-request.test.mjs
           node --check scripts/sanftwecker-v23-release-request.mjs
           node --test tests/sanftwecker-v23-release-request.test.mjs
+          node --check scripts/sanftwecker-v24-release-request.mjs
+          node --test tests/sanftwecker-v24-release-request.test.mjs
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug :watch:testDebugUnitTest :watch:lintDebug :watch:assembleDebug
       - name: Build unsigned release APK for migration preflight
