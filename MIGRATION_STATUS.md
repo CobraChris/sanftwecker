@@ -1,5 +1,17 @@
 # Sanftwecker-Migration – sichere Etappen
 
+## Signierte v25-Beta (Handy + Galaxy Watch) veröffentlicht – 10.11.2026
+
+- Nach ausdrücklicher Freigabe vom Nutzer wurde der ausschließlich aus `requests/sanftwecker-v25-release.json` bestehende [PR #21](https://github.com/CobraChris/sanftwecker/pull/21) kontrolliert von Draft zu Ready und mit Quell-SHA `a5a848bd143347f12d4d04a43bd2955cef4e75d2` auf `main` gemergt (Commit `38226d7245d567887c4719ee0c2aa80f141f8005`). PR-CI [#42747745905](https://github.com/CobraChris/sanftwecker/actions/runs/42747745905) SUCCESS.
+- Geschützter [v25-Release-Run #42749092523](https://github.com/CobraChris/sanftwecker/actions/runs/42749092523) **SUCCESS**: Owner-/Quellcode-Validierung, beide Android-/Wear-Builds samt Tests und Lint, Prüfungen der fest verankerten Vorgänger-APKs **Handy v24** und **Watch v23** vor Secret-Zugriff, Signierung **beider v25-APKs mit dem ursprünglichen Keystore**, erfolgreiche Zertifikatsvergleiche und Veröffentlichung. Temporärer Schlüssel erfolgreich entfernt. Auch die [Main-CI #42749092690](https://github.com/CobraChris/sanftwecker/actions/runs/42749092690) ist SUCCESS.
+- [**v25-Prerelease**](https://github.com/CobraChris/sanftwecker/releases/tag/sanftwecker-v25) veröffentlicht, kein Draft. VersionCode **25** mit identischer Paketkennung `com.cobrachris.sanftwecker`, Handy VersionName **0.9.6-beta**, Watch VersionName **0.9.6-watch**:
+  - [**Handy-APK**](https://github.com/CobraChris/sanftwecker/releases/download/sanftwecker-v25/sanftwecker-release.apk): **5.957.879 Bytes**, SHA-256 `da69da77c15406f9d4d3acd1f15891e73706d6b6e6cd2f4f7caf6817b312bff1`
+  - [**Watch-APK**](https://github.com/CobraChris/sanftwecker/releases/download/sanftwecker-v25/sanftwecker-watch-v25.apk): **2.172.999 Bytes**, SHA-256 `60dbadb976acfa51d1b3d500e96354f736bec031ede9c830384441d63fd91b1d`
+- Enthält die **zweistufige Weckkaskade**, den **Schlummerknopf auf der Uhr** und die **Weltuhr mit freier Städteauswahl**. Die alten v24-Handy-/v23-Watch-Releases bleiben erhalten.
+- **Offen:** Installation **durch den Nutzer**, bestehende Apps **nicht deinstallieren**; Praxistest am Samsung/Galaxy Watch inklusive Nicht stören, Vibrierstufen, Watch-Snooze, Weltuhr und Persistenz der bestehenden Wecker/Timer. **Keine** automatische Installation oder Schlüssel-/Rechteänderung. Weitere signierte Releases erfordern separate ausdrückliche Freigabe.
+
+
+
 ## Signierte v24-Handy-Beta veröffentlicht – 09.11.2026 (Endtest am Samsung offen)
 
 - Nach **ausdrücklicher Nutzerfreigabe** wurde der zuvor geprüfte, einzige Releaseauftrag aus [PR #16](https://github.com/CobraChris/sanftwecker/pull/16) gemergt: `8069fae588cb7d1858649ab3a9226015462f7c32`. Die PR-CI [#42624144626](https://github.com/CobraChris/sanftwecker/actions/runs/42624144626) war erfolgreich, der freigegebene Quell-SHA `61bdc97b7c13d7248f73713d643f985c0888f8f5` blieb unverändert.
