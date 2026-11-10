@@ -50,6 +50,9 @@ public final class WatchAlarmService extends Service {
     private final Runnable escalate=()->{
         if(activeWhen>0 && activeCascade && vibrator!=null){
             try{
+                // Cancel phase-one looping waveform explicitly: a few Wear OS motors
+                // keep playing it when an overlapping waveform is submitted.
+                vibrator.cancel();
                 applyHaptic(WatchCascade.strongTimings(activeIntensity),
                         WatchCascade.strongAmplitudes(activeIntensity));
                 sendAck("CASCADE_STRONG",activeId);
@@ -240,7 +243,9 @@ public final class WatchAlarmService extends Service {
         snoozePending=false;snoozeConnectionError=false;
         getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
                 .putInt("id",id).putLong("when",when)
-                .putInt("snooze_minutes",activeSnoozeMinutes).commit();
+                .putInt("snooze_minutes",activeSnoozeMinutes)
+                .putBoolean("cascade",activeCascade)
+                .putInt("watch_intensity",activeIntensity).commit();
         int minutes=Math.max(activeCascade?2:1,
                 Math.min(15,i.getIntExtra("minutes",5)));
         try{
@@ -303,7 +308,8 @@ public final class WatchAlarmService extends Service {
         activeIntensity=WatchCascade.NORMAL;
         activeSnoozeMinutes=0;
         getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
-                .remove("id").remove("when").remove("snooze_minutes").commit();
+                .remove("id").remove("when").remove("snooze_minutes")
+                .remove("cascade").remove("watch_intensity").commit();
         if(vibrator!=null)vibrator.cancel();
         vibrator=null;
         if(wake!=null&&wake.isHeld())wake.release();
