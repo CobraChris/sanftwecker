@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
@@ -52,8 +53,12 @@ public final class WorldClockGeocoding {
         String clean=qualifiedQuery(query);
         if(clean.length()<2 || clean.length()>100)
             throw new IllegalArgumentException("Bitte 2 bis 100 Zeichen eingeben");
-        return ENDPOINT+"?name="+URLEncoder.encode(clean,StandardCharsets.UTF_8)
-                +"&count=50&language=en&format=json";
+        try {
+            return ENDPOINT+"?name="+URLEncoder.encode(clean,"UTF-8")
+                    +"&count=50&language=en&format=json";
+        } catch(UnsupportedEncodingException impossible){
+            throw new IllegalStateException("UTF-8 nicht verfügbar",impossible);
+        }
     }
 
     /** Called on a background thread, never by the Android UI thread. */
