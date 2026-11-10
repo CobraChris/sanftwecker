@@ -54,7 +54,8 @@ public final class RingingService extends Service {
         @Override public void run() {
             if (!active || audio == null) return;
             long elapsed = SystemClock.elapsedRealtime() - startedAt;
-            float gain = AlarmEnvelope.gain(profile, toneOnlyPreview || quickTest, elapsed);
+            float gain = AlarmEnvelope.gain(profile,
+                    toneOnlyPreview || (quickTest && !profile.cascadeEnabled), elapsed);
             try { audio.setVolume(gain); }
             catch (IllegalStateException e) { Log.w("Sanftwecker", "Audio gain update", e); }
             if (elapsed < MAX_RING) handler.postDelayed(this, 200L);
@@ -63,7 +64,7 @@ public final class RingingService extends Service {
 
     private final Runnable pulse = new Runnable() {
         @Override public void run() {
-            if (!active || profile.watchPulses == 0 ||
+            if (!active || profile.cascadeEnabled || profile.watchPulses == 0 ||
                     pulseCount >= profile.watchPulses) return;
             WatchAlert.send(RingingService.this, profile, pulseCount++);
             if (pulseCount < profile.watchPulses) {
@@ -149,13 +150,14 @@ public final class RingingService extends Service {
         activeTone = toneOnlyPreview ? ToneCatalog.safe(
                 intent.getIntExtra("tone_preview_index",profile.tone)):profile.tone;
         quickTest = intent.getBooleanExtra(EXTRA_QUICK_TEST, false);
-        final long ringDuration = toneOnlyPreview ? 20_000L :
-                quickTest ? 30_000L : profile.autoStopMinutes * 60_000L;
+        final long ringDuration=WakeCascade.duration(toneOnlyPreview,quickTest,
+                profile.cascadeEnabled,profile.autoStopMinutes);
         try {
             startForegroundNotification();
             active = true;
             startedAt = SystemClock.elapsedRealtime();
-            pulseCount = toneOnlyPreview ? 0 : Math.min(1, profile.watchPulses);
+            pulseCount = toneOnlyPreview || profile.cascadeEnabled ?
+                    profile.watchPulses : Math.min(1, profile.watchPulses);
             AlarmRepository.diagnostic(this, "Audiodienst gestartet: " + profile.name +
                     (toneOnlyPreview ? " (Tonprobe)" : quickTest ? " (Kurztest)" : ""));
             try {
@@ -190,8 +192,28 @@ public final class RingingService extends Service {
                     AlarmRepository.diagnostic(this,
                             "Weckerlautstärke unverändert – Android-Alarmpegel / DND prüfen");
             }
-            // Direct handset vibration begins immediately, independently of delayed audio.
-            if(!toneOnlyPreview) PhoneVibration.start(this,profile.vibrationMode);
+            // Ordinary alarms retain their previous immediate vibration.
+            // Cascade alarms are completely vibration-free on the handset in
+            // minute one; phase two begins exactly 60 s after alarm start.
+            if(!toneOnlyPreview && !profile.cascadeEnabled){
+                PhoneVibration.start(this,profile.vibrationMode);
+            }else if(!toneOnlyPreview && profile.cascadeEnabled){
+                final int expectedId=ringId;
+                final long expectedWhen=ringWhen;
+                final long expectedStart=startedAt;
+                final int strongMode=WakeCascade.phoneMode(profile.vibrationMode);
+                handler.postDelayed(()->{
+                    if(active && !toneOnlyPreview && profile!=null &&
+                            profile.cascadeEnabled && ringId==expectedId &&
+                            ringWhen==expectedWhen && startedAt==expectedStart &&
+                            WakeCascade.strongStage(
+                                    SystemClock.elapsedRealtime()-startedAt)){
+                        PhoneVibration.start(this,strongMode);
+                        AlarmRepository.diagnostic(this,
+                                "Kaskade Phase 2: Handyvibration gestartet");
+                    }
+                },WakeCascade.SECOND_STAGE_MS);
+            }
             // Even if audio hardware fails, keep the watch alerts and stop/snooze controls.
             try {
                 beginAudio();
