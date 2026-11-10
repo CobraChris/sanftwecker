@@ -70,4 +70,30 @@ public class AlarmProfileTest {
     public void rejectsUnsafeHighDelay() {
         new AlarmProfile(1, "X", true, 7, 0, 1, 4000, 300, 30, 5, 20, 5, 0);
     }
+    @Test public void watchIntensityIsOptInAndSurvivesEveryProfileOperation(){
+        AlarmProfile prior=AlarmProfile.defaults(1);
+        assertEquals(WatchIntensity.NORMAL,prior.watchIntensity);
+        AlarmProfile sanft=new AlarmProfile(prior.id,prior.name,prior.enabled,
+                prior.hour,prior.minute,prior.days,prior.delaySeconds,
+                prior.rampSeconds,prior.maxVolume,prior.watchPulses,
+                prior.watchIntervalSeconds,prior.snoozeMinutes,prior.tone,
+                prior.rampEnabled,prior.autoStopMinutes,prior.skipAt,prior.oneTimeAt,
+                prior.replacedAt,prior.snoozeEnabled,prior.vibrationMode,
+                prior.audibleWhenMuted,prior.cascadeEnabled,WatchIntensity.SANFT);
+        assertFalse(prior.sameConfiguration(sanft));
+        assertEquals(WatchIntensity.SANFT,sanft.withEnabled(true).watchIntensity);
+        assertEquals(WatchIntensity.SANFT,sanft.withExceptions(0,0,0).watchIntensity);
+        assertEquals(WatchIntensity.SANFT,sanft.duplicateAs(2).watchIntensity);
+    }
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsInvalidWatchIntensity(){
+        AlarmProfile old=AlarmProfile.defaults(1);
+        new AlarmProfile(old.id,old.name,old.enabled,old.hour,old.minute,
+                old.days,old.delaySeconds,old.rampSeconds,old.maxVolume,
+                old.watchPulses,old.watchIntervalSeconds,old.snoozeMinutes,
+                old.tone,old.rampEnabled,old.autoStopMinutes,old.skipAt,
+                old.oneTimeAt,old.replacedAt,old.snoozeEnabled,old.vibrationMode,
+                old.audibleWhenMuted,old.cascadeEnabled,99);
+    }
+
 }
