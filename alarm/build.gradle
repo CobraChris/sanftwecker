@@ -18,4 +18,7 @@ dependencies {
     implementation 'androidx.core:core:1.13.1'
     implementation 'com.google.android.gms:play-services-wearable:20.0.1'
     testImplementation 'junit:junit:4.13.2'
+    // Android org.json is a stub in local JVM tests. Use the real JSON implementation
+    // for metadata-decoder regression tests; not packaged in the release APK.
+    testImplementation 'org.json:json:20240303'
 }
