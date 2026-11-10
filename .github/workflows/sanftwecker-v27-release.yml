@@ -1,0 +1,247 @@
+name: "Sanftwecker: v27 native Wear original-signer release"
+on:
+  push:
+    branches: [main]
+    paths: ['requests/sanftwecker-v27-release.json']
+permissions:
+  contents: read
+concurrency:
+  group: sanftwecker-v27-native-watch-original-signer
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'CobraChris/sanftwecker' && github.actor == 'CobraChris' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.repository.fork == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    outputs:
+      source_sha: ${{ steps.approval.outputs.source_sha }}
+      version_code: ${{ steps.approval.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Validate owner-controlled one-time release request
+        run: |
+          set -euo pipefail
+          node --check scripts/sanftwecker-v27-release-request.mjs
+          node --test tests/sanftwecker-v27-release-request.test.mjs
+      - name: Verify exact previous source and single new request
+        id: approval
+        env:
+          REQUEST_BEFORE: ${{ github.event.before }}
+        run: node scripts/sanftwecker-v27-release-request.mjs
+
+  build:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android 35 tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' >/dev/null
+      - name: Unit tests and lint both devices; build unsigned release APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :alarm:testDebugUnitTest :watch:testDebugUnitTest \
+            :alarm:lintDebug :watch:lintDebug :alarm:assembleRelease :watch:assembleRelease
+      - name: Check both unsigned package identities, versionCodes and watch hardware
+        shell: bash
+        env:
+          EXPECTED_CODE: ${{ needs.validate.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          python3 - "$EXPECTED_CODE" <<'PY'
+          import json,sys
+          expected=int(sys.argv[1])
+          assert expected==27
+          for module in ['alarm','watch']:
+              info=json.load(open(f'{module}/build/outputs/apk/release/output-metadata.json'))
+              assert info['applicationId']=='com.cobrachris.sanftwecker',module
+              assert len(info['elements'])==1
+              e=info['elements'][0]
+              assert e['versionCode']==27,module
+              assert e['outputFile']==f'{module}-release-unsigned.apk',module
+          PY
+          test -s alarm/build/outputs/apk/release/alarm-release-unsigned.apk
+          test -s watch/build/outputs/apk/release/watch-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging \
+            watch/build/outputs/apk/release/watch-release-unsigned.apk > watch-badging.txt
+          grep -q "android.hardware.type.watch" watch-badging.txt
+          mkdir -p unsigned
+          cp alarm/build/outputs/apk/release/alarm-release-unsigned.apk unsigned/phone.apk
+          cp watch/build/outputs/apk/release/watch-release-unsigned.apk unsigned/watch.apk
+      - name: Hand off unsigned phone and watch together
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sanftwecker-v27-original-key-unsigned-both
+          path: unsigned/
+          retention-days: 1
+          if-no-files-found: error
+
+  sign-and-publish:
+    needs: [validate,build]
+    if: needs.validate.result == 'success' && needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    environment: android-releases
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sanftwecker-v27-original-key-unsigned-both
+          path: unsigned
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android signing inspection tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;35.0.0' >/dev/null
+      - name: Verify signed phone v26 and signed watch v26 before secrets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s unsigned/phone.apk
+          test -s unsigned/watch.apk
+          mkdir -p legacy/phone legacy/watch
+          gh release download sanftwecker-v26 --repo CobraChris/sanftwecker \
+            --pattern 'sanftwecker-release.apk' --dir legacy/phone
+          gh release download sanftwecker-v26 --repo CobraChris/sanftwecker \
+            --pattern 'sanftwecker-watch-v26.apk' --dir legacy/watch
+          printf '%s  %s\n' \
+            0d785deb8d25f5b84172252e3b45286d7b870e08880da6412628fc46076d387d \
+            legacy/phone/sanftwecker-release.apk | sha256sum --check
+          printf '%s  %s\n' \
+            6b9d5e6e45c2fd4f9077c1f55bdab8a2c509d663d094fbbecc8092439ef46996 \
+            legacy/watch/sanftwecker-watch-v26.apk | sha256sum --check
+          SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$SIGNER" verify --min-sdk-version 30 --print-certs \
+            legacy/phone/sanftwecker-release.apk > legacy/phone/cert.txt
+          "$SIGNER" verify --min-sdk-version 30 --print-certs \
+            legacy/watch/sanftwecker-watch-v26.apk > legacy/watch/cert.txt
+          for device in phone watch; do
+            grep -m1 'Signer #1 certificate SHA-256 digest:' "legacy/$device/cert.txt" \
+              | awk -F': ' '{print $2}' > "legacy/$device/cert.sha"
+            test -s "legacy/$device/cert.sha"
+          done
+          cmp -s legacy/phone/cert.sha legacy/watch/cert.sha || {
+            echo "::error::Signed phone and watch v26 use different certificates"; exit 1;
+          }
+          "$AAPT" dump badging legacy/phone/sanftwecker-release.apk > legacy/phone/badging.txt
+          "$AAPT" dump badging legacy/watch/sanftwecker-watch-v26.apk > legacy/watch/badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='26'" \
+            legacy/phone/badging.txt
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='26'" \
+            legacy/watch/badging.txt
+          grep -q 'android.hardware.type.watch' legacy/watch/badging.txt
+          if gh release view sanftwecker-v27 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v27 already exists; refuse overwrite"; exit 1
+          fi
+      - name: Sign both original-certificate APKs
+        shell: bash
+        env:
+          STORE_B64: ${{ secrets.APP_SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.APP_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.APP_SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.APP_SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$STORE_B64" && test -n "$STORE_PASSWORD"
+          test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          umask 077
+          printf '%s' "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/sanftwecker-original.p12"
+          keytool -list -keystore "$RUNNER_TEMP/sanftwecker-original.p12" \
+            -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          mkdir -p signed
+          SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$SIGNER" sign --ks "$RUNNER_TEMP/sanftwecker-original.p12" \
+            --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD --out signed/sanftwecker-release.apk \
+            unsigned/phone.apk
+          "$SIGNER" sign --ks "$RUNNER_TEMP/sanftwecker-original.p12" \
+            --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD --out signed/sanftwecker-watch-v27.apk \
+            unsigned/watch.apk
+          "$SIGNER" verify --min-sdk-version 30 --print-certs \
+            signed/sanftwecker-release.apk > signed/phone.cert.txt
+          "$SIGNER" verify --min-sdk-version 30 --print-certs \
+            signed/sanftwecker-watch-v27.apk > signed/watch.cert.txt
+          for device in phone watch; do
+            grep -m1 'Signer #1 certificate SHA-256 digest:' "signed/$device.cert.txt" \
+              | awk -F': ' '{print $2}' > "signed/$device.cert.sha"
+            test -s "signed/$device.cert.sha"
+          done
+          cmp -s signed/phone.cert.sha signed/watch.cert.sha || {
+            echo "::error::Phone and watch were not signed with the same cert"; exit 1;
+          }
+          cmp -s signed/phone.cert.sha legacy/phone/cert.sha || {
+            echo "::error::Original v26 phone signing identity not preserved"; exit 1;
+          }
+          cmp -s signed/watch.cert.sha legacy/watch/cert.sha || {
+            echo "::error::Original v26 watch signing identity not preserved"; exit 1;
+          }
+          "$AAPT" dump badging signed/sanftwecker-release.apk > signed/phone.badging.txt
+          "$AAPT" dump badging signed/sanftwecker-watch-v27.apk > signed/watch.badging.txt
+          for device in phone watch; do
+            grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='27'" \
+              "signed/$device.badging.txt"
+          done
+          grep -q "android.hardware.type.watch" signed/watch.badging.txt
+          (cd signed && sha256sum sanftwecker-release.apk sanftwecker-watch-v27.apk > SHA256SUMS.txt)
+      - name: Publish same-signer phone + watch v27 prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if gh release view sanftwecker-v27 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v27 already published"; exit 1
+          fi
+          cat > signed/RELEASE_INFO.txt <<EOF
+          Sanftwecker 0.9.8-beta (v27) approved worldwide world-clock search phone and Wear OS update
+          Android phone package: com.cobrachris.sanftwecker (v27)
+          Wear OS watch package: com.cobrachris.sanftwecker (v27)
+          Both use original v21 signing certificate.
+          Only owner-installed in-place APK updates. Phone and watch device tests still required.
+          Owner-approved source: $SOURCE_SHA
+          EOF
+          gh release create sanftwecker-v27 \
+            signed/sanftwecker-release.apk signed/sanftwecker-watch-v27.apk \
+            signed/SHA256SUMS.txt signed/RELEASE_INFO.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+            --title "Sanftwecker 0.9.8-beta: Weltweite Ortssuche (v27)" \
+            --notes 'Beta for phone and Galaxy Watch: worldwide world-clock location search incl. Enfield CT, existing browser-free Watch APK downloader and alarm features. Update both existing apps with original signer; never uninstall. Device search/clock/watch hardware acceptance is still required.' \
+            --prerelease
+      - name: Always remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sanftwecker-original.p12"
