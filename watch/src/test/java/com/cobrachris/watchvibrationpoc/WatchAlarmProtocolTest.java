@@ -14,6 +14,38 @@ public final class WatchAlarmProtocolTest {
             "1:1794500000000:5:extra","1:evil:5","1:-1794500000000:5"
         })assertNull(bad,WatchAlarmProtocol.parse(bad));
     }
+    @Test public void snoozeIntervalIsTransmittedOnlyWhenExplicitlyEnabled(){
+        WatchAlarmProtocol.Packet old=WatchAlarmProtocol.parse("1:1794500000000:5");
+        assertNotNull(old);
+        assertEquals(0,old.snoozeMinutes);
+        assertFalse(old.cascade);
+        WatchAlarmProtocol.Packet cascadeLegacy=
+                WatchAlarmProtocol.parse("1:1794500000000:5:1");
+        assertNotNull(cascadeLegacy);
+        assertTrue(cascadeLegacy.cascade);
+        assertEquals(0,cascadeLegacy.snoozeMinutes);
+
+        WatchAlarmProtocol.Packet snooze=
+                WatchAlarmProtocol.parse("1:1794500000000:5:0:7");
+        assertNotNull(snooze);
+        assertFalse(snooze.cascade);
+        assertEquals(7,snooze.snoozeMinutes);
+
+        WatchAlarmProtocol.Packet cascadeSnooze=
+                WatchAlarmProtocol.parse("1:1794500000000:5:1:30");
+        assertNotNull(cascadeSnooze);
+        assertTrue(cascadeSnooze.cascade);
+        assertEquals(30,cascadeSnooze.snoozeMinutes);
+        assertEquals(0,WatchAlarmProtocol.parse("1:1794500000000:5:0:0").snoozeMinutes);
+        for(String bad:new String[]{
+            "1:1794500000000:5:1:31",
+            "1:1794500000000:5:1:-1",
+            "1:1794500000000:5:2:5",
+            "1:1794500000000:5:0:005",
+            "1:1794500000000:5:1:5:extra",
+            "1:1794500000000:5:0:999"
+        })assertNull(bad,WatchAlarmProtocol.parse(bad));
+    }
     @Test public void oldDisconnectedMessagesMustNotCauseLateAlarms(){
         long now=1794500000000L;
         assertTrue(WatchAlarmProtocol.nearTrigger(now,now));
