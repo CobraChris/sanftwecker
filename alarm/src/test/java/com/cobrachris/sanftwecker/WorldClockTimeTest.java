@@ -48,7 +48,7 @@ public final class WorldClockTimeTest {
         assertEquals("UTC+5:45",nepal.utcOffset);
     }
     @Test public void yesterdayAndTomorrowAreRelativeToDeviceZone(){
-        long when=timestamp("2026-11-10T11:00:00Z");
+        long when=timestamp("2026-11-10T05:00:00Z");
         WorldClockTime tokyo=WorldClockTime.at("Asia/Tokyo",when,
                 ZoneId.of("America/Los_Angeles"));
         assertEquals("Morgen",tokyo.dayDifference);
