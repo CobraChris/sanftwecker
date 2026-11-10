@@ -13,7 +13,7 @@ public final class WorldClockSelection {
     private WorldClockSelection(){}
 
     public static List<String> defaults(){
-        return Arrays.asList("Europe/Berlin","Asia/Tokyo",
+        return Arrays.asList("Europe/Berlin#hamburg","Asia/Tokyo",
                 "Europe/London","America/New_York");
     }
 
