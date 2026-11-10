@@ -53,6 +53,24 @@ public final class WatchCascadeTest {
         assertTrue(WatchCascade.strongAmplitudes(WatchCascade.SANFT)[1]<
                 WatchCascade.strongAmplitudes()[1]);
     }
+    @Test public void sanftPhaseOneIsAlmostImperceptibleAndPhaseTwoIsDistinctDoubleTap(){
+        long[] gentle=WatchCascade.gentleTimings(WatchCascade.SANFT);
+        int[] gentleAmps=WatchCascade.gentleAmplitudes(WatchCascade.SANFT);
+        long[] strong=WatchCascade.strongTimings(WatchCascade.SANFT);
+        int[] strongAmps=WatchCascade.strongAmplitudes(WatchCascade.SANFT);
+        assertArrayEquals(new long[]{0L,45L,17000L},gentle);
+        assertArrayEquals(new int[]{0,20,0},gentleAmps);
+        assertArrayEquals(new long[]{0L,250L,200L,250L,2500L},strong);
+        assertArrayEquals(new int[]{0,175,0,175,0},strongAmps);
+        // The strongly differentiated second stage must work even without amplitude control.
+        assertTrue(strong.length>=5);
+        assertTrue(strong[1]>gentle[1]*4);
+        assertTrue(strong[3]>gentle[1]*4);
+        assertTrue(strong[4]<gentle[2]/4);
+        assertTrue(strongAmps[1]>gentleAmps[1]*5);
+        assertFalse(WatchCascade.strong(WHEN,WHEN+59999L));
+        assertTrue(WatchCascade.strong(WHEN,WHEN+60000L));
+    }
     @Test public void legacyNormalPatternIsByteForByteUnchanged(){
         assertArrayEquals(new long[]{0L,110L,9000L},WatchCascade.gentleTimings(WatchCascade.NORMAL));
         assertArrayEquals(new int[]{0,48,0},WatchCascade.gentleAmplitudes(WatchCascade.NORMAL));

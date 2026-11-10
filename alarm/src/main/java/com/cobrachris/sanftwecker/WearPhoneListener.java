@@ -36,7 +36,7 @@ public final class WearPhoneListener extends WearableListenerService {
         }
         if(!WearAlarmBridge.ACK.equals(event.getPath()))return;
         String value=new String(event.getData(),StandardCharsets.UTF_8);
-        if(value.length()>96||!value.matches("(STARTED|STOPPED|NO_VIBRATOR|SCHEDULED):[0-9]{1,4}"))
+        if(!WatchAcknowledgement.valid(value))
             return;
         AlarmRepository.diagnostic(this,"Wear OS direkt: "+value);
         getSharedPreferences("sanftwecker_watch_native",MODE_PRIVATE).edit()

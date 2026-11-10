@@ -33,7 +33,18 @@ public final class WatchMainActivity extends Activity {
         int activeId=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
                 .getInt("id",0);
         if(when>0&&activeId>0){
-            status.setText("Sanftwecker klingelt");
+            boolean cascade=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
+                    .getBoolean("cascade",false);
+            int intensity=WatchCascade.safeIntensity(
+                    getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
+                    .getInt("watch_intensity",WatchCascade.NORMAL));
+            if(cascade){
+                String profile=intensity==WatchCascade.SANFT?"Sanft":
+                        intensity==WatchCascade.INTENSIV?"Intensiv":"Normal";
+                String phase=WatchCascade.strong(when,System.currentTimeMillis())
+                        ?"Phase 2 – deutlich":"Phase 1 – leise";
+                status.setText("Sanftwecker klingelt\n"+profile+" · "+phase);
+            }else status.setText("Sanftwecker klingelt");
             snooze.setVisibility(snoozeMinutes>0?View.VISIBLE:View.GONE);
             snooze.setText("Schlummern · "+snoozeMinutes+" Min.");
         }else{
