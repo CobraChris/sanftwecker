@@ -22,29 +22,29 @@ public final class WatchCascade {
 
     public static long[] gentleTimings(int intensity){
         switch(safeIntensity(intensity)){
-            case SANFT: return new long[]{0L,65L,12500L};
+            case SANFT: return new long[]{0L,45L,17000L};
             case INTENSIV: return new long[]{0L,140L,6500L};
             default: return new long[]{0L,110L,9000L};
         }
     }
     public static int[] gentleAmplitudes(int intensity){
         switch(safeIntensity(intensity)){
-            case SANFT: return new int[]{0,28,0};
+            case SANFT: return new int[]{0,20,0};
             case INTENSIV: return new int[]{0,80,0};
             default: return new int[]{0,48,0};
         }
     }
-    /** Timings remain distinct even on watches without amplitude control. */
+    /** Phase 2 uses a recognizable double pulse, even without amplitude control. */
     public static long[] strongTimings(int intensity){
         switch(safeIntensity(intensity)){
-            case SANFT: return new long[]{0L,200L,2000L};
+            case SANFT: return new long[]{0L,250L,200L,250L,2500L};
             case INTENSIV: return new long[]{0L,1000L,80L,1000L,80L,1000L,160L};
             default: return new long[]{0L,850L,120L,850L,120L,850L,250L,850L,400L};
         }
     }
     public static int[] strongAmplitudes(int intensity){
         switch(safeIntensity(intensity)){
-            case SANFT: return new int[]{0,130,0};
+            case SANFT: return new int[]{0,175,0,175,0};
             case INTENSIV: return new int[]{0,255,0,255,0,255,0};
             default: return new int[]{0,255,0,255,0,255,0,255,0};
         }
