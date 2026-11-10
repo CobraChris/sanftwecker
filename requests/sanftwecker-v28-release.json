@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v28",
+  "request_id": "2026-11-10-owner-approved-adjustable-watch-cascade",
+  "expected_version_code": 28,
+  "source_sha": "6740839115a8e04b1840ffd6ba06fe62bc646491",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V28_WITH_EXISTING_V27_CERTIFICATE"
+}
