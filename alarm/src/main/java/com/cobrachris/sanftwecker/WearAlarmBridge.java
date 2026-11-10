@@ -18,6 +18,7 @@ public final class WearAlarmBridge {
     public static final String STATE=PREFIX+"/state";
     public static final String RING=PREFIX+"/ring";
     public static final String STOP=PREFIX+"/stop";
+    public static final String SNOOZE=PREFIX+"/snooze";
     public static final String ACK=PREFIX+"/ack";
     public static final int TEST_SLOT=1001, SNOOZE_SLOT=1002;
     private WearAlarmBridge() {}
@@ -30,6 +31,11 @@ public final class WearAlarmBridge {
 
     static String packet(int id,long when,int minutes,boolean cascade){
         return packet(id,when,minutes)+(cascade?":1":"");
+    }
+    static String packet(int id,long when,int minutes,boolean cascade,int snoozeMinutes){
+        if(snoozeMinutes<0||snoozeMinutes>30)
+            throw new IllegalArgumentException("Invalid snooze minutes");
+        return packet(id,when,minutes)+":"+(cascade?1:0)+":"+snoozeMinutes;
     }
     /** Fail-safe: a disconnected watch does not interfere with phone scheduling. */
     public static void schedule(Context c,int slot,int alarmId,long when){
@@ -45,6 +51,7 @@ public final class WearAlarmBridge {
             data.putInt("minutes",enabled?
                     Math.min(Math.max(p.autoStopMinutes,p.cascadeEnabled?2:1),15):0);
             data.putBoolean("cascade",enabled&&p.cascadeEnabled);
+            data.putInt("snooze_minutes",enabled&&p.snoozeEnabled?p.snoozeMinutes:0);
             data.putString("name",p==null?"Sanftwecker":p.name);
             data.putLong("revision",System.nanoTime());
             Wearable.getDataClient(c.getApplicationContext())
@@ -60,18 +67,19 @@ public final class WearAlarmBridge {
         AlarmProfile p=AlarmRepository.get(c,id);
         if(p==null||(p.watchPulses<=0&&!p.cascadeEnabled))return;
         int duration=Math.min(Math.max(minutes,p.cascadeEnabled?2:1),15);
-        send(c,RING,packet(id,when,duration,p.cascadeEnabled));
-        state(c,id,when,true,p.cascadeEnabled,duration);
+        int snooze=p.snoozeEnabled?p.snoozeMinutes:0;
+        send(c,RING,packet(id,when,duration,p.cascadeEnabled,snooze));
+        state(c,id,when,true,p.cascadeEnabled,duration,snooze);
     }
 
     public static void alarmStopped(Context c,int id,long when){
         if(when<=0||id<1||id>AlarmProfile.MAX_ALARMS)return;
         send(c,STOP,packet(id,when,1));
-        state(c,id,when,false,false,1);
+        state(c,id,when,false,false,1,0);
     }
 
     private static void state(Context c,int id,long when,boolean ringing,
-            boolean cascade,int minutes){
+            boolean cascade,int minutes,int snoozeMinutes){
         try{
             PutDataMapRequest request=PutDataMapRequest.create(STATE);
             DataMap map=request.getDataMap();
@@ -79,6 +87,7 @@ public final class WearAlarmBridge {
             map.putBoolean("ringing",ringing);
             map.putBoolean("cascade",cascade);
             map.putInt("minutes",minutes);
+            map.putInt("snooze_minutes",snoozeMinutes);
             map.putLong("revision",System.nanoTime());
             Wearable.getDataClient(c.getApplicationContext()).putDataItem(
                     request.asPutDataRequest().setUrgent())
