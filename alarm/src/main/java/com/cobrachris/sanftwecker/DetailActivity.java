@@ -28,7 +28,7 @@ public final class DetailActivity extends Activity {
     private final TextView[] chips=new TextView[7];
     private final boolean[] days=new boolean[7];
     private Switch enabled,rising,watch,snoozeEnabled,audibleWhenMuted,cascade;
-    private Spinner vibration;
+    private Spinner vibration,watchIntensity;
     private SeekBar delay,ramp,volume,pulses,interval,snooze,autoStop;
     private TextView delayLabel,rampLabel,volumeLabel,pulsesLabel,intervalLabel,snoozeLabel,stopLabel;
 
@@ -265,6 +265,23 @@ public final class DetailActivity extends Activity {
             changed();
         });
         rowSwitch(wrist,"Uhr benachrichtigen",watch);
+        wrist.addView(UiKit.label(this,
+                "Watch-Vibration bei zweistufiger Kaskade (pro Wecker)",15,UiKit.MUTED));
+        watchIntensity=new Spinner(this);
+        watchIntensity.setContentDescription("Watch-Intensität auswählen");
+        watchIntensity.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item,WatchIntensity.LABELS));
+        wrist.addView(watchIntensity);
+        watchIntensity.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(AdapterView<?> parent,View view,int pos,long key){
+                changed();
+            }
+            public void onNothingSelected(AdapterView<?> parent){}
+        });
+        wrist.addView(UiKit.label(this,
+                "Sanft: kürzere, seltenere Impulse. Normal: wie bisher in v27. "+
+                "Intensiv: deutlichere Impulse. Nur nach ✓ Speichern aktiv. "+
+                "Die tatsächliche Stärke hängt von der Uhr ab.",13,UiKit.MUTED));
         pulsesLabel=label("",15);wrist.addView(pulsesLabel);
         pulses=slider(wrist,12);
         intervalLabel=label("",15);wrist.addView(intervalLabel);
@@ -283,8 +300,8 @@ public final class DetailActivity extends Activity {
         wrist.addView(UiKit.label(this,"Du kannst 3, 5, 10 bis 120 Sekunden "+
                 "Abstand wählen. Sehr schnelle Impulse werden eventuell durch "+
                 "Android oder Samsung gedämpft oder zusammengefasst. "+
-                "Die Watch-Stärke bleibt unverändert. "+
-                "Für durchgehende Watch-Vibration wäre eine Wear-OS-App erforderlich.",
+                "Bei Kaskaden nutzt die Uhr das oben gewählte Intensitätsprofil. "+
+                "Die Musterstärke bleibt von der Hardware abhängig.",
                 13,UiKit.MUTED));
 
         LinearLayout end=section(root,"Schlummern & Stoppen");
@@ -393,6 +410,7 @@ public final class DetailActivity extends Activity {
         audibleWhenMuted.setChecked(p.audibleWhenMuted);
         cascade.setChecked(p.cascadeEnabled);
         watch.setChecked(p.watchPulses>0);
+        watchIntensity.setSelection(p.watchIntensity);
         pulses.setProgress(p.watchPulses);
         interval.setProgress(WatchIntervals.progressFor(p.watchIntervalSeconds));
         snoozeEnabled.setChecked(p.snoozeEnabled);
@@ -413,7 +431,8 @@ public final class DetailActivity extends Activity {
                 autoStop.getProgress()+1,changedTime?0:saved.skipAt,
                 changedTime?0:saved.oneTimeAt,changedTime?0:saved.replacedAt,
                 snoozeEnabled.isChecked(),vibration.getSelectedItemPosition(),
-                audibleWhenMuted.isChecked(),cascade.isChecked());
+                audibleWhenMuted.isChecked(),cascade.isChecked(),
+                watchIntensity.getSelectedItemPosition());
     }
 
     private boolean save(){

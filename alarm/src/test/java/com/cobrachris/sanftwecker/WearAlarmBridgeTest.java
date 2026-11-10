@@ -43,4 +43,20 @@ public final class WearAlarmBridgeTest {
             catch(IllegalArgumentException expected){}
         }
     }
+    @Test public void v28OnlyAddsBoundedIntensityWithoutChangingLegacyPayload(){
+        long t=1794500000000L;
+        assertEquals("1:1794500000000:5:1:7",
+                WearAlarmBridge.packet(1,t,5,true,7));
+        assertEquals("1:1794500000000:5:1:7:0",
+                WearAlarmBridge.packet(1,t,5,true,7,WatchIntensity.SANFT));
+        assertEquals("1:1794500000000:5:1:7:1",
+                WearAlarmBridge.packet(1,t,5,true,7,WatchIntensity.NORMAL));
+        assertEquals("1:1794500000000:5:1:7:2",
+                WearAlarmBridge.packet(1,t,5,true,7,WatchIntensity.INTENSIV));
+        try{
+            WearAlarmBridge.packet(1,t,5,true,7,3);
+            fail();
+        }catch(IllegalArgumentException expected){}
+    }
+
 }

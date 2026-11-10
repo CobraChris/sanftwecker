@@ -36,7 +36,7 @@ public final class WatchAlarmService extends Service {
     private PowerManager.WakeLock wake;
     private Vibrator vibrator;
     private long activeWhen;
-    private int activeId,activeSnoozeMinutes;
+    private int activeId,activeSnoozeMinutes,activeIntensity=WatchCascade.NORMAL;
     private boolean activeCascade,snoozePending,snoozeConnectionError;
     private String activeTitle="Sanftwecker";
     private final Runnable snoozeTimeout=()->{
@@ -50,7 +50,8 @@ public final class WatchAlarmService extends Service {
     private final Runnable escalate=()->{
         if(activeWhen>0 && activeCascade && vibrator!=null){
             try{
-                applyHaptic(WatchCascade.strongTimings(),WatchCascade.strongAmplitudes());
+                applyHaptic(WatchCascade.strongTimings(activeIntensity),
+                        WatchCascade.strongAmplitudes(activeIntensity));
                 sendAck("CASCADE_STRONG",activeId);
             }catch(RuntimeException failure){
                 Log.w("SanftweckerWatch","Phase two vibration unavailable",failure);
@@ -67,13 +68,19 @@ public final class WatchAlarmService extends Service {
     }
     public static void start(Context c,int id,long when,int minutes,String title,
             boolean cascade,int snoozeMinutes){
+        start(c,id,when,minutes,title,cascade,snoozeMinutes,WatchCascade.NORMAL);
+    }
+    public static void start(Context c,int id,long when,int minutes,String title,
+            boolean cascade,int snoozeMinutes,int intensity){
         if(id<1||id>1000||snoozeMinutes<0||snoozeMinutes>30||
+                !WatchCascade.validIntensity(intensity)||
                 !WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))return;
         Intent i=new Intent(c,WatchAlarmService.class).setAction(START)
                 .putExtra("id",id).putExtra("when",when)
                 .putExtra("minutes",Math.max(cascade?2:1,Math.min(minutes,15)))
                 .putExtra("title",title).putExtra("cascade",cascade)
-                .putExtra("snooze_minutes",snoozeMinutes);
+                .putExtra("snooze_minutes",snoozeMinutes)
+                .putExtra("watch_intensity",intensity);
         try{c.startForegroundService(i);}
         catch(RuntimeException error){
             Log.e("SanftweckerWatch","Unable to start local watch alarm service",error);
@@ -223,6 +230,10 @@ public final class WatchAlarmService extends Service {
         if(activeWhen!=0)stopHaptics(false);
         activeWhen=when;activeId=id;
         activeCascade=i.getBooleanExtra("cascade",false);
+        activeIntensity=activeCascade
+                ?WatchCascade.safeIntensity(i.getIntExtra(
+                        "watch_intensity",WatchCascade.NORMAL))
+                :WatchCascade.NORMAL;
         activeSnoozeMinutes=Math.max(0,Math.min(30,i.getIntExtra("snooze_minutes",0)));
         activeTitle=i.getStringExtra("title")==null?
                 "Sanftwecker":i.getStringExtra("title");
@@ -251,14 +262,14 @@ public final class WatchAlarmService extends Service {
                 // dense original strong rhythm. Both use USAGE_ALARM.
                 handler.removeCallbacks(escalate);
                 if(activeCascade && !WatchCascade.strong(when,System.currentTimeMillis())){
-                    applyHaptic(WatchCascade.gentleTimings(),
-                            WatchCascade.gentleAmplitudes());
+                    applyHaptic(WatchCascade.gentleTimings(activeIntensity),
+                            WatchCascade.gentleAmplitudes(activeIntensity));
                     handler.postDelayed(escalate,
                             WatchCascade.untilStrong(when,System.currentTimeMillis()));
                     sendAck("CASCADE_GENTLE",id);
                 }else{
-                    applyHaptic(WatchCascade.strongTimings(),
-                            WatchCascade.strongAmplitudes());
+                    applyHaptic(WatchCascade.strongTimings(activeIntensity),
+                            WatchCascade.strongAmplitudes(activeIntensity));
                 }
                 getSharedPreferences("watch_last_start",MODE_PRIVATE).edit()
                         .putLong("alarm_"+id,when).commit();
@@ -289,6 +300,7 @@ public final class WatchAlarmService extends Service {
         handler.removeCallbacks(escalate);
         handler.removeCallbacks(snoozeTimeout);
         activeCascade=false;snoozePending=false;snoozeConnectionError=false;
+        activeIntensity=WatchCascade.NORMAL;
         activeSnoozeMinutes=0;
         getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
                 .remove("id").remove("when").remove("snooze_minutes").commit();
