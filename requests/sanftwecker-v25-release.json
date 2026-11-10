@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v25",
+  "request_id": "2026-11-10-two-device-cascade-snooze-worldclock",
+  "expected_version_code": 25,
+  "source_sha": "a5a848bd143347f12d4d04a43bd2955cef4e75d2",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V25_WITH_EXISTING_V24_V23_CERTIFICATE"
+}
