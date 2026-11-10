@@ -10,6 +10,14 @@ public final class WakeCascadeTest {
         assertTrue(WakeCascade.strongStage(60_000L));
         assertTrue(WakeCascade.strongStage(120_000L));
     }
+    @Test public void phoneUsesScheduledOccurrenceEvenAfterLateServiceStart(){
+        long when=1_800_000_000_000L;
+        assertEquals(0L,WakeCascade.elapsedSinceAlarm(when,when-1000,10_000));
+        assertEquals(52_000L,WakeCascade.elapsedSinceAlarm(when,when+52_000L,1000));
+        assertEquals(8_000L,WakeCascade.untilStrong(when,when+52_000L,1000));
+        assertEquals(0L,WakeCascade.untilStrong(when,when+60_000L,1000));
+        assertEquals(1100L,WakeCascade.elapsedSinceAlarm(0,when,1100L));
+    }
     @Test public void existingShortTestAndPreviewRemainShort(){
         assertEquals(20_000L,WakeCascade.duration(true,true,true,20));
         assertEquals(30_000L,WakeCascade.duration(false,true,false,20));
