@@ -239,7 +239,7 @@ jobs:
             signed/sanftwecker-release.apk signed/sanftwecker-watch-v26.apk \
             signed/SHA256SUMS.txt signed/RELEASE_INFO.txt \
             --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
-            --title "Sanftwecker 0.9.7-beta: Weckkaskade, Watch-Schlummern & Weltuhr (v26)" \
+            --title "Sanftwecker 0.9.7-beta: Watch-Update ohne Browser (v26)" \
             --notes 'Beta for phone and Galaxy Watch: verified browser-free Watch APK downloader and existing alarm features. Update both existing apps with original signer; never uninstall. Hardware vibration and DND require owner device acceptance.' \
             --prerelease
       - name: Always remove temporary signing key
