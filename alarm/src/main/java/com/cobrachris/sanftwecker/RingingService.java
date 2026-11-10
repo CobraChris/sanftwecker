@@ -53,7 +53,10 @@ public final class RingingService extends Service {
     private final Runnable gainTick = new Runnable() {
         @Override public void run() {
             if (!active || audio == null) return;
-            long elapsed = SystemClock.elapsedRealtime() - startedAt;
+            long elapsed = profile.cascadeEnabled ?
+                    WakeCascade.elapsedSinceAlarm(ringWhen,System.currentTimeMillis(),
+                            SystemClock.elapsedRealtime()-startedAt) :
+                    SystemClock.elapsedRealtime()-startedAt;
             float gain = AlarmEnvelope.gain(profile,
                     toneOnlyPreview || (quickTest && !profile.cascadeEnabled), elapsed);
             try { audio.setVolume(gain); }
@@ -207,12 +210,15 @@ public final class RingingService extends Service {
                             profile.cascadeEnabled && ringId==expectedId &&
                             ringWhen==expectedWhen && startedAt==expectedStart &&
                             WakeCascade.strongStage(
-                                    SystemClock.elapsedRealtime()-startedAt)){
+                                    WakeCascade.elapsedSinceAlarm(
+                                            ringWhen,System.currentTimeMillis(),
+                                            SystemClock.elapsedRealtime()-startedAt))){
                         PhoneVibration.start(this,strongMode);
                         AlarmRepository.diagnostic(this,
                                 "Kaskade Phase 2: Handyvibration gestartet");
                     }
-                },WakeCascade.SECOND_STAGE_MS);
+                },WakeCascade.untilStrong(ringWhen,System.currentTimeMillis(),
+                        SystemClock.elapsedRealtime()-startedAt));
             }
             // Even if audio hardware fails, keep the watch alerts and stop/snooze controls.
             try {
