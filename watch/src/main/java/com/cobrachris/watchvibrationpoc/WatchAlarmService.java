@@ -230,8 +230,10 @@ public final class WatchAlarmService extends Service {
         if(activeWhen!=0)stopHaptics(false);
         activeWhen=when;activeId=id;
         activeCascade=i.getBooleanExtra("cascade",false);
-        activeIntensity=WatchCascade.safeIntensity(i.getIntExtra(
-                "watch_intensity",WatchCascade.NORMAL));
+        activeIntensity=activeCascade
+                ?WatchCascade.safeIntensity(i.getIntExtra(
+                        "watch_intensity",WatchCascade.NORMAL))
+                :WatchCascade.NORMAL;
         activeSnoozeMinutes=Math.max(0,Math.min(30,i.getIntExtra("snooze_minutes",0)));
         activeTitle=i.getStringExtra("title")==null?
                 "Sanftwecker":i.getStringExtra("title");
