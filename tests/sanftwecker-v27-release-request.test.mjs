@@ -17,7 +17,7 @@ const valid={
 
 test('v27 approval must explicitly authorize both APKs with original signers',()=>{
   assert.deepEqual(validateRequest(valid),
-    {source_sha:source,expected_version_code:'26'});
+    {source_sha:source,expected_version_code:'27'});
   for(const update of [
     {expected_version_code:26},{expected_version_code:28},{source_sha:'main'},
     {source_sha:'C'.repeat(40)},{source_sha:'a'.repeat(41)},
@@ -79,7 +79,7 @@ test('dual-device signed v27 release requires explicit future approval',()=>{
     "versionCode='26'",
     "versionCode='27'",
     'assert expected==27',
-    'assert e[\'versionCode\']==26',
+    'assert e[\'versionCode\']==27',
     'android.hardware.type.watch',
     'APP_SIGNING_KEYSTORE_BASE64',
     'APP_SIGNING_STORE_PASSWORD',
