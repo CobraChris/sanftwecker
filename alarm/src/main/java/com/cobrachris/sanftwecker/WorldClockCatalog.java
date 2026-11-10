@@ -158,6 +158,30 @@ public final class WorldClockCatalog {
                 .replaceAll("\\p{M}+","").replace("ß","ss");
     }
 
+    /** Restore a previously selected worldwide place, or register a new search result. */
+    public static City registerOnlineCity(City city){
+        if(city==null || city.id==null ||
+                !city.id.matches("geo:[1-9][0-9]{0,15}") ||
+                city.name==null || city.name.trim().isEmpty() ||
+                city.name.length()>100 || city.country==null ||
+                city.country.trim().isEmpty() || city.country.length()>140 ||
+                city.zone==null || !isRegionZone(city.zone) ||
+                !ZoneId.getAvailableZoneIds().contains(city.zone))
+            throw new IllegalArgumentException("Ungültiger Weltuhr-Ort");
+        init();
+        synchronized(WorldClockCatalog.class){
+            City known=byZone.get(city.id);
+            if(known!=null)return known;
+            Map<String,City> next=new HashMap<>(byZone);
+            next.put(city.id,city);
+            List<City> list=new ArrayList<>(cached);
+            list.add(city);
+            byZone=Collections.unmodifiableMap(next);
+            cached=Collections.unmodifiableList(list);
+            return city;
+        }
+    }
+
     public static boolean isSelectable(String zone){
         return get(zone)!=null;
     }
