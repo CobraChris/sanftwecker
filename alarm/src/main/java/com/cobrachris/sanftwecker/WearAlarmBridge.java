@@ -76,7 +76,11 @@ public final class WearAlarmBridge {
         if(p==null||(p.watchPulses<=0&&!p.cascadeEnabled))return;
         int duration=Math.min(Math.max(minutes,p.cascadeEnabled?2:1),15);
         int snooze=p.snoozeEnabled?p.snoozeMinutes:0;
-        send(c,RING,packet(id,when,duration,p.cascadeEnabled,snooze,p.watchIntensity));
+        // Normal stays wire-compatible with the v27 watch during staggered updates.
+        String payload=p.watchIntensity==WatchIntensity.NORMAL
+                ?packet(id,when,duration,p.cascadeEnabled,snooze)
+                :packet(id,when,duration,p.cascadeEnabled,snooze,p.watchIntensity);
+        send(c,RING,payload);
         state(c,id,when,true,p.cascadeEnabled,duration,snooze,p.watchIntensity);
     }
 
