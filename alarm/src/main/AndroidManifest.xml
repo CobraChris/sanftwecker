@@ -36,6 +36,7 @@
         <activity android:name=".TimerActivity" android:exported="false"/>
         <activity android:name=".TimerDetailActivity" android:exported="false"/>
         <activity android:name=".StopwatchActivity" android:exported="false"/>
+        <activity android:name=".WorldClockActivity" android:exported="false"/>
         <activity android:name=".AlarmActivity" android:exported="false"
             android:showWhenLocked="true" android:turnScreenOn="true"/>
         <receiver android:name=".AlarmReceiver" android:exported="false"/>
