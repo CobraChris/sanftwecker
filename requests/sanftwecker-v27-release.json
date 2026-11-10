@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v27",
+  "request_id": "2026-11-10-approved-world-clock-global-search",
+  "expected_version_code": 27,
+  "source_sha": "a494ba19e08b2014a89b9efcc35a5755f8ce2e75",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V27_WITH_EXISTING_V26_CERTIFICATE"
+}
