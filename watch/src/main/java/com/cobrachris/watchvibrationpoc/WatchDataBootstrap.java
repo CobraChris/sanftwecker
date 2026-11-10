@@ -39,7 +39,8 @@ public final class WatchDataBootstrap {
                 WatchScheduleStore.plan(c,slot,id,map.getLong("when"),
                         map.getString("name"),map.getInt("minutes"),
                         map.getBoolean("cascade",false),
-                        map.getInt("snooze_minutes",0));
+                        map.getInt("snooze_minutes",0),
+                        WatchCascade.safeIntensity(map.getInt("watch_intensity",WatchCascade.NORMAL)));
             }else if(WatchAlarmProtocol.STATE.equals(path)){
                 int id=map.getInt("id");
                 long when=map.getLong("when");
@@ -49,7 +50,8 @@ public final class WatchDataBootstrap {
                         WatchAlarmService.start(c,id,when,
                                 Math.max(1,map.getInt("minutes",5)),
                                 "Sanftwecker",map.getBoolean("cascade",false),
-                                map.getInt("snooze_minutes",0));
+                                map.getInt("snooze_minutes",0),
+                                WatchCascade.safeIntensity(map.getInt("watch_intensity",WatchCascade.NORMAL)));
                 }else {
                     android.content.Intent stop=new android.content.Intent(
                             c,WatchAlarmService.class).setAction(WatchAlarmService.STOP)
