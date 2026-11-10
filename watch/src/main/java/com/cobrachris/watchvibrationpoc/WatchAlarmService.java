@@ -31,20 +31,50 @@ public final class WatchAlarmService extends Service {
     private static final long MAX_DURATION=15*60_000L;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable finish=()->{stopHaptics(false);stopSelf();};
+    private final Runnable escalate=()->{
+        if(activeWhen>0 && activeCascade && vibrator!=null){
+            try{
+                applyHaptic(WatchCascade.strongTimings(),WatchCascade.strongAmplitudes());
+                sendAck("CASCADE_STRONG",activeId);
+            }catch(RuntimeException failure){
+                Log.w("SanftweckerWatch","Phase two vibration unavailable",failure);
+            }
+        }
+    };
     private PowerManager.WakeLock wake;
     private Vibrator vibrator;
     private long activeWhen;
     private int activeId;
+    private boolean activeCascade;
 
     public static void start(Context c,int id,long when,int minutes,String title){
+        start(c,id,when,minutes,title,false);
+    }
+    public static void start(Context c,int id,long when,int minutes,String title,
+            boolean cascade){
         if(id<1||id>1000||!WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))return;
         Intent i=new Intent(c,WatchAlarmService.class).setAction(START)
                 .putExtra("id",id).putExtra("when",when)
-                .putExtra("minutes",Math.max(1,Math.min(minutes,15)))
-                .putExtra("title",title);
+                .putExtra("minutes",Math.max(cascade?2:1,Math.min(minutes,15)))
+                .putExtra("title",title).putExtra("cascade",cascade);
         try{c.startForegroundService(i);}
         catch(RuntimeException error){
             Log.e("SanftweckerWatch","Unable to start local watch alarm service",error);
+        }
+    }
+    private void applyHaptic(long[] timings,int[] amplitudes){
+        if(vibrator==null)return;
+        VibrationEffect effect=vibrator.hasAmplitudeControl()
+                ? VibrationEffect.createWaveform(timings,amplitudes,0)
+                : VibrationEffect.createWaveform(timings,0);
+        if(Build.VERSION.SDK_INT>=33){
+            VibrationAttributes attrs=new VibrationAttributes.Builder()
+                    .setUsage(VibrationAttributes.USAGE_ALARM).build();
+            vibrator.vibrate(effect,attrs);
+        }else{
+            AudioAttributes attrs=new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM).build();
+            vibrator.vibrate(effect,attrs);
         }
     }
     private PendingIntent stopAction(){
@@ -116,7 +146,9 @@ public final class WatchAlarmService extends Service {
         if(last==when)return START_NOT_STICKY;
         if(activeWhen!=0)stopHaptics(false);
         activeWhen=when;activeId=id;
-        int minutes=Math.max(1,Math.min(15,i.getIntExtra("minutes",5)));
+        activeCascade=i.getBooleanExtra("cascade",false);
+        int minutes=Math.max(activeCascade?2:1,
+                Math.min(15,i.getIntExtra("minutes",5)));
         try{
             foreground(i.getStringExtra("title"));
             PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);
@@ -131,18 +163,19 @@ public final class WatchAlarmService extends Service {
             if(vibrator==null||!vibrator.hasVibrator()){
                 sendAck("NO_VIBRATOR",id);
             }else{
-                // On devices with no amplitude control, DEFAULT_AMPLITUDE still vibrates.
-                // The alarm USAGE tells Android/Samsung this is an actual clock alarm.
-                long[] pattern={0,850,120,850,120,850,250,850,400};
-                VibrationEffect effect=VibrationEffect.createWaveform(pattern,0);
-                if(Build.VERSION.SDK_INT>=33){
-                    VibrationAttributes attrs=new VibrationAttributes.Builder()
-                            .setUsage(VibrationAttributes.USAGE_ALARM).build();
-                    vibrator.vibrate(effect,attrs);
+                // Before the 60-second boundary, give sparse, short pulses at
+                // low amplitude when the motor supports it. Phase two has the
+                // dense original strong rhythm. Both use USAGE_ALARM.
+                handler.removeCallbacks(escalate);
+                if(activeCascade && !WatchCascade.strong(when,System.currentTimeMillis())){
+                    applyHaptic(WatchCascade.gentleTimings(),
+                            WatchCascade.gentleAmplitudes());
+                    handler.postDelayed(escalate,
+                            WatchCascade.untilStrong(when,System.currentTimeMillis()));
+                    sendAck("CASCADE_GENTLE",id);
                 }else{
-                    AudioAttributes attrs=new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM).build();
-                    vibrator.vibrate(effect,attrs);
+                    applyHaptic(WatchCascade.strongTimings(),
+                            WatchCascade.strongAmplitudes());
                 }
                 getSharedPreferences("watch_last_start",MODE_PRIVATE).edit()
                         .putLong("alarm_"+id,when).commit();
@@ -170,6 +203,8 @@ public final class WatchAlarmService extends Service {
     }
     private void stopHaptics(boolean acknowledged){
         handler.removeCallbacks(finish);
+        handler.removeCallbacks(escalate);
+        activeCascade=false;
         if(vibrator!=null)vibrator.cancel();
         vibrator=null;
         if(wake!=null&&wake.isHeld())wake.release();
