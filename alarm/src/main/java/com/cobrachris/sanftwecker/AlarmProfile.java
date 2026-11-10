@@ -6,7 +6,7 @@ public final class AlarmProfile {
     public static final int COUNT = 3;
     public static final int MAX_ALARMS = 1000;
     public final int id, hour, minute, days, delaySeconds, rampSeconds, maxVolume;
-    public final int watchPulses, watchIntervalSeconds, snoozeMinutes, tone, autoStopMinutes;
+    public final int watchPulses, watchIntervalSeconds, snoozeMinutes, tone, autoStopMinutes, watchIntensity;
     public final String name;
     public final boolean enabled, rampEnabled, snoozeEnabled, audibleWhenMuted, cascadeEnabled;
     /** 0 = previous notification pattern, 1..4 = customizable haptics. */
@@ -72,11 +72,23 @@ public final class AlarmProfile {
             boolean rampEnabled, int autoStopMinutes, long skipAt, long oneTimeAt,
             long replacedAt, boolean snoozeEnabled, int vibrationMode,
             boolean audibleWhenMuted, boolean cascadeEnabled) {
+        this(id,name,enabled,hour,minute,days,delaySeconds,rampSeconds,maxVolume,
+                watchPulses,watchIntervalSeconds,snoozeMinutes,tone,rampEnabled,autoStopMinutes,
+                skipAt,oneTimeAt,replacedAt,snoozeEnabled,vibrationMode,audibleWhenMuted,
+                cascadeEnabled,WatchIntensity.NORMAL);
+    }
+
+    public AlarmProfile(int id, String name, boolean enabled, int hour, int minute,
+            int days, int delaySeconds, int rampSeconds, int maxVolume,
+            int watchPulses, int watchIntervalSeconds, int snoozeMinutes, int tone,
+            boolean rampEnabled, int autoStopMinutes, long skipAt, long oneTimeAt,
+            long replacedAt, boolean snoozeEnabled, int vibrationMode,
+            boolean audibleWhenMuted, boolean cascadeEnabled, int watchIntensity) {
         if (id < 1 || id > MAX_ALARMS || hour < 0 || hour > 23 || minute < 0 || minute > 59
                 || (days & 0x7f) == 0 || (days & ~0x7f) != 0
                 || delaySeconds < 0 || delaySeconds > 300 || rampSeconds < 60
                 || rampSeconds > 1800 || maxVolume < 1 || maxVolume > 100
-                || watchPulses < 0 || watchPulses > 12 || !WatchIntervals.isSupported(watchIntervalSeconds) || snoozeMinutes < 1 || snoozeMinutes > 30
+                || watchPulses < 0 || watchPulses > 12 || !WatchIntervals.isSupported(watchIntervalSeconds) || !WatchIntensity.valid(watchIntensity) || snoozeMinutes < 1 || snoozeMinutes > 30
                 || !ToneCatalog.valid(tone) || autoStopMinutes < 1
                 || autoStopMinutes > 30 || vibrationMode < 0 || vibrationMode > 4 || skipAt < 0 || oneTimeAt < 0 || replacedAt < 0) {
             throw new IllegalArgumentException("Invalid alarm configuration");
@@ -101,6 +113,7 @@ public final class AlarmProfile {
         this.vibrationMode = vibrationMode;
         this.audibleWhenMuted = audibleWhenMuted;
         this.cascadeEnabled = cascadeEnabled;
+        this.watchIntensity = watchIntensity;
         this.autoStopMinutes = autoStopMinutes;
         this.skipAt = skipAt;
         this.oneTimeAt = oneTimeAt;
@@ -110,19 +123,19 @@ public final class AlarmProfile {
     public AlarmProfile withEnabled(boolean enabled) {
         return new AlarmProfile(id, name, enabled, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
-                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skipAt, oneTimeAt, replacedAt, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled);
+                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skipAt, oneTimeAt, replacedAt, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled, watchIntensity);
     }
 
     public AlarmProfile withExceptions(long skip, long once, long replaced) {
         return new AlarmProfile(id, name, enabled, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
-                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skip, once, replaced, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled);
+                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skip, once, replaced, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled, watchIntensity);
     }
 
     public AlarmProfile duplicateAs(int id) {
         return new AlarmProfile(id, name + " Kopie", false, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
-                snoozeMinutes, tone, rampEnabled, autoStopMinutes, 0, 0, 0, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled);
+                snoozeMinutes, tone, rampEnabled, autoStopMinutes, 0, 0, 0, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled, watchIntensity);
     }
 
     public boolean sameConfiguration(AlarmProfile b) {
@@ -136,6 +149,7 @@ public final class AlarmProfile {
                 rampEnabled == b.rampEnabled && autoStopMinutes == b.autoStopMinutes &&
                 snoozeEnabled == b.snoozeEnabled && vibrationMode == b.vibrationMode &&
                 audibleWhenMuted == b.audibleWhenMuted && cascadeEnabled == b.cascadeEnabled &&
+                watchIntensity == b.watchIntensity &&
                 skipAt == b.skipAt &&
                 oneTimeAt == b.oneTimeAt && replacedAt == b.replacedAt;
     }
