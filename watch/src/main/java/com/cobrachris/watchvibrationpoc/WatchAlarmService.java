@@ -26,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 public final class WatchAlarmService extends Service {
     public static final String START="com.cobrachris.sanftwecker.WATCH_START";
     public static final String STOP="com.cobrachris.sanftwecker.WATCH_STOP";
+    public static final String SNOOZE="com.cobrachris.sanftwecker.WATCH_SNOOZE";
+    public static final String ACTIVE_PREF="watch_alarm_current_v1";
     private static final String CHANNEL="sanftwecker_native_watch_alarm";
     private static final int NOTIFICATION_ID=4831;
     private static final long MAX_DURATION=15*60_000L;
@@ -34,8 +36,17 @@ public final class WatchAlarmService extends Service {
     private PowerManager.WakeLock wake;
     private Vibrator vibrator;
     private long activeWhen;
-    private int activeId;
-    private boolean activeCascade;
+    private int activeId,activeSnoozeMinutes;
+    private boolean activeCascade,snoozePending,snoozeConnectionError;
+    private String activeTitle="Sanftwecker";
+    private final Runnable snoozeTimeout=()->{
+        if(activeWhen>0&&snoozePending){
+            snoozePending=false;
+            snoozeConnectionError=true;
+            foreground(activeTitle);
+            sendAck("SNOOZE_UNCONFIRMED",activeId);
+        }
+    };
     private final Runnable escalate=()->{
         if(activeWhen>0 && activeCascade && vibrator!=null){
             try{
@@ -52,11 +63,17 @@ public final class WatchAlarmService extends Service {
     }
     public static void start(Context c,int id,long when,int minutes,String title,
             boolean cascade){
-        if(id<1||id>1000||!WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))return;
+        start(c,id,when,minutes,title,cascade,0);
+    }
+    public static void start(Context c,int id,long when,int minutes,String title,
+            boolean cascade,int snoozeMinutes){
+        if(id<1||id>1000||snoozeMinutes<0||snoozeMinutes>30||
+                !WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))return;
         Intent i=new Intent(c,WatchAlarmService.class).setAction(START)
                 .putExtra("id",id).putExtra("when",when)
                 .putExtra("minutes",Math.max(cascade?2:1,Math.min(minutes,15)))
-                .putExtra("title",title).putExtra("cascade",cascade);
+                .putExtra("title",title).putExtra("cascade",cascade)
+                .putExtra("snooze_minutes",snoozeMinutes);
         try{c.startForegroundService(i);}
         catch(RuntimeException error){
             Log.e("SanftweckerWatch","Unable to start local watch alarm service",error);
@@ -84,6 +101,51 @@ public final class WatchAlarmService extends Service {
         return PendingIntent.getService(this,10,stop,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
+    private PendingIntent snoozeAction(){
+        Intent snooze=new Intent(this,WatchAlarmService.class).setAction(SNOOZE)
+                .putExtra("id",activeId).putExtra("when",activeWhen)
+                .putExtra("user",true);
+        return PendingIntent.getService(this,12,snooze,
+                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    private void requestSnooze(){
+        if(activeWhen<=0||activeSnoozeMinutes<=0||snoozePending)return;
+        final int id=activeId;
+        final long when=activeWhen;
+        snoozePending=true;
+        snoozeConnectionError=false;
+        foreground(activeTitle);
+        handler.removeCallbacks(snoozeTimeout);
+        // Do not stop the local alarm yet. Only the phone's confirmed STOP
+        // message means snoozing was actually scheduled on the handset.
+        try{
+            Wearable.getNodeClient(this).getConnectedNodes().addOnSuccessListener(nodes->{
+                if(nodes.isEmpty()){
+                    if(activeWhen==when&&activeId==id)rejectSnooze();
+                    return;
+                }
+                for(com.google.android.gms.wearable.Node node:nodes){
+                    Wearable.getMessageClient(this).sendMessage(node.getId(),
+                            WatchAlarmProtocol.SNOOZE,
+                            (id+":"+when+":1").getBytes(StandardCharsets.UTF_8))
+                            .addOnFailureListener(e->{
+                                if(activeWhen==when&&activeId==id)rejectSnooze();
+                            });
+                }
+            }).addOnFailureListener(e->{
+                if(activeWhen==when&&activeId==id)rejectSnooze();
+            });
+        }catch(RuntimeException e){
+            rejectSnooze();
+        }
+        handler.postDelayed(snoozeTimeout,8000L);
+    }
+    private void rejectSnooze(){
+        handler.removeCallbacks(snoozeTimeout);
+        snoozePending=false;
+        snoozeConnectionError=true;
+        if(activeWhen>0)foreground(activeTitle);
+    }
     private static PendingIntent openApp(Context c){
         return PendingIntent.getActivity(c,11,new Intent(c,WatchMainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -98,21 +160,35 @@ public final class WatchAlarmService extends Service {
             channel.setDescription("Lokaler Weckalarm mit direkter Vibrationssteuerung");
             nm.createNotificationChannel(channel);
         }
-        Notification n=new Notification.Builder(this,CHANNEL)
+        Notification.Builder builder=new Notification.Builder(this,CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setContentTitle(title==null?"Sanftwecker":title)
-                .setContentText("Uhralarm aktiv – zum Stoppen tippen")
+                .setContentText(snoozePending?"Schlummern wird am Handy bestätigt…":
+                        snoozeConnectionError?"Handy nicht erreicht – erneut versuchen":
+                        activeSnoozeMinutes>0?"Schlummern oder stoppen":
+                        "Uhralarm aktiv – zum Stoppen tippen")
                 .setContentIntent(openApp(this))
                 .setOngoing(true).setOnlyAlertOnce(true)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .addAction(new Notification.Action.Builder(
-                        android.R.drawable.ic_media_pause,"Stoppen",stopAction()).build())
-                .build();
-        startForeground(NOTIFICATION_ID,n,ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                .setVisibility(Notification.VISIBILITY_PUBLIC);
+        if(activeSnoozeMinutes>0&&!snoozePending)
+            builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_lock_idle_alarm,
+                    "Schlummern · "+activeSnoozeMinutes+" Min.",snoozeAction()).build());
+        builder.addAction(new Notification.Action.Builder(
+                android.R.drawable.ic_media_pause,"Stoppen",stopAction()).build());
+        startForeground(NOTIFICATION_ID,builder.build(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
     }
     @Override public int onStartCommand(Intent i,int flags,int startId){
         if(i==null)return START_NOT_STICKY;
+        if(SNOOZE.equals(i.getAction())){
+            long when=i.getLongExtra("when",0);
+            int id=i.getIntExtra("id",-1);
+            if(activeWhen==when&&activeId==id&&when>0&&
+                    i.getBooleanExtra("user",false))requestSnooze();
+            return START_NOT_STICKY;
+        }
         if(STOP.equals(i.getAction())){
             long when=i.getLongExtra("when",0);
             int id=i.getIntExtra("id",-1);
@@ -147,6 +223,13 @@ public final class WatchAlarmService extends Service {
         if(activeWhen!=0)stopHaptics(false);
         activeWhen=when;activeId=id;
         activeCascade=i.getBooleanExtra("cascade",false);
+        activeSnoozeMinutes=Math.max(0,Math.min(30,i.getIntExtra("snooze_minutes",0)));
+        activeTitle=i.getStringExtra("title")==null?
+                "Sanftwecker":i.getStringExtra("title");
+        snoozePending=false;snoozeConnectionError=false;
+        getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
+                .putInt("id",id).putLong("when",when)
+                .putInt("snooze_minutes",activeSnoozeMinutes).commit();
         int minutes=Math.max(activeCascade?2:1,
                 Math.min(15,i.getIntExtra("minutes",5)));
         try{
@@ -204,7 +287,11 @@ public final class WatchAlarmService extends Service {
     private void stopHaptics(boolean acknowledged){
         handler.removeCallbacks(finish);
         handler.removeCallbacks(escalate);
-        activeCascade=false;
+        handler.removeCallbacks(snoozeTimeout);
+        activeCascade=false;snoozePending=false;snoozeConnectionError=false;
+        activeSnoozeMinutes=0;
+        getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
+                .remove("id").remove("when").remove("snooze_minutes").commit();
         if(vibrator!=null)vibrator.cancel();
         vibrator=null;
         if(wake!=null&&wake.isHeld())wake.release();
