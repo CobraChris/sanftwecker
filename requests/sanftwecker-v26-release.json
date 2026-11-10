@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v26",
+  "request_id": "2026-11-10-browserless-watch-download",
+  "expected_version_code": 26,
+  "source_sha": "eee0f23005411f8ee10fed233f188490e6ecf9a5",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V26_WITH_EXISTING_V25_CERTIFICATE"
+}
