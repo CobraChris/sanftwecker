@@ -66,4 +66,22 @@ public final class WatchAlarmProtocolTest {
         assertFalse(WatchAlarmProtocol.validWhen(now+999,now));
         assertFalse(WatchAlarmProtocol.validWhen(now+367L*24*60*60*1000,now));
     }
+    @Test public void v28CarriesIntensityAndLegacyDefaultsToNormal(){
+        WatchAlarmProtocol.Packet old=WatchAlarmProtocol.parse("1:1794500000000:5:1:5");
+        assertNotNull(old);
+        assertEquals(WatchCascade.NORMAL,old.intensity);
+        for(int intensity=0;intensity<=2;intensity++){
+            WatchAlarmProtocol.Packet current=WatchAlarmProtocol.parse(
+                    "1:1794500000000:5:1:5:"+intensity);
+            assertNotNull(current);
+            assertTrue(current.cascade);
+            assertEquals(5,current.snoozeMinutes);
+            assertEquals(intensity,current.intensity);
+        }
+        for(String bad:new String[]{"1:1794500000000:5:1:5:3",
+                "1:1794500000000:5:1:5:-1","1:1794500000000:5:1:5:01",
+                "1:1794500000000:5:1:5:2:2"})
+            assertNull(bad,WatchAlarmProtocol.parse(bad));
+    }
+
 }
