@@ -114,11 +114,20 @@ public final class RingingService extends Service {
             int minutes = profile == null ? 5 : profile.snoozeMinutes;
             boolean snoozing = SNOOZE.equals(action) && active && !toneOnlyPreview &&
                     profile != null && profile.snoozeEnabled;
+            // Never replace a rejected snooze by an accidental permanent stop.
+            if (SNOOZE.equals(action) && !snoozing) {
+                AlarmRepository.diagnostic(this,
+                        "Schlummern abgewiesen: kein aktiver schlummerbarer Alarm");
+                return START_NOT_STICKY;
+            }
             if (snoozing) {
                 try { AlarmScheduler.snooze(this, id, minutes); }
                 catch (RuntimeException e) {
+                    // Keep the audible alarm and wrist alarm active if exact
+                    // scheduling failed. No misleading 'snoozed' state.
                     AlarmRepository.diagnostic(this, "FEHLER: Schlummeralarm konnte nicht geplant werden");
                     Log.e("Sanftwecker", "Snooze failed", e);
+                    return START_NOT_STICKY;
                 }
             }
             if (!snoozing) AlarmScheduler.cancelSnooze(this);

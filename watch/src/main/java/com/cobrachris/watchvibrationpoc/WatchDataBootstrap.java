@@ -38,7 +38,8 @@ public final class WatchDataBootstrap {
                 if(slot!=map.getInt("slot")||id<1||id>1000)return;
                 WatchScheduleStore.plan(c,slot,id,map.getLong("when"),
                         map.getString("name"),map.getInt("minutes"),
-                        map.getBoolean("cascade",false));
+                        map.getBoolean("cascade",false),
+                        map.getInt("snooze_minutes",0));
             }else if(WatchAlarmProtocol.STATE.equals(path)){
                 int id=map.getInt("id");
                 long when=map.getLong("when");
@@ -47,7 +48,8 @@ public final class WatchDataBootstrap {
                     if(WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))
                         WatchAlarmService.start(c,id,when,
                                 Math.max(1,map.getInt("minutes",5)),
-                                "Sanftwecker",map.getBoolean("cascade",false));
+                                "Sanftwecker",map.getBoolean("cascade",false),
+                                map.getInt("snooze_minutes",0));
                 }else {
                     android.content.Intent stop=new android.content.Intent(
                             c,WatchAlarmService.class).setAction(WatchAlarmService.STOP)
