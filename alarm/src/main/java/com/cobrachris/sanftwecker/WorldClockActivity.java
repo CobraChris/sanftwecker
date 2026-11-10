@@ -234,6 +234,11 @@ public final class WorldClockActivity extends Activity {
         android.widget.Button globalSearch=UiKit.button(this,
                 "Weltweit suchen (Internet)",false);
         body.addView(globalSearch);
+        query.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        query.setOnEditorActionListener((text,action,event)->{
+            globalSearch.performClick();
+            return true;
+        });
         TextView count=UiKit.label(this,"",12,UiKit.MUTED);
         body.addView(count);
         ListView list=new ListView(this);
@@ -329,6 +334,10 @@ public final class WorldClockActivity extends Activity {
                 return;
             }
             final int request=++generation[0];
+            android.view.inputmethod.InputMethodManager keyboard=
+                    (android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            if(keyboard!=null)keyboard.hideSoftInputFromWindow(query.getWindowToken(),0);
+            query.clearFocus();
             globalSearch.setEnabled(false);
             count.setText("Weltweite Suche läuft …");
             executor.execute(()->{
