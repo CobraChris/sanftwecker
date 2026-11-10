@@ -23,7 +23,8 @@ public final class SanftweckerWearListener extends WearableListenerService {
         if(packet==null)return;
         if(WatchAlarmProtocol.RING.equals(event.getPath())&&
                 WatchAlarmProtocol.nearTrigger(packet.when,System.currentTimeMillis())){
-            WatchAlarmService.start(this,packet.id,packet.when,packet.minutes,"Sanftwecker");
+            WatchAlarmService.start(this,packet.id,packet.when,packet.minutes,
+                    "Sanftwecker",packet.cascade);
         }else if(WatchAlarmProtocol.STOP.equals(event.getPath()))
             stop(packet.id,packet.when,false);
     }

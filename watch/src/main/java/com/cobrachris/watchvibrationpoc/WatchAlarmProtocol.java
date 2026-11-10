@@ -14,17 +14,21 @@ public final class WatchAlarmProtocol {
     public static final class Packet {
         public final int id,minutes;
         public final long when;
-        Packet(int id,long when,int minutes){this.id=id;this.when=when;this.minutes=minutes;}
+        public final boolean cascade;
+        Packet(int id,long when,int minutes,boolean cascade){
+            this.id=id;this.when=when;this.minutes=minutes;
+            this.cascade=cascade;
+        }
     }
     public static Packet parse(String value){
-        if(value==null||!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[1-9][0-9]?"))
+        if(value==null||!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[1-9][0-9]?(?::1)?"))
             return null;
         try{
             String[] split=value.split(":");
             int id=Integer.parseInt(split[0]),minutes=Integer.parseInt(split[2]);
             long when=Long.parseLong(split[1]);
             if(id>1000||minutes>15)return null;
-            return new Packet(id,when,minutes);
+            return new Packet(id,when,minutes,split.length==4);
         }catch(NumberFormatException e){return null;}
     }
     public static boolean nearTrigger(long when,long now){

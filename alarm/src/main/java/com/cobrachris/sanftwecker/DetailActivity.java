@@ -27,7 +27,7 @@ public final class DetailActivity extends Activity {
     private Button fullScreenPermissionButton,tonePicker;
     private final TextView[] chips=new TextView[7];
     private final boolean[] days=new boolean[7];
-    private Switch enabled,rising,watch,snoozeEnabled,audibleWhenMuted;
+    private Switch enabled,rising,watch,snoozeEnabled,audibleWhenMuted,cascade;
     private Spinner vibration;
     private SeekBar delay,ramp,volume,pulses,interval,snooze,autoStop;
     private TextView delayLabel,rampLabel,volumeLabel,pulsesLabel,intervalLabel,snoozeLabel,stopLabel;
@@ -191,6 +191,26 @@ public final class DetailActivity extends Activity {
         Button preview=UiKit.button(this,"Tonprobe starten (20 Sek.)",false);
         music.addView(preview);
         preview.setOnClickListener(v->previewTone());
+
+        LinearLayout cascadeCard=section(root,"Weckkaskade (2 Stufen)");
+        cascade=UiKit.toggle(this);
+        cascade.setContentDescription("Weckkaskade mit sanftem Start und intensiver zweiter Minute");
+        cascade.setOnCheckedChangeListener((button,on)->changed());
+        rowSwitch(cascadeCard,"Zweistufige Weckkaskade",cascade);
+        cascadeCard.addView(UiKit.label(this,
+                "0–60 Sekunden: Handyton steigt langsam bis zu deinem gewählten Maximum. "+
+                "Die Galaxy Watch gibt nur kurze, leichte Vibrationsimpulse ab; das Handy "+
+                "vibriert noch nicht. Ab 60 Sekunden: Die Uhr wechselt zu kräftigen, "+
+                "dicht aufeinanderfolgenden Impulsen und das Handy beginnt zu vibrieren. "+
+                "Stoppen und Schlummern beenden beide Geräte.",
+                14,UiKit.MUTED));
+        cascadeCard.addView(UiKit.label(this,
+                "Nur bei aktiviertem Modus: Tonstart und Anstieg werden für diesen "+
+                "Weckvorgang durch die 60-Sekunden-Kaskade ersetzt. Deine alten "+
+                "Werte bleiben gespeichert. Für die Kaskade sind die neue Handy- "+
+                "und Watch-App erforderlich. Die tatsächliche Vibrationsstärke "+
+                "hängt von der Galaxy Watch und Androids Nicht-stören-Regeln ab.",
+                13,UiKit.MUTED));
 
         LinearLayout vibrationCard=section(root,"Vibration");
         vibrationCard.addView(UiKit.label(this,
@@ -371,6 +391,7 @@ public final class DetailActivity extends Activity {
         delay.setProgress(p.delaySeconds/10);ramp.setProgress(p.rampSeconds/60-1);
         volume.setProgress(p.maxVolume-5);
         audibleWhenMuted.setChecked(p.audibleWhenMuted);
+        cascade.setChecked(p.cascadeEnabled);
         watch.setChecked(p.watchPulses>0);
         pulses.setProgress(p.watchPulses);
         interval.setProgress(WatchIntervals.progressFor(p.watchIntervalSeconds));
@@ -392,7 +413,7 @@ public final class DetailActivity extends Activity {
                 autoStop.getProgress()+1,changedTime?0:saved.skipAt,
                 changedTime?0:saved.oneTimeAt,changedTime?0:saved.replacedAt,
                 snoozeEnabled.isChecked(),vibration.getSelectedItemPosition(),
-                audibleWhenMuted.isChecked());
+                audibleWhenMuted.isChecked(),cascade.isChecked());
     }
 
     private boolean save(){
@@ -446,8 +467,12 @@ public final class DetailActivity extends Activity {
             long when=AlarmScheduler.test(this,id);
             notice("Test geplant um "+new java.text.SimpleDateFormat("HH:mm:ss",
                     Locale.GERMANY).format(new Date(when))+". Bitte Handy sperren. "+
+                    (saved.cascadeEnabled ?
+                    "Kaskaden-Test: 60 Sekunden sanfter Ton und leichte Uhrvibration, "+
+                    "danach stärkere Uhr- und Handyvibration. Die Probe endet "+
+                    "nach insgesamt 150 Sekunden." :
                     "Dieser Kurztest umgeht die Tonverzögerung und "+
-                    "steigt innerhalb von 8 Sekunden auf Testlautstärke an.");
+                    "steigt innerhalb von 8 Sekunden auf Testlautstärke an."));
         }catch(RuntimeException e){notice("Test konnte nicht starten: "+e.getMessage());}
     }
 

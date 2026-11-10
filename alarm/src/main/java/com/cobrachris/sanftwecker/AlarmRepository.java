@@ -113,7 +113,8 @@ public final class AlarmRepository {
                 .putLong(k(a.id, "replaced"), a.replacedAt)
                 .putBoolean(k(a.id, "snooze_enabled"), a.snoozeEnabled)
                 .putInt(k(a.id, "vibration_mode"), a.vibrationMode)
-                .putBoolean(k(a.id, "audible_muted"), a.audibleWhenMuted);
+                .putBoolean(k(a.id, "audible_muted"), a.audibleWhenMuted)
+                .putBoolean(k(a.id, "wake_cascade"), a.cascadeEnabled);
     }
 
     public static synchronized List<Integer> ids(Context c) {
@@ -156,7 +157,8 @@ public final class AlarmRepository {
                     p.getLong(k(id, "replaced"), 0L),
                     p.getBoolean(k(id, "snooze_enabled"), true),
                     p.getInt(k(id, "vibration_mode"), 0),
-                    p.getBoolean(k(id, "audible_muted"), false));
+                    p.getBoolean(k(id, "audible_muted"), false),
+                    p.getBoolean(k(id, "wake_cascade"), false));
         } catch (RuntimeException invalid) {
             diagnostic(c, "WARNUNG: ungültiger Eintrag " + id + ", deaktiviert");
             return d.withEnabled(false);
@@ -201,7 +203,8 @@ public final class AlarmRepository {
         SharedPreferences.Editor e = p.edit().putString("ids", csv(found));
         String[] keys = {"name","enabled","hour","minute","days","delay","ramp","max",
                 "pulses","interval","snooze","tone","ramp_enabled","autostop",
-                "skip","once","replaced","next","snooze_enabled","vibration_mode","audible_muted"};
+                "skip","once","replaced","next","snooze_enabled","vibration_mode","audible_muted",
+                "wake_cascade"};
         for (String key : keys) e.remove(k(id,key));
         if (!e.commit()) throw new IllegalStateException("Could not delete alarm");
     }

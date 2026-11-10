@@ -33,8 +33,11 @@ public final class AlarmReceiver extends BroadcastReceiver {
 
         // Post the first watch alert directly from the exact-alarm receiver.
         // Even a failed foreground-service startup must not silently skip the watch alert.
-        if (profile.watchPulses > 0) {
-            WatchAlert.send(c, profile, 0); // Fallback for old notification-only watches.
+        if (profile.watchPulses > 0 || profile.cascadeEnabled) {
+            // Cascade uses the native watch service. Mirrored full-strength
+            // notifications would interfere with its gentle first minute.
+            if (!profile.cascadeEnabled)
+                WatchAlert.send(c, profile, 0); // Legacy watch fallback.
             WearAlarmBridge.alarmFired(c,id,when,profile.autoStopMinutes);
         }
         try {

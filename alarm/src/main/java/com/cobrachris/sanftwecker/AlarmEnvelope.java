@@ -10,6 +10,10 @@ public final class AlarmEnvelope {
             // No user-configured delay: the diagnostic ends before a long delay would elapse.
             return GentleGain.level(elapsedMs, 0, 8, Math.max(45, profile.maxVolume));
         }
+        // Opt-in cascade always begins immediately and reaches the chosen
+        // ceiling after exactly one minute; the tone frequency is unchanged.
+        if (profile.cascadeEnabled)
+            return GentleGain.level(elapsedMs, 0, 60, profile.maxVolume);
         return GentleGain.level(elapsedMs, profile.delaySeconds,
                 profile.rampEnabled ? profile.rampSeconds : 30, profile.maxVolume);
     }
