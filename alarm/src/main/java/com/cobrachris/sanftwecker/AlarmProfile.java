@@ -8,7 +8,7 @@ public final class AlarmProfile {
     public final int id, hour, minute, days, delaySeconds, rampSeconds, maxVolume;
     public final int watchPulses, watchIntervalSeconds, snoozeMinutes, tone, autoStopMinutes;
     public final String name;
-    public final boolean enabled, rampEnabled, snoozeEnabled, audibleWhenMuted;
+    public final boolean enabled, rampEnabled, snoozeEnabled, audibleWhenMuted, cascadeEnabled;
     /** 0 = previous notification pattern, 1..4 = customizable haptics. */
     public final int vibrationMode;
     /** Stored original occurrence to omit once; epoch milliseconds. */
@@ -60,6 +60,18 @@ public final class AlarmProfile {
             boolean rampEnabled, int autoStopMinutes, long skipAt, long oneTimeAt,
             long replacedAt, boolean snoozeEnabled, int vibrationMode,
             boolean audibleWhenMuted) {
+        this(id,name,enabled,hour,minute,days,delaySeconds,rampSeconds,maxVolume,
+                watchPulses,watchIntervalSeconds,snoozeMinutes,tone,rampEnabled,
+                autoStopMinutes,skipAt,oneTimeAt,replacedAt,snoozeEnabled,vibrationMode,
+                audibleWhenMuted,false);
+    }
+
+    public AlarmProfile(int id, String name, boolean enabled, int hour, int minute,
+            int days, int delaySeconds, int rampSeconds, int maxVolume,
+            int watchPulses, int watchIntervalSeconds, int snoozeMinutes, int tone,
+            boolean rampEnabled, int autoStopMinutes, long skipAt, long oneTimeAt,
+            long replacedAt, boolean snoozeEnabled, int vibrationMode,
+            boolean audibleWhenMuted, boolean cascadeEnabled) {
         if (id < 1 || id > MAX_ALARMS || hour < 0 || hour > 23 || minute < 0 || minute > 59
                 || (days & 0x7f) == 0 || (days & ~0x7f) != 0
                 || delaySeconds < 0 || delaySeconds > 300 || rampSeconds < 60
@@ -88,6 +100,7 @@ public final class AlarmProfile {
         this.snoozeEnabled = snoozeEnabled;
         this.vibrationMode = vibrationMode;
         this.audibleWhenMuted = audibleWhenMuted;
+        this.cascadeEnabled = cascadeEnabled;
         this.autoStopMinutes = autoStopMinutes;
         this.skipAt = skipAt;
         this.oneTimeAt = oneTimeAt;
@@ -97,19 +110,19 @@ public final class AlarmProfile {
     public AlarmProfile withEnabled(boolean enabled) {
         return new AlarmProfile(id, name, enabled, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
-                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skipAt, oneTimeAt, replacedAt, snoozeEnabled, vibrationMode, audibleWhenMuted);
+                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skipAt, oneTimeAt, replacedAt, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled);
     }
 
     public AlarmProfile withExceptions(long skip, long once, long replaced) {
         return new AlarmProfile(id, name, enabled, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
-                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skip, once, replaced, snoozeEnabled, vibrationMode, audibleWhenMuted);
+                snoozeMinutes, tone, rampEnabled, autoStopMinutes, skip, once, replaced, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled);
     }
 
     public AlarmProfile duplicateAs(int id) {
         return new AlarmProfile(id, name + " Kopie", false, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
-                snoozeMinutes, tone, rampEnabled, autoStopMinutes, 0, 0, 0, snoozeEnabled, vibrationMode, audibleWhenMuted);
+                snoozeMinutes, tone, rampEnabled, autoStopMinutes, 0, 0, 0, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled);
     }
 
     public boolean sameConfiguration(AlarmProfile b) {
@@ -122,7 +135,8 @@ public final class AlarmProfile {
                 snoozeMinutes == b.snoozeMinutes && tone == b.tone &&
                 rampEnabled == b.rampEnabled && autoStopMinutes == b.autoStopMinutes &&
                 snoozeEnabled == b.snoozeEnabled && vibrationMode == b.vibrationMode &&
-                audibleWhenMuted == b.audibleWhenMuted && skipAt == b.skipAt &&
+                audibleWhenMuted == b.audibleWhenMuted && cascadeEnabled == b.cascadeEnabled &&
+                skipAt == b.skipAt &&
                 oneTimeAt == b.oneTimeAt && replacedAt == b.replacedAt;
     }
 
