@@ -76,6 +76,11 @@ public final class UpdateActivity extends Activity {
         browser.setEnabled(false);
         root.addView(browser);
         browser.setOnClickListener(v->openBrowser());
+        Button watchDownload=UiKit.button(this,
+                "Galaxy Watch: APK ohne Browser laden",false);
+        root.addView(watchDownload);
+        watchDownload.setOnClickListener(v->startActivity(
+                new Intent(this,WatchUpdateActivity.class)));
         root.addView(UiKit.label(this,
                 "„Update installieren“ lädt die geprüfte APK direkt in der App herunter "+
                 "und öffnet den Android-Installationsdialog. Beim ersten Mal muss "+
@@ -133,7 +138,7 @@ public final class UpdateActivity extends Activity {
     }
 
     /** Read-only HTTPS GET; no APK bytes or credentials are downloaded here. */
-    private static String fetchReleases(String api) throws Exception {
+    static String fetchReleases(String api) throws Exception {
         HttpURLConnection conn=null;
         try{
             conn=(HttpURLConnection)new URL(api).openConnection();
