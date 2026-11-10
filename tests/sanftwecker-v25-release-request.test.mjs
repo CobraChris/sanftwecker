@@ -86,7 +86,7 @@ test('dual-device signed v25 release requires explicit future approval',()=>{
     'APP_SIGNING_KEY_ALIAS',
     'APP_SIGNING_KEY_PASSWORD',
     'gh release create sanftwecker-v25',
-    'Signed phone v24 and signed watch v23',
+    'Signed phone v24 and watch v23',
     '--prerelease'
   ];
   for(const token of checks)assert.ok(yml.includes(token),token);
