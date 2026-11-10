@@ -2,6 +2,8 @@ package com.cobrachris.sanftwecker;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,6 +25,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** Selectable offline world clock – no internet, background service, or permissions. */
 public final class WorldClockActivity extends Activity {
@@ -132,6 +136,11 @@ public final class WorldClockActivity extends Activity {
         cityName.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         location.addView(cityName);
         location.addView(UiKit.label(this,city.country,13,UiKit.MUTED));
+        if(city.id.startsWith("geo:")){
+            TextView credit=UiKit.label(this,"Ortsdaten: Open-Meteo / GeoNames ↗",11,UiKit.MUTED);
+            credit.setOnClickListener(v->openGeoCredits());
+            location.addView(credit);
+        }
         headline.addView(location,UiKit.weight());
 
         TextView up=UiKit.action(this,"↑");
@@ -201,6 +210,11 @@ public final class WorldClockActivity extends Activity {
         persist(WorldClockSelection.remove(selected,id));
     }
 
+    private void openGeoCredits(){
+        startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(
+                "https://open-meteo.com/en/docs/geocoding-api")));
+    }
+
     private void showCityPicker(){
         if(selected.size()>=WorldClockSelection.MAX_CITIES){
             new AlertDialog.Builder(this).setMessage(
@@ -214,16 +228,28 @@ public final class WorldClockActivity extends Activity {
         query.setSingleLine(true);
         query.setTextColor(UiKit.TEXT);
         query.setHintTextColor(UiKit.MUTED);
-        query.setHint("Stadt oder Zeitzone suchen");
+        query.setHint("Ort, z. B. Enfield CT");
         query.setTextSize(16);
         body.addView(query,new LinearLayout.LayoutParams(-1,-2));
+        android.widget.Button globalSearch=UiKit.button(this,
+                "Weltweit suchen (Internet)",false);
+        body.addView(globalSearch);
         TextView count=UiKit.label(this,"",12,UiKit.MUTED);
         body.addView(count);
         ListView list=new ListView(this);
         list.setDividerHeight(UiKit.dp(this,1));
         list.setBackgroundColor(UiKit.CARD);
-        body.addView(list,new LinearLayout.LayoutParams(-1,UiKit.dp(this,350)));
+        body.addView(list,new LinearLayout.LayoutParams(-1,UiKit.dp(this,310)));
+        TextView provider=UiKit.label(this,
+                "Online-Suche über Open-Meteo / GeoNames · danach offline ↗",
+                12,UiKit.MUTED);
+        provider.setOnClickListener(v->openGeoCredits());
+        body.addView(provider);
         List<WorldClockCatalog.City> matches=new ArrayList<>();
+        List<WorldClockCatalog.City> remoteResults=new ArrayList<>();
+        final String[] searchedTerm={""};
+        final int[] generation={0};
+        ExecutorService executor=Executors.newSingleThreadExecutor();
         List<String> names=new ArrayList<>();
         ArrayAdapter<String> adapter=new ArrayAdapter<String>(
                 this,android.R.layout.simple_list_item_1,names){
@@ -247,21 +273,35 @@ public final class WorldClockActivity extends Activity {
                 .create();
 
         Runnable refresh=()->{
+            String typed=query.getText().toString().trim();
+            Set<String> excluded=new HashSet<>(selected);
             matches.clear();
-            matches.addAll(WorldClockCatalog.search(query.getText().toString(),
-                    new HashSet<>(selected),60));
+            if(typed.equals(searchedTerm[0])){
+                for(WorldClockCatalog.City city:remoteResults){
+                    if(excluded.add(city.id))matches.add(city);
+                }
+            }
+            for(WorldClockCatalog.City city:WorldClockCatalog.search(typed,
+                    new HashSet<>(selected),60)){
+                if(excluded.add(city.id))matches.add(city);
+                if(matches.size()>=60)break;
+            }
             names.clear();
             for(WorldClockCatalog.City city:matches){
                 names.add(city.name+" · "+city.country+"\n"+city.zone);
             }
             adapter.notifyDataSetChanged();
-            count.setText(matches.isEmpty()?"Keine passende Stadt gefunden":
-                    query.length()==0?"Beliebte Städte · tippe zum Hinzufügen":
-                            matches.size()+" Treffer (weitere mit genauerer Suche)");
+            count.setText(typed.isEmpty()?"Beliebte Städte · tippe zum Hinzufügen":
+                    matches.isEmpty()?"Keine lokalen Treffer · tippe auf „Weltweit suchen“":
+                    matches.size()+" Treffer · weitere Orte über „Weltweit suchen“");
         };
         query.addTextChangedListener(new TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
             @Override public void onTextChanged(CharSequence s,int start,int before,int count){
+                generation[0]++;
+                remoteResults.clear();
+                searchedTerm[0]="";
+                globalSearch.setEnabled(true);
                 refresh.run();
             }
             @Override public void afterTextChanged(Editable e){}
@@ -270,6 +310,8 @@ public final class WorldClockActivity extends Activity {
             if(position<0||position>=matches.size())return;
             String choice=matches.get(position).id;
             try{
+                if(choice.startsWith("geo:"))
+                    WorldClockCatalog.registerOnlineCity(matches.get(position));
                 List<String> next=WorldClockSelection.add(selected,choice);
                 WorldClockStore.save(this,next);
                 selected=next;
@@ -279,6 +321,47 @@ public final class WorldClockActivity extends Activity {
                 new AlertDialog.Builder(this).setMessage(error.getMessage())
                         .setPositiveButton("OK",null).show();
             }
+        });
+        globalSearch.setOnClickListener(v->{
+            String term=query.getText().toString().trim();
+            if(term.length()<2 || term.length()>100){
+                count.setText("Bitte mindestens 2 und höchstens 100 Zeichen eingeben");
+                return;
+            }
+            final int request=++generation[0];
+            globalSearch.setEnabled(false);
+            count.setText("Weltweite Suche läuft …");
+            executor.execute(()->{
+                List<WorldClockCatalog.City> result=null;
+                String error=null;
+                try {
+                    result=WorldClockGeocoding.search(term);
+                } catch(Exception ex){
+                    error=ex.getMessage()==null?"Keine Verbindung":ex.getMessage();
+                }
+                final List<WorldClockCatalog.City> found=result;
+                final String problem=error;
+                handler.post(()->{
+                    if(!dialog.isShowing() || generation[0]!=request)return;
+                    globalSearch.setEnabled(true);
+                    if(problem!=null){
+                        count.setText("Online-Suche nicht möglich: "+problem);
+                        return;
+                    }
+                    searchedTerm[0]=term;
+                    remoteResults.clear();
+                    remoteResults.addAll(found);
+                    refresh.run();
+                    if(found.isEmpty())
+                        count.setText("Online kein passender Ort gefunden · genauer suchen");
+                    else
+                        count.setText(matches.size()+" Treffer · Ort zum Hinzufügen antippen");
+                });
+            });
+        });
+        dialog.setOnDismissListener(v->{
+            generation[0]++;
+            executor.shutdownNow();
         });
         refresh.run();
         dialog.show();
