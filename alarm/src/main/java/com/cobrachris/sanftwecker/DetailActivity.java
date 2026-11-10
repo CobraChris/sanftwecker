@@ -279,8 +279,9 @@ public final class DetailActivity extends Activity {
             public void onNothingSelected(AdapterView<?> parent){}
         });
         wrist.addView(UiKit.label(this,
-                "Sanft: kürzere, seltenere Impulse. Normal: wie bisher in v27. "+
-                "Intensiv: deutlichere Impulse. Nur nach ✓ Speichern aktiv. "+
+                "Sanft: ganz kurze Impulse mit langen Pausen; nach 60 Sekunden "+ 
+                "ein deutlicher Doppelimpuls. Normal: bisheriges Muster. "+
+                "Intensiv: kräftig. Nur nach ✓ Speichern aktiv. "+
                 "Die tatsächliche Stärke hängt von der Uhr ab.",13,UiKit.MUTED));
         pulsesLabel=label("",15);wrist.addView(pulsesLabel);
         pulses=slider(wrist,12);
