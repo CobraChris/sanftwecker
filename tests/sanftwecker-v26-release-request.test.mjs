@@ -10,7 +10,7 @@ const source='a'.repeat(40),after='b'.repeat(40);
 const valid={
   intent:'signed-native-wear-v26',
   request_id:'2026-11-10-phone-watch-cascade',
-  expected_version_code:27,source_sha:source,
+  expected_version_code:26,source_sha:source,
   watch_application_id:'com.cobrachris.sanftwecker',
   confirmation:'SIGN_PHONE_AND_WATCH_V26_WITH_EXISTING_V25_CERTIFICATE'
 };
@@ -66,9 +66,9 @@ test('dual-device signed v26 release requires explicit future approval',()=>{
     'needs.validate.outputs.source_sha',
     'scripts/sanftwecker-v26-release-request.mjs',
     'tests/sanftwecker-v26-release-request.test.mjs',
-    'sanftwecker-v24', 'sanftwecker-v23',
+    'sanftwecker-v25',
     'legacy/phone/sanftwecker-release.apk',
-    'legacy/watch/sanftwecker-watch-v23.apk',
+    'legacy/watch/sanftwecker-watch-v25.apk',
     'sanftwecker-watch-v26.apk',
     PHONE_V25_SHA256,WATCH_V25_SHA256,
     'cmp -s legacy/phone/cert.sha legacy/watch/cert.sha',
@@ -90,13 +90,13 @@ test('dual-device signed v26 release requires explicit future approval',()=>{
     '--prerelease'
   ];
   for(const token of checks)assert.ok(yml.includes(token),token);
-  assert.equal(EXPECTED_CODE,25);
+  assert.equal(EXPECTED_CODE,26);
   assert.equal(EXPECTED_PACKAGE,'com.cobrachris.sanftwecker');
   assert.equal(PHONE_V25_SHA256.length,64);
   assert.equal(WATCH_V25_SHA256.length,64);
   assert.doesNotMatch(yml,/workflow_dispatch:|pull_request_target:|genkeypair/);
   assert.doesNotMatch(yml,/uses:\s*[^\s]+@v[0-9]+\s*$/m);
-  assert.ok(yml.indexOf('Verify signed phone v24 and signed watch v23 before secrets')<
+  assert.ok(yml.indexOf('Verify signed phone v25 and signed watch v25 before secrets')<
        yml.indexOf('Sign both original-certificate APKs'));
   assert.ok(yml.indexOf('Sign both original-certificate APKs')<
        yml.indexOf('gh release create sanftwecker-v26'));
