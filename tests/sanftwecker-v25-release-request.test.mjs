@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,existsSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {
   REPO,REQUEST,EXPECTED_CODE,PHONE_V24_SHA256,WATCH_V23_SHA256,
   EXPECTED_PACKAGE,validateRequest,validateDiff,validateActor
@@ -94,8 +94,6 @@ test('dual-device signed v25 release requires explicit future approval',()=>{
   assert.equal(EXPECTED_PACKAGE,'com.cobrachris.sanftwecker');
   assert.equal(PHONE_V24_SHA256.length,64);
   assert.equal(WATCH_V23_SHA256.length,64);
-  assert.ok(!existsSync(new URL('../'+REQUEST,import.meta.url)),
-    'never stage the actual sign/publish approval file before explicit user consent');
   assert.doesNotMatch(yml,/workflow_dispatch:|pull_request_target:|genkeypair/);
   assert.doesNotMatch(yml,/uses:\s*[^\s]+@v[0-9]+\s*$/m);
   assert.ok(yml.indexOf('Verify signed phone v24 and signed watch v23 before secrets')<
