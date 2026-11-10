@@ -31,6 +31,11 @@ public final class WatchAlarmService extends Service {
     private static final long MAX_DURATION=15*60_000L;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable finish=()->{stopHaptics(false);stopSelf();};
+    private PowerManager.WakeLock wake;
+    private Vibrator vibrator;
+    private long activeWhen;
+    private int activeId;
+    private boolean activeCascade;
     private final Runnable escalate=()->{
         if(activeWhen>0 && activeCascade && vibrator!=null){
             try{
@@ -41,11 +46,6 @@ public final class WatchAlarmService extends Service {
             }
         }
     };
-    private PowerManager.WakeLock wake;
-    private Vibrator vibrator;
-    private long activeWhen;
-    private int activeId;
-    private boolean activeCascade;
 
     public static void start(Context c,int id,long when,int minutes,String title){
         start(c,id,when,minutes,title,false);
