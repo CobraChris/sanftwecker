@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v29",
+  "request_id": "2026-11-11-owner-approved-gentle-watch-cascade",
+  "expected_version_code": 29,
+  "source_sha": "cd9ebd7a5bd8c659ebb73411f254db185154d2b2",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V29_WITH_EXISTING_V28_CERTIFICATE"
+}
