@@ -17,9 +17,9 @@ public final class WorldClockCatalog {
     public static final class City {
         public final String name;
         public final String country;
-        public final String zone;
-        City(String name,String country,String zone){
-            this.name=name;this.country=country;this.zone=zone;
+        public final String zone,id;
+        City(String name,String country,String zone,String id){
+            this.name=name;this.country=country;this.zone=zone;this.id=id;
         }
     }
 
@@ -30,6 +30,8 @@ public final class WorldClockCatalog {
     private static final String[][] POPULAR={
         {"Tokio","Japan","Asia/Tokyo"},
         {"Berlin","Deutschland","Europe/Berlin"},
+        {"Hamburg","Deutschland","Europe/Berlin"},
+        {"München","Deutschland","Europe/Berlin"},
         {"London","Vereinigtes Königreich","Europe/London"},
         {"New York","USA","America/New_York"},
         {"Los Angeles","USA","America/Los_Angeles"},
@@ -99,9 +101,12 @@ public final class WorldClockCatalog {
             Map<String,City> by=new HashMap<>();
             List<City> all=new ArrayList<>();
             for(String[] row:POPULAR){
-                if(!available.contains(row[2])||by.containsKey(row[2]))continue;
-                City city=new City(row[0],row[1],row[2]);
-                all.add(city);by.put(city.zone,city);
+                if(!available.contains(row[2]))continue;
+                String key=by.containsKey(row[2])?
+                        row[2]+"#"+normalize(row[0]).replaceAll("[^a-z0-9]+","_"):
+                        row[2];
+                City city=new City(row[0],row[1],row[2],key);
+                all.add(city);by.put(city.id,city);
             }
             List<String> remaining=new ArrayList<>(available);
             remaining.sort(String.CASE_INSENSITIVE_ORDER);
@@ -109,8 +114,8 @@ public final class WorldClockCatalog {
                 if(by.containsKey(zone)||!isRegionZone(zone))continue;
                 String[] segments=zone.split("/");
                 String city=segments[segments.length-1].replace('_',' ');
-                City other=new City(city,segments[0],zone);
-                all.add(other);by.put(zone,other);
+                City other=new City(city,segments[0],zone,zone);
+                all.add(other);by.put(other.id,other);
             }
             cached=Collections.unmodifiableList(all);
             byZone=Collections.unmodifiableMap(by);
@@ -139,7 +144,7 @@ public final class WorldClockCatalog {
         String needle=normalize(query==null?"":query);
         List<City> found=new ArrayList<>();
         for(City city:cached){
-            if(excluded!=null&&excluded.contains(city.zone))continue;
+            if(excluded!=null&&excluded.contains(city.id))continue;
             if(!needle.isEmpty()&&!normalize(city.name+" "+city.country+" "+city.zone)
                     .contains(needle))continue;
             found.add(city);
