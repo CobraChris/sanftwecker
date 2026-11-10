@@ -7,6 +7,16 @@ public final class WakeCascade {
     public static final long MIN_ALARM_MS=120_000L;
     private WakeCascade(){}
 
+    /** Both devices calculate the phase from the same scheduled alarm time.
+     * Normal tone previews without an occurrence retain monotonic elapsed time.
+     */
+    public static long elapsedSinceAlarm(long when,long nowWall,long serviceElapsed){
+        return when>0?Math.max(0L,nowWall-when):Math.max(0L,serviceElapsed);
+    }
+    public static long untilStrong(long when,long nowWall,long serviceElapsed){
+        return Math.max(0L,SECOND_STAGE_MS-
+                elapsedSinceAlarm(when,nowWall,serviceElapsed));
+    }
     public static boolean strongStage(long elapsedMs){
         return elapsedMs>=SECOND_STAGE_MS;
     }
