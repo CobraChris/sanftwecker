@@ -159,7 +159,7 @@ jobs:
           "$AAPT" dump badging legacy/watch/sanftwecker-watch-v23.apk > legacy/watch/badging.txt
           grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='24'" \
             legacy/phone/badging.txt
-          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='25'" \
+          grep -Eq "^package: name='com.cobrachris.sanftwecker' versionCode='23'" \
             legacy/watch/badging.txt
           grep -q 'android.hardware.type.watch' legacy/watch/badging.txt
           if gh release view sanftwecker-v25 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -228,19 +228,19 @@ jobs:
             echo "::error::v25 already published"; exit 1
           fi
           cat > signed/RELEASE_INFO.txt <<EOF
-          Sanftwecker native Wear OS test package
+          Sanftwecker 0.9.6-beta (v25) approved phone and Wear OS update
           Android phone package: com.cobrachris.sanftwecker (v25)
           Wear OS watch package: com.cobrachris.sanftwecker (v25)
           Both use original v21 signing certificate.
-          Explicit user-installed update and companion required.
+          Only owner-installed in-place APK updates. Phone and watch device tests still required.
           Owner-approved source: $SOURCE_SHA
           EOF
           gh release create sanftwecker-v25 \
             signed/sanftwecker-release.apk signed/sanftwecker-watch-v25.apk \
             signed/SHA256SUMS.txt signed/RELEASE_INFO.txt \
             --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
-            --title "Sanftwecker 0.9.4-beta: Native Wear OS alarm (v25)" \
-            --notes 'Phone and watch original-signer prerelease. Requires one-time watch companion installation and explicit user device acceptance. Do not uninstall existing phone app.' \
+            --title "Sanftwecker 0.9.6-beta: Weckkaskade, Watch-Schlummern & Weltuhr (v25)" \
+            --notes 'Beta for phone and Galaxy Watch: two-stage wake cascade, confirmed snooze on the watch and selectable world clock. Update both existing apps with original signer; never uninstall. Hardware vibration and DND require owner device acceptance.' \
             --prerelease
       - name: Always remove temporary signing key
         if: always()
