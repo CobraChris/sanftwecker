@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v30",
+  "request_id": "2026-11-11-owner-approved-watch-alarm-screen",
+  "expected_version_code": 30,
+  "source_sha": "63c0aa9e39a4fd8356cd5dd3793536ea8956964d",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V30_WITH_EXISTING_V29_CERTIFICATE"
+}
