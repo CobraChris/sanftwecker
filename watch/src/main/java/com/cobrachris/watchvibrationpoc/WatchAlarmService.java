@@ -157,7 +157,7 @@ public final class WatchAlarmService extends Service {
         if(activeWhen>0)foreground(activeTitle);
     }
     private static PendingIntent openApp(Context c){
-        return PendingIntent.getActivity(c,11,new Intent(c,WatchMainActivity.class),
+        return PendingIntent.getActivity(c,11,WatchRingActivity.openIntent(c),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
     private void foreground(String title){
@@ -179,6 +179,7 @@ public final class WatchAlarmService extends Service {
                         activeSnoozeMinutes>0?"Schlummern oder stoppen":
                         "Uhralarm aktiv – zum Stoppen tippen")
                 .setContentIntent(openApp(this))
+                .setPriority(Notification.PRIORITY_HIGH)
                 .setOngoing(true).setOnlyAlertOnce(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
         if(activeSnoozeMinutes>0&&!snoozePending)
