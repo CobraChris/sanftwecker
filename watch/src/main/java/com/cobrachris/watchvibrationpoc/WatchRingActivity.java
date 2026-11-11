@@ -35,7 +35,7 @@ public final class WatchRingActivity extends Activity {
     private TextView state;
     private Button snooze,stop;
     private long createdAt,requestedSnoozeAt;
-    private boolean alarmWasVisible;
+    private boolean alarmWasVisible,screenResumed,ackSent;
 
     public static Intent ringIntent(Context c,int slot,long when){
         return new Intent(c,WatchRingActivity.class)
@@ -99,6 +99,7 @@ public final class WatchRingActivity extends Activity {
         setIntent(intent);
         createdAt=SystemClock.elapsedRealtime();
         alarmWasVisible=false;
+        ackSent=false;
         handleAlarm(intent);
         refresh();
     }
@@ -132,6 +133,10 @@ public final class WatchRingActivity extends Activity {
             return;
         }
         alarmWasVisible=true;
+        if(screenResumed&&!ackSent){
+            ackSent=true;
+            WatchAlarmScreenAck.visible(this,id);
+        }
         stop.setText("ALARM BEENDEN");
         stop.setEnabled(true);
         boolean cascade=current.getBoolean("cascade",false);
@@ -185,10 +190,12 @@ public final class WatchRingActivity extends Activity {
     }
     @Override protected void onResume(){
         super.onResume();
+        screenResumed=true;
         handler.removeCallbacks(update);
         handler.post(update);
     }
     @Override protected void onPause(){
+        screenResumed=false;
         handler.removeCallbacks(update);
         super.onPause();
     }
