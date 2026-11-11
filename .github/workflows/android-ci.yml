@@ -46,6 +46,8 @@ jobs:
         run: node --test tests/watch-alarm-screen-contract.test.mjs
       - name: Verify secure Watch self-update contracts
         run: node --test tests/watch-self-update-contract.test.mjs
+      - name: Verify round Watch controls and updater access
+        run: node --test tests/watch-round-screen-controls.test.mjs
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug :watch:testDebugUnitTest :watch:lintDebug :watch:assembleDebug
       - name: Build unsigned release APK for migration preflight
