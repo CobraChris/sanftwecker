@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v32",
+  "request_id": "2026-11-11-owner-approved-watch-round-ui-v32",
+  "expected_version_code": 32,
+  "source_sha": "84f2593be0e1e7a3bf7c603e13c11c565ac9622d",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V32_WITH_EXISTING_V31_CERTIFICATE"
+}
