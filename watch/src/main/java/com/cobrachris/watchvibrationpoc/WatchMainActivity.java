@@ -18,7 +18,7 @@ import java.util.Locale;
 /** Minimal standalone screen; vibration runs from local AlarmManager without UI. */
 public final class WatchMainActivity extends Activity {
     private TextView status;
-    private Button snooze;
+    private Button snooze,local,stop,updateWatch;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable update=new Runnable(){
         @Override public void run(){
@@ -33,7 +33,12 @@ public final class WatchMainActivity extends Activity {
                 .getInt("snooze_minutes",0);
         int activeId=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
                 .getInt("id",0);
-        if(when>0&&activeId>0){
+        boolean ringing=when>0&&activeId>0;
+        // Keep only actions relevant to the current state on the round screen.
+        updateWatch.setVisibility(ringing?View.GONE:View.VISIBLE);
+        local.setVisibility(ringing?View.GONE:View.VISIBLE);
+        stop.setVisibility(ringing?View.VISIBLE:View.GONE);
+        if(ringing){
             boolean cascade=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
                     .getBoolean("cascade",false);
             int intensity=WatchCascade.safeIntensity(
@@ -60,13 +65,22 @@ public final class WatchMainActivity extends Activity {
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
         LinearLayout layout=new LinearLayout(this);
-        layout.setGravity(Gravity.CENTER);
+        layout.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(24,20,24,20);
+        int dp=Math.round(getResources().getDisplayMetrics().density);
+        layout.setPadding(18*dp,40*dp,18*dp,88*dp);
+        // A square Android window overestimates the usable circular viewport.
+        // Ensure a real scroll range even if the round edges clip a control.
+        layout.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+64*dp);
         status=new TextView(this);
         status.setTextSize(16);status.setGravity(Gravity.CENTER);
         layout.addView(status);
-        Button local=new Button(this);
+        updateWatch=new Button(this);
+        updateWatch.setText("Uhr aktualisieren");
+        layout.addView(updateWatch);
+        updateWatch.setOnClickListener(v->startActivity(
+                new Intent(this,WatchSelfUpdateActivity.class)));
+        local=new Button(this);
         local.setText("Alarmvibration testen");
         layout.addView(local);
         local.setOnClickListener(v->WatchAlarmService.start(
@@ -94,7 +108,7 @@ public final class WatchMainActivity extends Activity {
                 status.setText("Keine Handy-Verbindung für Schlummern");
             }
         });
-        Button stop=new Button(this);stop.setText("Alarm beenden");
+        stop=new Button(this);stop.setText("Alarm beenden");
         layout.addView(stop);
         stop.setOnClickListener(v->{
             // Local user can always cancel an ongoing alarm without the phone.
@@ -102,13 +116,8 @@ public final class WatchMainActivity extends Activity {
                     .putExtra("user",true).putExtra("stop_all",true);
             startService(i);
         });
-        Button updateWatch=new Button(this);
-        updateWatch.setText("Uhr aktualisieren");
-        layout.addView(updateWatch);
-        updateWatch.setOnClickListener(v->startActivity(
-                new Intent(this,WatchSelfUpdateActivity.class)));
         ScrollView scroll=new ScrollView(this);
-        scroll.setFillViewport(true);
+        scroll.setFillViewport(false);
         scroll.addView(layout);
         setContentView(scroll);
         refresh();
