@@ -9,7 +9,8 @@ import static org.junit.Assert.*;
 public final class WatchSelfUpdateClientTest {
     private static final String HASH="a".repeat(64);
 
-    private static JSONObject release(int code,boolean draft,String owner,boolean valid){
+    private static JSONObject release(int code,boolean draft,String owner,boolean valid)
+            throws org.json.JSONException {
         String tag="sanftwecker-v"+code;
         JSONObject asset=new JSONObject();
         asset.put("name","sanftwecker-watch-v"+code+".apk");
