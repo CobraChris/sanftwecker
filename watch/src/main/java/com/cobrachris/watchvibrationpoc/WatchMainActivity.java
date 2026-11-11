@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -101,7 +102,15 @@ public final class WatchMainActivity extends Activity {
                     .putExtra("user",true).putExtra("stop_all",true);
             startService(i);
         });
-        setContentView(layout);
+        Button updateWatch=new Button(this);
+        updateWatch.setText("Uhr aktualisieren");
+        layout.addView(updateWatch);
+        updateWatch.setOnClickListener(v->startActivity(
+                new Intent(this,WatchSelfUpdateActivity.class)));
+        ScrollView scroll=new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.addView(layout);
+        setContentView(scroll);
         refresh();
         WatchDataBootstrap.refresh(this,()->runOnUiThread(this::refresh));
     }
