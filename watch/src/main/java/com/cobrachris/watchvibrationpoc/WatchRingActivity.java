@@ -116,7 +116,7 @@ public final class WatchRingActivity extends Activity {
         SharedPreferences current=active();
         int id=current.getInt("id",0);
         long when=current.getLong("when",0L);
-        boolean ringing=id>=1 && when>0;
+        boolean ringing=WatchAlarmUiPolicy.active(id,when);
         if(!ringing){
             snooze.setVisibility(View.GONE);
             stop.setEnabled(false);
@@ -139,15 +139,14 @@ public final class WatchRingActivity extends Activity {
                 "watch_intensity",WatchCascade.NORMAL));
         String level=intensity==WatchCascade.SANFT?"Sanft":
                 intensity==WatchCascade.INTENSIV?"Intensiv":"Normal";
-        String phase=!cascade?"Alarm aktiv":
-                WatchCascade.strong(when,System.currentTimeMillis())
-                    ?"Phase 2 – deutlich":"Phase 1 – leise";
+        String phase=WatchAlarmUiPolicy.stage(cascade,when,System.currentTimeMillis());
         int minutes=current.getInt("snooze_minutes",0);
         boolean snoozing=requestedSnoozeAt>0 &&
                 SystemClock.elapsedRealtime()-requestedSnoozeAt<10_000L;
         state.setText(snoozing?"Schlummern wird bestätigt …":
                 "Sanftwecker\n"+(cascade?level+" · ":"")+phase);
-        snooze.setVisibility(minutes>0?View.VISIBLE:View.GONE);
+        snooze.setVisibility(WatchAlarmUiPolicy.snoozeVisible(id,when,minutes)
+                ?View.VISIBLE:View.GONE);
         snooze.setText("SCHLUMMERN · "+minutes+" Min.");
         snooze.setEnabled(!snoozing);
         if(!snoozing)requestedSnoozeAt=0;
@@ -156,7 +155,7 @@ public final class WatchRingActivity extends Activity {
         SharedPreferences current=active();
         int id=current.getInt("id",0),minutes=current.getInt("snooze_minutes",0);
         long when=current.getLong("when",0L);
-        if(id<1||when<=0||minutes<=0)return;
+        if(!WatchAlarmUiPolicy.snoozeVisible(id,when,minutes))return;
         Intent request=new Intent(this,WatchAlarmService.class)
                 .setAction(WatchAlarmService.SNOOZE)
                 .putExtra("id",id).putExtra("when",when).putExtra("user",true);
