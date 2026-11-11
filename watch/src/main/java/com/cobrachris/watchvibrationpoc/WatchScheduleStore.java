@@ -23,23 +23,37 @@ public final class WatchScheduleStore {
         return PendingIntent.getBroadcast(c,6000+slot,i,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
+    private static PendingIntent ringScreen(Context c,int slot,long when){
+        return PendingIntent.getActivity(c,8000+slot,
+                WatchRingActivity.ringIntent(c,slot,when),
+                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
     private static void setAlarm(Context c,int slot,long when){
         AlarmManager m=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
         if(m==null)return;
         PendingIntent event=receiver(c,slot,when);
+        PendingIntent screen=ringScreen(c,slot,when);
         PendingIntent display=PendingIntent.getActivity(c,7000+slot,
                 new Intent(c,WatchMainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         try{
-            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||m.canScheduleExactAlarms())
-                m.setAlarmClock(new AlarmManager.AlarmClockInfo(when,display),event);
-            else {
+            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||m.canScheduleExactAlarms()){
+                // Keep the proven broadcast as the independent vibration path.
+                // A second exact alarm launches the screen without relying on
+                // unsupported Wear OS full-screen notifications.
+                AlarmManager.AlarmClockInfo info=new AlarmManager.AlarmClockInfo(when,display);
+                m.setAlarmClock(info,event);
+                m.setAlarmClock(info,screen);
+            }else {
                 Log.w("SanftweckerWatch","Exact alarms not yet allowed; idle fallback");
                 m.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,event);
+                // Best-effort UI fallback when exact-alarm access is unavailable.
+                m.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,screen);
             }
         }catch(SecurityException e){
             Log.w("SanftweckerWatch","Exact watch alarm unavailable",e);
             m.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,event);
+            m.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,screen);
         }
     }
     public static synchronized void plan(Context c,int slot,int id,long when,
@@ -72,15 +86,22 @@ public final class WatchScheduleStore {
             return;
         setAlarm(c,slot,when);
     }
+    private static void forget(Context c,int slot){
+        // Deliberately do not cancel already dispatched UI alarm intents:
+        // broadcast and activity are separate operations for the same alarm.
+        store(c).edit().remove(key(slot,"when")).remove(key(slot,"id"))
+                .remove(key(slot,"minutes")).remove(key(slot,"name"))
+                .remove(key(slot,"cascade")).remove(key(slot,"snooze_minutes"))
+                .remove(key(slot,"intensity")).commit();
+    }
     public static synchronized void clear(Context c,int slot){
         if(!WatchAlarmProtocol.validSlot(slot))return;
         AlarmManager m=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
-        if(m!=null)m.cancel(receiver(c,slot,0));
-        store(c).edit().remove(key(slot,"when")).remove(key(slot,"id"))
-                .remove(key(slot,"minutes")).remove(key(slot,"name"))
-                .remove(key(slot,"cascade"))
-                 .remove(key(slot,"snooze_minutes"))
-                .remove(key(slot,"intensity")).commit();
+        if(m!=null){
+            m.cancel(receiver(c,slot,0));
+            m.cancel(ringScreen(c,slot,0));
+        }
+        forget(c,slot);
     }
     public static synchronized void fired(Context c,int slot,long when){
         if(!WatchAlarmProtocol.validSlot(slot))return;
@@ -93,7 +114,7 @@ public final class WatchScheduleStore {
         int snooze=prefs.getInt(key(slot,"snooze_minutes"),0);
         int intensity=WatchCascade.safeIntensity(prefs.getInt(
                 key(slot,"intensity"),WatchCascade.NORMAL));
-        clear(c,slot);
+        forget(c,slot);
         if(id>0&&id<=1000&&WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))
             WatchAlarmService.start(c,id,when,minutes,name,cascade,snooze,intensity);
     }
