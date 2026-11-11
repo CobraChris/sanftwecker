@@ -67,11 +67,13 @@ public final class WatchMainActivity extends Activity {
         LinearLayout layout=new LinearLayout(this);
         layout.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
         layout.setOrientation(LinearLayout.VERTICAL);
-        int dp=Math.round(getResources().getDisplayMetrics().density);
-        layout.setPadding(18*dp,40*dp,18*dp,88*dp);
+        float density=getResources().getDisplayMetrics().density;
+        layout.setPadding(Math.round(18*density),Math.round(40*density),
+                Math.round(18*density),Math.round(88*density));
         // A square Android window overestimates the usable circular viewport.
         // Ensure a real scroll range even if the round edges clip a control.
-        layout.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+64*dp);
+        layout.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+
+                Math.round(64*density));
         status=new TextView(this);
         status.setTextSize(16);status.setGravity(Gravity.CENTER);
         layout.addView(status);
