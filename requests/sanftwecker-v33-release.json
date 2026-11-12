@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v33",
+  "request_id": "2026-11-12-owner-approved-watch-self-update-test",
+  "expected_version_code": 33,
+  "source_sha": "182d6d4de185d2de6acf943a4ea4188065046e4e",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V33_WITH_EXISTING_V32_CERTIFICATE"
+}
