@@ -29,8 +29,8 @@ test('main view and self-updater preserve scrolling on a circular viewport',()=>
 });
 test('Watch self-update check is above status; no automatic install introduced',()=>{
   const s=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchSelfUpdateActivity.java');
-  assert.ok(s.indexOf('content.addView(check)')<s.indexOf('content.addView(status)'));
-  assert.ok(s.indexOf('content.addView(status)')<s.indexOf('content.addView(download)'));
+  assert.ok(s.indexOf('content.addView(check,')<s.indexOf('content.addView(status,'));
+  assert.ok(s.indexOf('content.addView(status,')<s.indexOf('content.addView(download,'));
   assert.match(s,/setPositiveButton\("Weiter"/);
   assert.match(s,/canRequestPackageInstalls\(\)/);
   assert.match(s,/FLAG_GRANT_READ_URI_PERMISSION/);
