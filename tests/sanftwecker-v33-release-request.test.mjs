@@ -79,7 +79,7 @@ test('dual-device signed v33 release requires explicit future approval',()=>{
     "versionCode='32'",
     "versionCode='33'",
     'assert expected==33',
-    'assert e[\'versionCode\']==32',
+    'assert e[\'versionCode\']==33',
     'android.hardware.type.watch',
     'APP_SIGNING_KEYSTORE_BASE64',
     'APP_SIGNING_STORE_PASSWORD',
