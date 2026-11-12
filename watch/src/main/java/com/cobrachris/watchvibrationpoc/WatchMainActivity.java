@@ -59,7 +59,7 @@ public final class WatchMainActivity extends Activity {
             status.setText(next>0
                     ?"Nächster lokaler Wecker:\n"+
                     new SimpleDateFormat("dd.MM. HH:mm",Locale.GERMANY).format(new Date(next))
-                    :"Noch kein Uhralarm synchronisiert.\nHandy- und Uhr-App müssen dieselbe Signatur haben.");
+                    :"Kein kommender Wecker auf der Uhr.\nFalls am Handy einer aktiv ist: Synchronisierung prüfen.");
         }
     }
     @Override protected void onCreate(Bundle state){
