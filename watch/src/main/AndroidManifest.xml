@@ -22,6 +22,11 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTop" />
         <activity android:name=".WatchSelfUpdateActivity" android:exported="false" />
+        <receiver android:name=".WatchUpdateInstalledReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <provider android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.updates"
             android:exported="false" android:grantUriPermissions="true">
