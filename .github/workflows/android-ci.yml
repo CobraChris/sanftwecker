@@ -48,6 +48,10 @@ jobs:
         run: node --test tests/watch-self-update-contract.test.mjs
       - name: Verify round Watch controls and updater access
         run: node --test tests/watch-round-screen-controls.test.mjs
+      - name: Verify protected v33 self-update test release gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v33-release-request.mjs
+          node --test tests/sanftwecker-v33-release-request.test.mjs
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug :watch:testDebugUnitTest :watch:lintDebug :watch:assembleDebug
       - name: Build unsigned release APK for migration preflight
