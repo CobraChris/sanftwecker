@@ -16,20 +16,20 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * Optional update UI running on the watch itself. No ADB or companion installer,
- * no silent installations. Android still controls unknown-source permission and
- * displays the system installation confirmation if supported on this device.
+ * User-triggered, signaturgeprüftes Watch-Update. Die Systeminstallation
+ * erfordert weiterhin eine ausdrückliche Bestätigung auf der Uhr.
  */
 public final class WatchSelfUpdateActivity extends Activity {
-    private TextView status;
+    private TextView status,versionLabel;
     private Button check,download,install;
     private WatchSelfUpdateClient.Candidate candidate;
     private Uri verified;
-    private boolean busy;
+    private boolean busy,awaitingSourcePermission;
 
-    private void show(String text){
-        status.setText(text);
+    private int dp(float size){
+        return Math.round(size*getResources().getDisplayMetrics().density);
     }
+    private void show(String text){status.setText(text);}
     private void buttons(){
         check.setEnabled(!busy);
         download.setEnabled(!busy&&candidate!=null);
@@ -39,45 +39,96 @@ public final class WatchSelfUpdateActivity extends Activity {
         try{WatchSelfUpdateClient.requireIdleAlarm(this);return true;}
         catch(IllegalStateException error){show(error.getMessage());return false;}
     }
+    private void refreshVersion(){
+        try{
+            versionLabel.setText("Installiert: "+WatchSelfUpdateFeedback.installedVersion(this));
+        }catch(Exception e){
+            versionLabel.setText("Installierte Version nicht lesbar");
+        }
+    }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
+        if(state!=null)awaitingSourcePermission=state.getBoolean("awaiting_permission",false);
         LinearLayout content=new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
-        float density=getResources().getDisplayMetrics().density;
-        content.setPadding(Math.round(20*density),Math.round(40*density),
-                Math.round(20*density),Math.round(88*density));
-        content.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+
-                Math.round(64*density));
+        content.setPadding(dp(16),dp(28),dp(16),dp(80));
+        // Round-screen edges are clipped; retain an actual scroll range.
+        content.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+dp(80));
+        int usableWidth=Math.round(getResources().getDisplayMetrics().widthPixels*0.82f);
         TextView title=new TextView(this);
         title.setText("Uhr aktualisieren");
-        title.setTextSize(18);
-        title.setGravity(Gravity.CENTER);
+        title.setTextSize(17);title.setGravity(Gravity.CENTER);
         content.addView(title);
-        TextView hint=new TextView(this);
-        hint.setText("Nur offizielle APKs. Signaturprüfung und Android-Bestätigung erforderlich.");
-        hint.setGravity(Gravity.CENTER);
-        hint.setTextSize(12);
+        versionLabel=new TextView(this);
+        versionLabel.setGravity(Gravity.CENTER);
+        versionLabel.setTextSize(11);
+        content.addView(versionLabel,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         status=new TextView(this);
-        status.setTextSize(13);
-        status.setGravity(Gravity.CENTER);
+        status.setTextSize(12);status.setGravity(Gravity.CENTER);
         status.setText("Noch nicht geprüft.");
-        check=new Button(this);check.setText("Update suchen");
-        content.addView(check);
+        TextView hint=new TextView(this);
+        hint.setText("Nur offizielle APKs. Signaturprüfung und Android-Bestätigung.");
+        hint.setGravity(Gravity.CENTER);hint.setTextSize(11);
+
+        check=new Button(this);check.setText("Update suchen");check.setTextSize(13);
+        content.addView(check,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         check.setOnClickListener(v->checkUpdate());
-        content.addView(status);
+        content.addView(status,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         download=new Button(this);download.setText("APK laden und prüfen");
-        content.addView(download);
+        download.setTextSize(13);
+        content.addView(download,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         download.setOnClickListener(v->downloadUpdate());
         install=new Button(this);install.setText("Update installieren");
-        content.addView(install);
+        install.setTextSize(13);
+        content.addView(install,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         install.setOnClickListener(v->confirmInstall());
-        content.addView(hint);
+        content.addView(hint,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(false);
         scroll.addView(content);
         setContentView(scroll);
+        refreshVersion();
         buttons();
+    }
+    @Override protected void onSaveInstanceState(Bundle outState){
+        outState.putBoolean("awaiting_permission",awaitingSourcePermission);
+        super.onSaveInstanceState(outState);
+    }
+    @Override protected void onResume(){
+        super.onResume();
+        refreshVersion();
+        try{
+            String result=WatchSelfUpdateFeedback.consumeSuccess(this);
+            if(result!=null){
+                busy=false;candidate=null;verified=null;
+                awaitingSourcePermission=false;
+                show(result);
+                buttons();
+                return;
+            }
+        }catch(Exception e){
+            show("Versionsprüfung fehlgeschlagen: "+e.getMessage());
+        }
+        // One-time continuation only after the user actively granted permission.
+        if(awaitingSourcePermission){
+            awaitingSourcePermission=false;
+            if(getPackageManager().canRequestPackageInstalls()&&verified!=null&&idle()){
+                show("Berechtigung erteilt. Öffne Android-Installation …");
+                openInstaller();
+            }else if(verified==null){
+                show("Aktualisierung unterbrochen. APK erneut laden und prüfen.");
+            }else{
+                show("Installationsfreigabe nicht erteilt. Keine Installation gestartet.");
+            }
+        }
     }
     private void checkUpdate(){
         if(busy||!idle())return;
@@ -121,47 +172,58 @@ public final class WatchSelfUpdateActivity extends Activity {
                     if(isFinishing()||isDestroyed())return;
                     busy=false;verified=file;
                     show("APK vollständig geladen: SHA-256, Paket-ID, Version und "+
-                            "Originalzertifikat geprüft. Du kannst das Update starten.");
+                            "Originalzertifikat geprüft. Bereit zur Installation.");
                     buttons();
                 });
             }catch(Exception e){
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
-                    busy=false;
-                    show("Download nicht abgeschlossen: "+e.getMessage());
+                    busy=false;show("Download nicht abgeschlossen: "+e.getMessage());
                     buttons();
                 });
             }
         },"Sanftwecker-Watch-Verified-Download").start();
     }
     private void confirmInstall(){
-        if(busy||verified==null||!idle())return;
+        if(busy||verified==null||candidate==null||!idle())return;
         new AlertDialog.Builder(this)
                 .setTitle("Sanftwecker Uhr aktualisieren?")
-                .setMessage("Die APK ist geprüft. Android muss die Installation "+
-                        "auf dieser Uhr zusätzlich bestätigen. "+
-                        "Die vorhandene App und ihre Daten bleiben erhalten. "+
+                .setMessage("Die APK wurde geprüft. Android muss das Update "+
+                        "bestätigen. Bestehende App-Daten bleiben erhalten. "+
                         "Nicht deinstallieren.")
                 .setNegativeButton("Abbrechen",null)
-                .setPositiveButton("Weiter", (dialog,which)->openInstaller())
+                .setPositiveButton("Weiter",(dialog,which)->openInstaller())
                 .show();
     }
     private void openInstaller(){
-        if(!idle())return;
-        // Do not bypass Android's per-source consent; unsupported watch variants
-        // show a clear fallback instead of trying privileged or silent installation.
+        if(verified==null||candidate==null||!idle()){
+            show("Geprüfte APK fehlt. Bitte erneut laden.");
+            return;
+        }
+        try{
+            if(WatchSelfUpdateClient.installedCode(this)>=candidate.code){
+                show("Version "+candidate.code+" ist bereits installiert.");
+                refreshVersion();return;
+            }
+        }catch(Exception e){
+            show("Versionsprüfung fehlgeschlagen: "+e.getMessage());return;
+        }
         if(!getPackageManager().canRequestPackageInstalls()){
-            show("Auf der Uhr muss die Installation aus Sanftwecker erlaubt werden.");
+            show("Bitte auf der Uhr die Installation aus Sanftwecker erlauben.");
             try{
+                awaitingSourcePermission=true;
                 Intent allow=new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                         Uri.parse("package:"+getPackageName()));
                 startActivity(allow);
             }catch(ActivityNotFoundException|SecurityException error){
-                show("Wear OS bietet hier keine Freigabe für externe APK-Updates. "+
+                awaitingSourcePermission=false;
+                show("Wear OS bietet keine Freigabe für externe APK-Updates. "+
                         "Bitte vorerst GeminiMan verwenden; keine Deinstallation.");
             }
             return;
         }
+        // Record only the requested target. Success is verified against installed version.
+        WatchSelfUpdateFeedback.markRequested(this,candidate.code);
         Intent intent=new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(verified,"application/vnd.android.package-archive");
         intent.setClipData(ClipData.newUri(getContentResolver(),
@@ -169,21 +231,22 @@ public final class WatchSelfUpdateActivity extends Activity {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try{
             startActivity(intent);
-            show("Bitte das offizielle Android-Update auf der Uhr bestätigen.");
+            show("Android-Installation bestätigen. Nach dem Update Sanftwecker öffnen.");
         }catch(ActivityNotFoundException|SecurityException e){
-            // A device may not expose a regular APK viewer; try the explicit
-            // system installer before falling back to the existing ADB route.
+            // Preserve the previously working ACTION_VIEW path; use system fallback.
             try{
                 Intent installIntent=new Intent(Intent.ACTION_INSTALL_PACKAGE);
                 installIntent.setData(verified);
                 installIntent.setClipData(ClipData.newUri(getContentResolver(),
                         "Signiertes Sanftwecker-Uhr-Update",verified));
                 installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                installIntent.putExtra(Intent.EXTRA_RETURN_RESULT,true);
                 startActivity(installIntent);
-                show("Bitte die Installation auf der Uhr bestätigen.");
+                show("Android-Installation bestätigen. Danach Version kontrollieren.");
             }catch(ActivityNotFoundException|SecurityException unavailable){
-                show("Der Android-Paketinstaller ist auf dieser Watch nicht "+
-                        "direkt erreichbar. GeminiMan bleibt als sicherer Ausweg.");
+                WatchSelfUpdateFeedback.clearRequest(this);
+                show("Der Android-Paketinstaller ist nicht erreichbar. "+
+                        "GeminiMan bleibt als sicherer Ausweg.");
             }
         }
     }
