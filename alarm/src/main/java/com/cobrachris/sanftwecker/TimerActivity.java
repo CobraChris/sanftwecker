@@ -32,6 +32,7 @@ import java.text.SimpleDateFormat;
 /** Independent parallel countdowns. No direct vibrator or ringing-service reuse. */
 public final class TimerActivity extends Activity {
     private LinearLayout cards;
+    private Button pauseAll;
     private final Map<Integer,TextView> clocks=new HashMap<>();
     private final Map<Integer,TextView> statusViews=new HashMap<>();
     private final Map<Integer,Integer> lastStates=new HashMap<>();
@@ -104,9 +105,9 @@ public final class TimerActivity extends Activity {
         a.setOnClickListener(v->quick("Übungsdauer",45_000));
         b.setOnClickListener(v->quick("Pause / Dehnen",120_000));
         c.setOnClickListener(v->TimerEditor.show(this,null,this::render));
-        Button stopAll=UiKit.button(this,"Alle laufenden Timer pausieren",false);
-        root.addView(stopAll);
-        stopAll.setOnClickListener(v->{
+        pauseAll=UiKit.button(this,"Alle laufenden Timer pausieren",false);
+        root.addView(pauseAll);
+        pauseAll.setOnClickListener(v->{
             for(TimerEntry t:TimerRepository.all(this))
                 if(t.state==TimerEntry.RUNNING || t.state==TimerEntry.WAITING)TimerScheduler.pause(this,t.id);
             render();
@@ -131,6 +132,12 @@ public final class TimerActivity extends Activity {
         if(cards==null)return;
         cards.removeAllViews();clocks.clear();statusViews.clear();lastStates.clear();
         List<TimerEntry> timers=TimerRepository.all(this);
+        boolean anyActive=false;
+        for(TimerEntry timer:timers)
+            if(timer.state==TimerEntry.RUNNING || timer.state==TimerEntry.WAITING){
+                anyActive=true;break;
+            }
+        if(pauseAll!=null)pauseAll.setVisibility(anyActive?View.VISIBLE:View.GONE);
         if(timers.isEmpty()){
             LinearLayout empty=UiKit.card(this);
             empty.addView(UiKit.label(this,
