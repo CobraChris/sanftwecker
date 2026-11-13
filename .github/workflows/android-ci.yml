@@ -48,6 +48,8 @@ jobs:
         run: node --test tests/watch-self-update-contract.test.mjs
       - name: Verify round Watch controls and updater access
         run: node --test tests/watch-round-screen-controls.test.mjs
+      - name: Verify final navigation and alarm countdown UI contracts
+        run: node --test tests/sanftwecker-navigation-polish.test.mjs
       - name: Verify protected v33 self-update test release gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v33-release-request.mjs
