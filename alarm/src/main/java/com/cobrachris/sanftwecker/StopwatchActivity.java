@@ -20,6 +20,7 @@ import java.util.Map;
 /** Multiple independent stopwatches with cumulative lap history and local persistence. */
 public final class StopwatchActivity extends Activity {
     private LinearLayout cards;
+    private Button pauseAll;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Map<Integer,TextView> faces=new HashMap<>();
     private final Map<Integer,TextView> details=new HashMap<>();
@@ -59,7 +60,7 @@ public final class StopwatchActivity extends Activity {
         LinearLayout toolbar=UiKit.row(this);
         Button add=UiKit.button(this,"+ Stoppuhr",true);
         toolbar.addView(add,UiKit.weight());
-        Button pauseAll=UiKit.button(this,"Alle pausieren",false);
+        pauseAll=UiKit.button(this,"Alle pausieren",false);
         toolbar.addView(pauseAll,UiKit.weight());
         LinearLayout.LayoutParams tb=new LinearLayout.LayoutParams(-1,-2);
         tb.topMargin=UiKit.dp(this,18);tb.bottomMargin=UiKit.dp(this,16);
@@ -90,6 +91,10 @@ public final class StopwatchActivity extends Activity {
         if(cards==null)return;
         cards.removeAllViews();faces.clear();details.clear();
         List<StopwatchEntry> all=StopwatchRepository.all(this);
+        boolean anyRunning=false;
+        for(StopwatchEntry stopwatch:all)
+            if(stopwatch.running){anyRunning=true;break;}
+        if(pauseAll!=null)pauseAll.setVisibility(anyRunning?View.VISIBLE:View.GONE);
         if(all.isEmpty()){
             LinearLayout empty=UiKit.card(this);
             empty.addView(UiKit.label(this,
