@@ -40,7 +40,9 @@ public final class WatchDataBootstrap {
                         map.getString("name"),map.getInt("minutes"),
                         map.getBoolean("cascade",false),
                         map.getInt("snooze_minutes",0),
-                        WatchCascade.safeIntensity(map.getInt("watch_intensity",WatchCascade.NORMAL)));
+                        WatchCascade.safeIntensity(map.getInt("watch_intensity",WatchCascade.NORMAL)),
+                        WatchCascade.safePulses(map.getInt("watch_pulses",6)),
+                        WatchCascade.safeInterval(map.getInt("watch_interval_seconds",5)));
             }else if(WatchAlarmProtocol.STATE.equals(path)){
                 int id=map.getInt("id");
                 long when=map.getLong("when");
@@ -51,7 +53,9 @@ public final class WatchDataBootstrap {
                                 Math.max(1,map.getInt("minutes",5)),
                                 "Sanftwecker",map.getBoolean("cascade",false),
                                 map.getInt("snooze_minutes",0),
-                                WatchCascade.safeIntensity(map.getInt("watch_intensity",WatchCascade.NORMAL)));
+                                WatchCascade.safeIntensity(map.getInt("watch_intensity",WatchCascade.NORMAL)),
+                                WatchCascade.safePulses(map.getInt("watch_pulses",6)),
+                                WatchCascade.safeInterval(map.getInt("watch_interval_seconds",5)));
                 }else {
                     android.content.Intent stop=new android.content.Intent(
                             c,WatchAlarmService.class).setAction(WatchAlarmService.STOP)

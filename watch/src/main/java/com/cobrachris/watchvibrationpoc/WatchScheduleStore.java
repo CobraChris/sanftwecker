@@ -70,6 +70,11 @@ public final class WatchScheduleStore {
     }
     public static synchronized void plan(Context c,int slot,int id,long when,
             String name,int minutes,boolean cascade,int snoozeMinutes,int intensity){
+        plan(c,slot,id,when,name,minutes,cascade,snoozeMinutes,intensity,6,5);
+    }
+    public static synchronized void plan(Context c,int slot,int id,long when,
+            String name,int minutes,boolean cascade,int snoozeMinutes,int intensity,
+            int pulseCount,int intervalSeconds){
         if(!WatchAlarmProtocol.validSlot(slot)||id<1||id>1000 ||
                 snoozeMinutes<0||snoozeMinutes>30||!WatchCascade.validIntensity(intensity))return;
         clear(c,slot);
@@ -82,7 +87,10 @@ public final class WatchScheduleStore {
                 .putString(key(slot,"name"),name==null?"Sanftwecker":name)
                 .putBoolean(key(slot,"cascade"),cascade)
                  .putInt(key(slot,"snooze_minutes"),snoozeMinutes)
-                .putInt(key(slot,"intensity"),intensity).commit())
+                .putInt(key(slot,"intensity"),intensity)
+                .putInt(key(slot,"pulse_count"),WatchCascade.safePulses(pulseCount))
+                .putInt(key(slot,"pulse_interval_seconds"),WatchCascade.safeInterval(intervalSeconds))
+                .commit())
             return;
         setAlarm(c,slot,when);
     }
@@ -92,7 +100,8 @@ public final class WatchScheduleStore {
         store(c).edit().remove(key(slot,"when")).remove(key(slot,"id"))
                 .remove(key(slot,"minutes")).remove(key(slot,"name"))
                 .remove(key(slot,"cascade")).remove(key(slot,"snooze_minutes"))
-                .remove(key(slot,"intensity")).commit();
+                .remove(key(slot,"intensity")).remove(key(slot,"pulse_count"))
+                .remove(key(slot,"pulse_interval_seconds")).commit();
     }
     public static synchronized void clear(Context c,int slot){
         if(!WatchAlarmProtocol.validSlot(slot))return;
@@ -116,7 +125,9 @@ public final class WatchScheduleStore {
                 key(slot,"intensity"),WatchCascade.NORMAL));
         forget(c,slot);
         if(id>0&&id<=1000&&WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))
-            WatchAlarmService.start(c,id,when,minutes,name,cascade,snooze,intensity);
+            WatchAlarmService.start(c,id,when,minutes,name,cascade,snooze,intensity,
+                    WatchCascade.safePulses(prefs.getInt(key(slot,"pulse_count"),6)),
+                    WatchCascade.safeInterval(prefs.getInt(key(slot,"pulse_interval_seconds"),5)));
     }
     public static synchronized void restore(Context c){
         SharedPreferences prefs=store(c);

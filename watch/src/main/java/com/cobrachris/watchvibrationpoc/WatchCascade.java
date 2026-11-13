@@ -7,6 +7,15 @@ public final class WatchCascade {
     private WatchCascade(){}
 
     public static boolean validIntensity(int value){return value>=SANFT&&value<=INTENSIV;}
+    public static int safePulses(int count){return count>=0&&count<=12?count:6;}
+    public static int safeInterval(int seconds){
+        switch(seconds){
+            case 3: case 5: case 10: case 20: case 30: case 40: case 50:
+            case 60: case 70: case 80: case 90: case 100: case 110: case 120:
+                return seconds;
+            default: return 5;
+        }
+    }
     public static int safeIntensity(int value){return validIntensity(value)?value:NORMAL;}
 
     public static boolean strong(long scheduledAt,long now){
@@ -23,14 +32,14 @@ public final class WatchCascade {
     public static long[] gentleTimings(int intensity){
         switch(safeIntensity(intensity)){
             case SANFT: return new long[]{0L,45L,17000L};
-            case INTENSIV: return new long[]{0L,140L,6500L};
+            case INTENSIV: return new long[]{0L,320L,0L};
             default: return new long[]{0L,110L,9000L};
         }
     }
     public static int[] gentleAmplitudes(int intensity){
         switch(safeIntensity(intensity)){
             case SANFT: return new int[]{0,20,0};
-            case INTENSIV: return new int[]{0,80,0};
+            case INTENSIV: return new int[]{0,185,0};
             default: return new int[]{0,48,0};
         }
     }

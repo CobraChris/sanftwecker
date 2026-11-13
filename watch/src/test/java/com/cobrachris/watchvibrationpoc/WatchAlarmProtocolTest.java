@@ -84,4 +84,21 @@ public final class WatchAlarmProtocolTest {
             assertNull(bad,WatchAlarmProtocol.parse(bad));
     }
 
+    @Test public void v35CarriesUserWatchPulseCountAndInterval(){
+        WatchAlarmProtocol.Packet p=WatchAlarmProtocol.parse("1:1794500000000:5:1:5:2:12:3");
+        assertNotNull(p);
+        assertEquals(WatchCascade.INTENSIV,p.intensity);
+        assertEquals(12,p.pulseCount);
+        assertEquals(3,p.pulseIntervalSeconds);
+        WatchAlarmProtocol.Packet legacy=WatchAlarmProtocol.parse("1:1794500000000:5:1:5:2");
+        assertNotNull(legacy);
+        assertEquals(6,legacy.pulseCount);
+        assertEquals(5,legacy.pulseIntervalSeconds);
+        for(String invalid:new String[]{
+                "1:1794500000000:5:1:5:2:13:3",
+                "1:1794500000000:5:1:5:2:12:4",
+                "1:1794500000000:5:1:5:2:12",
+                "1:1794500000000:5:1:5:2:12:3:8"
+        })assertNull(invalid,WatchAlarmProtocol.parse(invalid));
+    }
 }

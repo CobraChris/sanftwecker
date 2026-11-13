@@ -59,4 +59,15 @@ public final class WearAlarmBridgeTest {
         }catch(IllegalArgumentException expected){}
     }
 
+    @Test public void v35TransmitsBoundedPulseSettings(){
+        long time=1794500000000L;
+        assertEquals("1:1794500000000:5:1:5:2:12:3",
+                WearAlarmBridge.packet(1,time,5,true,5,WatchIntensity.INTENSIV,12,3));
+        for(int count:new int[]{-1,13}){
+            try{WearAlarmBridge.packet(1,time,5,true,5,2,count,3);fail();}
+            catch(IllegalArgumentException expected){}
+        }
+        try{WearAlarmBridge.packet(1,time,5,true,5,2,12,4);fail();}
+        catch(IllegalArgumentException expected){}
+    }
 }

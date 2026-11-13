@@ -13,16 +13,18 @@ public final class WatchAlarmProtocol {
     private WatchAlarmProtocol(){}
 
     public static final class Packet {
-        public final int id,minutes,snoozeMinutes,intensity;
+        public final int id,minutes,snoozeMinutes,intensity,pulseCount,pulseIntervalSeconds;
         public final long when;
         public final boolean cascade;
-        Packet(int id,long when,int minutes,boolean cascade,int snoozeMinutes,int intensity){
+        Packet(int id,long when,int minutes,boolean cascade,int snoozeMinutes,int intensity,
+                int pulseCount,int pulseIntervalSeconds){
             this.id=id;this.when=when;this.minutes=minutes;
             this.cascade=cascade;this.snoozeMinutes=snoozeMinutes;this.intensity=intensity;
+            this.pulseCount=pulseCount;this.pulseIntervalSeconds=pulseIntervalSeconds;
         }
     }
     public static Packet parse(String value){
-        if(value==null||!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[1-9][0-9]?(?::1|:[01]:([0-9]|[12][0-9]|30)(?::[012])?)?"))
+        if(value==null||!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[1-9][0-9]?(?::1|:[01]:([0-9]|[12][0-9]|30)(?::[012](?:(?::(?:[0-9]|1[0-2]):(?:3|5|10|20|30|40|50|60|70|80|90|100|110|120)))?)?)?"))
             return null;
         try{
             String[] split=value.split(":");
@@ -31,8 +33,12 @@ public final class WatchAlarmProtocol {
             if(id>1000||minutes>15)return null;
             boolean cascade=split.length>=5 ? "1".equals(split[3]):split.length==4;
             int snooze=split.length>=5 ? Integer.parseInt(split[4]):0;
-            int intensity=split.length==6 ? Integer.parseInt(split[5]):WatchCascade.NORMAL;
-            return new Packet(id,when,minutes,cascade,snooze,intensity);
+            if(split.length==7||split.length>8)return null;
+            int intensity=split.length>=6 ? Integer.parseInt(split[5]):WatchCascade.NORMAL;
+            int pulses=split.length==8?Integer.parseInt(split[6]):6;
+            int interval=split.length==8?Integer.parseInt(split[7]):5;
+            if(!WatchCascade.validIntensity(intensity))return null;
+            return new Packet(id,when,minutes,cascade,snooze,intensity,pulses,interval);
         }catch(NumberFormatException e){return null;}
     }
     public static boolean nearTrigger(long when,long now){
