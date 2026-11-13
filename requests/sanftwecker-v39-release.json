@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V39_WITH_EXISTING_V38_CERTIFICATE",
+  "expected_version_code": 39,
+  "intent": "signed-native-wear-v39",
+  "request_id": "2026-11-13-final-timer-navigation-approved",
+  "source_sha": "23ca94af0473af73172354d2b7456082f710a4b2",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
