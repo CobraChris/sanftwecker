@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v35",
+  "request_id": "2026-11-13-approved-watch-cascade-pulse-fix",
+  "expected_version_code": 35,
+  "source_sha": "8a8e92f5bc1c6a021ab6ed8ffb28f60caf6e3990",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V35_WITH_EXISTING_V34_CERTIFICATE"
+}
