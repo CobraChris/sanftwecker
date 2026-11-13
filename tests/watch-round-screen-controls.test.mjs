@@ -7,10 +7,10 @@ test('watch idle view shows Update before Vibration test and hides unused Stop',
   const s=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchMainActivity.java');
   const update=s.indexOf('layout.addView(updateWatch)');
   const vibration=s.indexOf('layout.addView(local)');
-  const stop=s.indexOf('layout.addView(stop)');
+  const stop=s.indexOf('layout.addView(stop,1)');
   assert.ok(update>0&&vibration>0&&stop>0);
   assert.ok(update<vibration,'Update must be first visible action at idle');
-  assert.ok(vibration<stop,'Local test can remain an alternative action');
+  assert.ok(vibration<stop,'Local test remains available when the alarm is idle');
   assert.match(s,/updateWatch\.setVisibility\(ringing\?View\.GONE:View\.VISIBLE\)/);
   assert.match(s,/local\.setVisibility\(ringing\?View\.GONE:View\.VISIBLE\)/);
   assert.match(s,/stop\.setVisibility\(ringing\?View\.VISIBLE:View\.GONE\)/);
