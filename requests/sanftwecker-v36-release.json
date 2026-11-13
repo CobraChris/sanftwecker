@@ -1,0 +1,8 @@
+{
+  "intent": "signed-native-wear-v36",
+  "request_id": "2026-11-13-owner-approved-v36-full-alarm-controls",
+  "expected_version_code": 36,
+  "source_sha": "72709a9c9a6bc2a2b8754351b4a31b040b420d97",
+  "watch_application_id": "com.cobrachris.sanftwecker",
+  "confirmation": "SIGN_PHONE_AND_WATCH_V36_WITH_EXISTING_V35_CERTIFICATE"
+}
