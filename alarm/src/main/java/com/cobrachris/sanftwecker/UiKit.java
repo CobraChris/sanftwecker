@@ -14,6 +14,10 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 /** Small reusable dark UI kit; no external UI dependency or copied artwork. */
 public final class UiKit {
@@ -36,6 +40,19 @@ public final class UiKit {
         c.getWindow().setStatusBarColor(BG);
         c.getWindow().setNavigationBarColor(BG);
         c.getWindow().getDecorView().setSystemUiVisibility(0);
+        // Android 15+ enforces edge-to-edge for targetSdk 35. Apply the
+        // real device system/cutout/keyboard insets to the Activity content
+        // rather than hard-coding status or navigation bar heights.
+        WindowCompat.setDecorFitsSystemWindows(c.getWindow(), false);
+        View content=c.findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(content,(view,insets)->{
+            Insets bars=insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                    |WindowInsetsCompat.Type.displayCutout());
+            Insets keyboard=insets.getInsets(WindowInsetsCompat.Type.ime());
+            view.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard.bottom));
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(content);
     }
 
     public static GradientDrawable shape(int color, Activity c, int radius) {
