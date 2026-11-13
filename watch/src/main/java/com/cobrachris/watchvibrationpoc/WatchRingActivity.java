@@ -74,14 +74,7 @@ public final class WatchRingActivity extends Activity {
         state.setGravity(Gravity.CENTER);
         root.addView(state,new LinearLayout.LayoutParams(-1,-2));
 
-        snooze=new Button(this);
-        snooze.setText("Schlummern");
-        snooze.setTextSize(16);
-        LinearLayout.LayoutParams snoozeParams=params(dp(this,56));
-        snoozeParams.topMargin=dp(this,5);
-        root.addView(snooze,snoozeParams);
-        snooze.setOnClickListener(v->requestSnooze());
-
+        // Critical action first: visible on a small, circular watch screen.
         stop=new Button(this);
         stop.setText("ALARM BEENDEN");
         stop.setTextSize(16);
@@ -89,6 +82,14 @@ public final class WatchRingActivity extends Activity {
         stopParams.topMargin=dp(this,5);
         root.addView(stop,stopParams);
         stop.setOnClickListener(v->stopAlarm());
+
+        snooze=new Button(this);
+        snooze.setText("Schlummern");
+        snooze.setTextSize(16);
+        LinearLayout.LayoutParams snoozeParams=params(dp(this,56));
+        snoozeParams.topMargin=dp(this,5);
+        root.addView(snooze,snoozeParams);
+        snooze.setOnClickListener(v->requestSnooze());
 
         setContentView(root);
         handleAlarm(getIntent());
