@@ -121,7 +121,7 @@ public final class TimerActivity extends Activity {
                 "Für Benachrichtigungen auf der Galaxy Watch muss diese App in "+
                 "Galaxy Wearable freigegeben sein; Samsungs Ruhemodus kann sie unterdrücken.",
                 13,UiKit.MUTED));
-        setContentView(UiKit.scroll(this,root));
+        setContentView(ClockTabs.pin(this,root,UiKit.scroll(this,root)));
         render();
     }
     private void quick(String label,long millis){
