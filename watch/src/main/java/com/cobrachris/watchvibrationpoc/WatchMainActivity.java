@@ -167,7 +167,9 @@ public final class WatchMainActivity extends Activity {
         openAlarmScreen.setOnClickListener(v->
                 startActivity(WatchRingActivity.openIntent(this)));
         stop=new Button(this);stop.setText("Alarm beenden");
-        layout.addView(stop);
+        // On the circular watch the first visible action must be STOP.
+        // Insert directly below status; snooze and secondary navigation follow.
+        layout.addView(stop,1);
         stop.setOnClickListener(v->{
             // Local user can always cancel an ongoing alarm without the phone.
             Intent i=new Intent(this,WatchAlarmService.class).setAction(WatchAlarmService.STOP)
