@@ -301,7 +301,8 @@ public final class DetailActivity extends Activity {
         wrist.addView(UiKit.label(this,"Du kannst 3, 5, 10 bis 120 Sekunden "+
                 "Abstand wählen. Sehr schnelle Impulse werden eventuell durch "+
                 "Android oder Samsung gedämpft oder zusammengefasst. "+
-                "Bei Kaskaden nutzt die Uhr das oben gewählte Intensitätsprofil. "+
+                "Bei zweistufigen Kaskaden bestimmen Anzahl und Abstand die "+
+                "kurzen Impulse in Minute 1; danach folgt die kräftigere Phase. "+
                 "Die Musterstärke bleibt von der Hardware abhängig.",
                 13,UiKit.MUTED));
 

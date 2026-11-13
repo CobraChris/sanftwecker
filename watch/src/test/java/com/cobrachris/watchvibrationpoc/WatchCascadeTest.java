@@ -90,4 +90,16 @@ public final class WatchCascadeTest {
         }
     }
 
+    @Test public void strongFirstStageIsPerceptibleWithoutChangingSanftOrNormal(){
+        assertArrayEquals(new long[]{0L,320L,0L},
+                WatchCascade.gentleTimings(WatchCascade.INTENSIV));
+        assertArrayEquals(new int[]{0,185,0},
+                WatchCascade.gentleAmplitudes(WatchCascade.INTENSIV));
+        assertEquals(6,WatchCascade.safePulses(13));
+        assertEquals(12,WatchCascade.safePulses(12));
+        assertEquals(0,WatchCascade.safePulses(0));
+        assertEquals(5,WatchCascade.safeInterval(4));
+        assertEquals(3,WatchCascade.safeInterval(3));
+        assertEquals(120,WatchCascade.safeInterval(120));
+    }
 }

@@ -38,6 +38,26 @@ public final class WatchAlarmService extends Service {
     private long activeWhen;
     private int activeId,activeSnoozeMinutes,activeIntensity=WatchCascade.NORMAL;
     private boolean activeCascade,snoozePending,snoozeConnectionError;
+    private int gentlePulseLimit,gentleIntervalSeconds,gentlePulsesPlayed;
+    private final Runnable gentlePulse=new Runnable(){
+        @Override public void run(){
+            if(activeWhen<=0||!activeCascade||vibrator==null||
+                    gentlePulsesPlayed>=gentlePulseLimit||
+                    WatchCascade.strong(activeWhen,System.currentTimeMillis()))return;
+            try{
+                // Each impulse ends by itself. Re-arm explicitly: some Wear OS
+                // hardware stops indefinitely repeating weak waveforms early.
+                applyHaptic(WatchCascade.gentleTimings(activeIntensity),
+                        WatchCascade.gentleAmplitudes(activeIntensity),false);
+                gentlePulsesPlayed++;
+                if(gentlePulsesPlayed<gentlePulseLimit)
+                    handler.postDelayed(this,gentleIntervalSeconds*1000L);
+            }catch(RuntimeException problem){
+                Log.w("SanftweckerWatch","Gentle haptic pulse failed",problem);
+                sendAck("GENTLE_PULSE_FAILED",activeId);
+            }
+        }
+    };
     private String activeTitle="Sanftwecker";
     private final Runnable snoozeTimeout=()->{
         if(activeWhen>0&&snoozePending){
@@ -52,6 +72,7 @@ public final class WatchAlarmService extends Service {
             try{
                 // Cancel phase-one looping waveform explicitly: a few Wear OS motors
                 // keep playing it when an overlapping waveform is submitted.
+                handler.removeCallbacks(gentlePulse);
                 vibrator.cancel();
                 applyHaptic(WatchCascade.strongTimings(activeIntensity),
                         WatchCascade.strongAmplitudes(activeIntensity));
@@ -75,6 +96,11 @@ public final class WatchAlarmService extends Service {
     }
     public static void start(Context c,int id,long when,int minutes,String title,
             boolean cascade,int snoozeMinutes,int intensity){
+        start(c,id,when,minutes,title,cascade,snoozeMinutes,intensity,6,5);
+    }
+    public static void start(Context c,int id,long when,int minutes,String title,
+            boolean cascade,int snoozeMinutes,int intensity,int pulseCount,
+            int intervalSeconds){
         if(id<1||id>1000||snoozeMinutes<0||snoozeMinutes>30||
                 !WatchCascade.validIntensity(intensity)||
                 !WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))return;
@@ -83,17 +109,23 @@ public final class WatchAlarmService extends Service {
                 .putExtra("minutes",Math.max(cascade?2:1,Math.min(minutes,15)))
                 .putExtra("title",title).putExtra("cascade",cascade)
                 .putExtra("snooze_minutes",snoozeMinutes)
-                .putExtra("watch_intensity",intensity);
+                .putExtra("watch_intensity",intensity)
+                .putExtra("pulse_count",WatchCascade.safePulses(pulseCount))
+                .putExtra("pulse_interval_seconds",WatchCascade.safeInterval(intervalSeconds));
         try{c.startForegroundService(i);}
         catch(RuntimeException error){
             Log.e("SanftweckerWatch","Unable to start local watch alarm service",error);
         }
     }
     private void applyHaptic(long[] timings,int[] amplitudes){
+        applyHaptic(timings,amplitudes,true);
+    }
+    private void applyHaptic(long[] timings,int[] amplitudes,boolean repeat){
         if(vibrator==null)return;
+        int repeatIndex=repeat?0:-1;
         VibrationEffect effect=vibrator.hasAmplitudeControl()
-                ? VibrationEffect.createWaveform(timings,amplitudes,0)
-                : VibrationEffect.createWaveform(timings,0);
+                ? VibrationEffect.createWaveform(timings,amplitudes,repeatIndex)
+                : VibrationEffect.createWaveform(timings,repeatIndex);
         if(Build.VERSION.SDK_INT>=33){
             VibrationAttributes attrs=new VibrationAttributes.Builder()
                     .setUsage(VibrationAttributes.USAGE_ALARM).build();
@@ -239,6 +271,9 @@ public final class WatchAlarmService extends Service {
                         "watch_intensity",WatchCascade.NORMAL))
                 :WatchCascade.NORMAL;
         activeSnoozeMinutes=Math.max(0,Math.min(30,i.getIntExtra("snooze_minutes",0)));
+        gentlePulseLimit=WatchCascade.safePulses(i.getIntExtra("pulse_count",6));
+        gentleIntervalSeconds=WatchCascade.safeInterval(i.getIntExtra("pulse_interval_seconds",5));
+        gentlePulsesPlayed=0;
         activeTitle=i.getStringExtra("title")==null?
                 "Sanftwecker":i.getStringExtra("title");
         snoozePending=false;snoozeConnectionError=false;
@@ -268,8 +303,7 @@ public final class WatchAlarmService extends Service {
                 // dense original strong rhythm. Both use USAGE_ALARM.
                 handler.removeCallbacks(escalate);
                 if(activeCascade && !WatchCascade.strong(when,System.currentTimeMillis())){
-                    applyHaptic(WatchCascade.gentleTimings(activeIntensity),
-                            WatchCascade.gentleAmplitudes(activeIntensity));
+                    gentlePulse.run();
                     handler.postDelayed(escalate,
                             WatchCascade.untilStrong(when,System.currentTimeMillis()));
                     sendAck("CASCADE_GENTLE",id);
@@ -304,6 +338,7 @@ public final class WatchAlarmService extends Service {
     private void stopHaptics(boolean acknowledged){
         handler.removeCallbacks(finish);
         handler.removeCallbacks(escalate);
+        handler.removeCallbacks(gentlePulse);
         handler.removeCallbacks(snoozeTimeout);
         activeCascade=false;snoozePending=false;snoozeConnectionError=false;
         activeIntensity=WatchCascade.NORMAL;
