@@ -178,3 +178,27 @@ test('alarm home focuses on alarms while preserving all critical maintenance pat
     assert.match(main,/fullScreenPermissionButton.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
     assert.match(main,/Wecker werden auf der Uhr geplant/);
 });
+
+test('four clock navigation tabs remain pinned while each content page scrolls',()=>{
+    const tabs=read('alarm/src/main/java/com/cobrachris/sanftwecker/ClockTabs.java');
+    assert.match(tabs,/String\[\] names=\{"Wecker","Timer","Stoppuhr","Weltuhr"\}/);
+    assert.match(tabs,/bar.setTag\(BAR_MARKER\)/);
+    assert.match(tabs,/scrollColumn.removeView\(bar\)/);
+    assert.match(tabs,/frame.addView\(bar,new LinearLayout.LayoutParams\(/);
+    assert.match(tabs,/frame.addView\(scrollArea,new LinearLayout.LayoutParams\(/);
+    assert.match(tabs,/ViewGroup.LayoutParams.MATCH_PARENT,0,1f/);
+    assert.match(tabs,/if\(index==selected\)return/);
+    assert.match(tabs,/Intent.FLAG_ACTIVITY_CLEAR_TOP\|Intent.FLAG_ACTIVITY_SINGLE_TOP/);
+    assert.match(tabs,/c.finish\(\)/);
+    const pages=[
+        ['MainActivity.java','base','page','ALARMS'],
+        ['TimerActivity.java','root','UiKit.scroll(this,root)','TIMERS'],
+        ['StopwatchActivity.java','root','UiKit.scroll(this,root)','STOPWATCH'],
+        ['WorldClockActivity.java','base','UiKit.scroll(this,base)','WORLD_CLOCK']
+    ];
+    for(const [filename,column,view,selected] of pages){
+        const src=read('alarm/src/main/java/com/cobrachris/sanftwecker/'+filename);
+        assert.ok(src.includes('ClockTabs.add(this,'+column+',ClockTabs.'+selected+')'),filename);
+        assert.ok(src.includes('setContentView(ClockTabs.pin(this,'+column+','+view+'))'),filename);
+    }
+});
