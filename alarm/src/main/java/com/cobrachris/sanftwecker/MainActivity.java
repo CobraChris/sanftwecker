@@ -269,7 +269,7 @@ public final class MainActivity extends Activity {
         // as merely mirrored Android notifications.
         TextView hint=UiKit.label(this,
                 "Galaxy Watch: Wecker werden auf der Uhr geplant. " +
-                "Bei fehlenden Uhralarmen die Synchronisierung prüfen.",
+                "Fehlende Alarme? Synchronisierung prüfen.",
                 13,UiKit.MUTED);
         list.addView(hint);
         list.addView(UiKit.label(this,
