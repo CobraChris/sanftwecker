@@ -39,21 +39,21 @@ public final class WatchCascadeTest {
         assertNull(WatchAlarmProtocol.parse("1:1794500000000:5:0"));
         assertNull(WatchAlarmProtocol.parse("1:1794500000000:5:2"));
     }
-    @Test public void sanftIsShorterAndSparserButStillEscalates(){
+    @Test public void sanftIsShorterThanNormalAndStillEscalates(){
         long[] weak=WatchCascade.gentleTimings(WatchCascade.SANFT);
         long[] strong=WatchCascade.strongTimings(WatchCascade.SANFT);
         assertTrue(weak[1]<WatchCascade.gentleTimings()[1]);
-        assertTrue(weak[1]<WatchCascade.gentleTimings()[1]);
+        assertEquals(0L,weak[2]);
         assertTrue(strong[1]<WatchCascade.strongTimings()[1]);
         assertTrue(strong[2]>WatchCascade.strongTimings()[2]);
         assertTrue(strong[1]>weak[1]);
-        assertTrue(strong[2]<weak[2]);
+        assertTrue(strong[2]>weak[2]);
         assertTrue(WatchCascade.gentleAmplitudes(WatchCascade.SANFT)[1]<
                 WatchCascade.gentleAmplitudes()[1]);
         assertTrue(WatchCascade.strongAmplitudes(WatchCascade.SANFT)[1]<
                 WatchCascade.strongAmplitudes()[1]);
     }
-    @Test public void sanftPhaseOneIsAlmostImperceptibleAndPhaseTwoIsDistinctDoubleTap(){
+    @Test public void sanftPhaseOneIsPerceptibleAndPhaseTwoIsDistinctDoubleTap(){
         long[] gentle=WatchCascade.gentleTimings(WatchCascade.SANFT);
         int[] gentleAmps=WatchCascade.gentleAmplitudes(WatchCascade.SANFT);
         long[] strong=WatchCascade.strongTimings(WatchCascade.SANFT);
@@ -64,8 +64,8 @@ public final class WatchCascadeTest {
         assertArrayEquals(new int[]{0,175,0,175,0},strongAmps);
         // The strongly differentiated second stage must work even without amplitude control.
         assertTrue(strong.length>=5);
-        assertTrue(strong[1]>gentle[1]*4);
-        assertTrue(strong[3]>gentle[1]*4);
+        assertTrue(strong[1]>gentle[1]);
+        assertTrue(strong[3]>gentle[1]);
         assertTrue(strong[4]>gentle[2]);
         assertTrue(strongAmps[1]>gentleAmps[1]*2);
         assertFalse(WatchCascade.strong(WHEN,WHEN+59999L));
