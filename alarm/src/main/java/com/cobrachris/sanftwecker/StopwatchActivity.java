@@ -75,9 +75,8 @@ public final class StopwatchActivity extends Activity {
         cards=UiKit.column(this);
         root.addView(cards);
         root.addView(UiKit.label(this,
-                "Die Stoppuhren laufen auch weiter, wenn du eine andere App öffnest. "+
-                "Nach einem Handy-Neustart werden laufende Messungen aus "+
-                "Sicherheitsgründen angehalten. Es werden keine Daten versendet.",
+                "Stoppuhren laufen auch beim App-Wechsel weiter. " +
+                "Nach einem Neustart pausieren sie. Keine Datenübertragung.",
                 13,UiKit.MUTED));
         setContentView(ClockTabs.pin(this,root,UiKit.scroll(this,root)));
         render();

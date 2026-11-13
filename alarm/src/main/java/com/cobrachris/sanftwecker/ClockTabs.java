@@ -2,6 +2,7 @@ package com.cobrachris.sanftwecker;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
@@ -23,7 +24,7 @@ public final class ClockTabs {
         for(int i=0;i<names.length;i++){
             final int index=i;
             TextView tab=UiKit.label(c,names[i],14,
-                    i==selected?UiKit.BLUE:UiKit.MUTED);
+                    i==selected?UiKit.BLUE:Color.rgb(194,200,219));
             tab.setTypeface(Typeface.DEFAULT,i==selected?Typeface.BOLD:Typeface.NORMAL);
             tab.setGravity(Gravity.CENTER);
             tab.setMinHeight(UiKit.dp(c,52));
