@@ -7,6 +7,8 @@ import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.net.Uri;
 import android.view.Gravity;
@@ -26,6 +28,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Locale;
 
 /** Dark alarm list with arbitrary saved alarms, shortcuts and one-off actions. */
@@ -38,6 +42,14 @@ public final class MainActivity extends Activity {
     private Button openActiveAlarm;
     private Button emergencyStopButton;
     private boolean sortByNext = true;
+    private final Map<Integer,TextView> countdownLabels = new HashMap<>();
+    private final Handler countdownHandler = new Handler(Looper.getMainLooper());
+    private final Runnable countdownTick = new Runnable() {
+        @Override public void run() {
+            updateCountdowns();
+            countdownHandler.postDelayed(this, 15_000L);
+        }
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -68,6 +80,21 @@ public final class MainActivity extends Activity {
         }
         refreshFullScreenPermissionUi();
         refreshActiveAlarmButton();
+        countdownHandler.removeCallbacks(countdownTick);
+        countdownHandler.post(countdownTick);
+    }
+
+    @Override public void onPause() {
+        countdownHandler.removeCallbacks(countdownTick);
+        super.onPause();
+    }
+
+    private void updateCountdowns() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<Integer,TextView> entry : countdownLabels.entrySet()) {
+            long next = AlarmRepository.next(this,entry.getKey());
+            entry.getValue().setText(AlarmCountdown.label(next,now));
+        }
     }
 
     private void refreshActiveAlarmButton() {
@@ -203,6 +230,7 @@ public final class MainActivity extends Activity {
 
     private void renderList() {
         list.removeAllViews();
+        countdownLabels.clear();
         List<AlarmProfile> profiles = AlarmRepository.all(this);
         List<AlarmProfile> ordered = new ArrayList<>(profiles);
         if (sortByNext) {
@@ -281,21 +309,16 @@ public final class MainActivity extends Activity {
             days.addView(chip,cp);
         }
         card.addView(days);
-        LinearLayout.LayoutParams pad=new LinearLayout.LayoutParams(-1,-2);
-        pad.topMargin=UiKit.dp(this,9);
-        TextView subtitle=UiKit.label(this,
-                "Ton +" + p.delaySeconds + " s  ·  Rampe " + p.rampSeconds/60 +
-                " Min.  ·  Watch " + (p.watchPulses==0 ? "aus" : p.watchPulses+"×"),
-                13,UiKit.MUTED);
-        card.addView(subtitle,pad);
-        if (p.vibrationMode != 0) {
-            card.addView(UiKit.label(this,
-                    "Vibration: "+VibrationPresets.LABELS[p.vibrationMode],
-                    12,UiKit.MUTED));
-        }
-        if (p.enabled && AlarmRepository.next(this,p.id)==earliest) {
-            TextView next=UiKit.label(this,"NÄCHSTER ALARM · "+shortTime(earliest),12,UiKit.BLUE);
-            card.addView(next);
+        // Show only the time remaining; technical tone/vibration settings
+        // remain editable in DetailActivity and are not changed by this UI.
+        if (p.enabled && AlarmRepository.next(this,p.id)>0L) {
+            TextView countdown=UiKit.label(this,
+                    AlarmCountdown.label(AlarmRepository.next(this,p.id),
+                            System.currentTimeMillis()),15,UiKit.TEXT);
+            LinearLayout.LayoutParams gap=new LinearLayout.LayoutParams(-1,-2);
+            gap.topMargin=UiKit.dp(this,12);
+            card.addView(countdown,gap);
+            countdownLabels.put(p.id,countdown);
         }
         if (p.enabled && AlarmRepository.next(this,p.id)==0L) {
             card.addView(UiKit.label(this,
