@@ -86,34 +86,15 @@ public final class MainActivity extends Activity {
         subheading = UiKit.label(this, "Noch keine Wecker", 14, UiKit.MUTED);
         headerText.addView(subheading);
         header.addView(headerText, UiKit.weight());
-        TextView order = UiKit.action(this, "☷");
-        order.setContentDescription("Sortierung wählen");
-        header.addView(order);
-        order.setOnClickListener(v -> {
-            PopupMenu menu = new PopupMenu(this, v);
-            menu.getMenu().add("Nach nächster Auslösung").setOnMenuItemClickListener(item -> {
-                sortByNext = true; saveSort(); renderList(); return true;
-            });
-            menu.getMenu().add("Nach Uhrzeit").setOnMenuItemClickListener(item -> {
-                sortByNext = false; saveSort(); renderList(); return true;
-            });
-            menu.show();
-        });
+        TextView options = UiKit.action(this, "⋮");
+        options.setContentDescription("Weitere Optionen und Sortierung");
+        header.addView(options);
+        options.setOnClickListener(this::showMainMenu);
         base.addView(header);
         ClockTabs.add(this,base,ClockTabs.ALARMS);
-        Button updates=UiKit.button(this,"App aktualisieren",false);
-        base.addView(updates);
-        updates.setOnClickListener(v->startActivity(
-                new Intent(this,UpdateActivity.class)));
-        TextView safety = UiKit.label(this,
-                "Beta · bitte bisherigen Wecker weiterhin benutzen", 13, UiKit.MUTED);
-        LinearLayout.LayoutParams safetyParams = new LinearLayout.LayoutParams(-1,-2);
-        safetyParams.topMargin = UiKit.dp(this, 8);
-        safetyParams.bottomMargin = UiKit.dp(this, 14);
-        base.addView(safety, safetyParams);
 
-        Button stopNow=UiKit.button(this,"SOFORT STOPPEN – Ton und Vibration",true);
-        base.addView(stopNow);
+        // A running alarm must remain immediately actionable.
+        // Maintenance and emergency controls belong to the explicit menu.
         openActiveAlarm=UiKit.button(this,"LAUFENDEN WECKER ÖFFNEN – Stoppen / Schlummern",true);
         base.addView(openActiveAlarm);
         openActiveAlarm.setOnClickListener(v->{
@@ -124,22 +105,6 @@ public final class MainActivity extends Activity {
                     .putExtra("from_alarm",true));
         });
         refreshActiveAlarmButton();
-        stopNow.setOnClickListener(v->{
-            PhoneVibration.stop();
-            AlarmScheduler.cancelTest(this);
-            if(openActiveAlarm!=null)openActiveAlarm.setVisibility(View.GONE);
-            try{
-                startService(new Intent(this,RingingService.class).setAction(RingingService.STOP));
-                new android.app.AlertDialog.Builder(this)
-                        .setMessage("Not-Stopp angefordert: Ton und Handyvibration beenden.")
-                        .setPositiveButton("OK",null).show();
-            }catch(RuntimeException e){
-                new android.app.AlertDialog.Builder(this)
-                        .setMessage("Handyvibration gestoppt. Falls der Alarm weiterläuft: "+
-                                "Einstellungen → Apps → Sanftwecker (Test) → Stopp erzwingen.")
-                        .setPositiveButton("OK",null).show();
-            }
-        });
         if(android.os.Build.VERSION.SDK_INT>=34){
             fullScreenPermissionStatus=UiKit.label(this,
                     "Klingelbildschirm: Android-Berechtigung wird geprüft …",
@@ -186,6 +151,45 @@ public final class MainActivity extends Activity {
         renderList();
     }
 
+    private void showMainMenu(View anchor) {
+        PopupMenu menu=new PopupMenu(this,anchor);
+        menu.getMenu().add(sortByNext?"✓ Sortierung: nächste Auslösung":
+                "Sortieren: nächste Auslösung").setOnMenuItemClickListener(item->{
+            sortByNext=true;saveSort();renderList();return true;
+        });
+        menu.getMenu().add(!sortByNext?"✓ Sortierung: Uhrzeit":
+                "Sortieren: Uhrzeit").setOnMenuItemClickListener(item->{
+            sortByNext=false;saveSort();renderList();return true;
+        });
+        menu.getMenu().add("App aktualisieren").setOnMenuItemClickListener(item->{
+            startActivity(new Intent(this,UpdateActivity.class));return true;
+        });
+        menu.getMenu().add("Not-Stopp: Ton und Vibration").setOnMenuItemClickListener(item->{
+            emergencyStop();return true;
+        });
+        menu.show();
+    }
+
+    private void emergencyStop(){
+        // Retain the original emergency path, including an alarm test without
+        // an ActiveAlarmState token. Never silently remove this safety action.
+        PhoneVibration.stop();
+        AlarmScheduler.cancelTest(this);
+        if(openActiveAlarm!=null)openActiveAlarm.setVisibility(View.GONE);
+        try{
+            startService(new Intent(this,RingingService.class)
+                    .setAction(RingingService.STOP));
+            new AlertDialog.Builder(this)
+                    .setMessage("Not-Stopp angefordert: Ton und Handyvibration beenden.")
+                    .setPositiveButton("OK",null).show();
+        }catch(RuntimeException e){
+            new AlertDialog.Builder(this)
+                    .setMessage("Handyvibration gestoppt. Falls der Alarm weiterläuft: "+
+                            "Einstellungen → Apps → Sanftwecker (Test) → Stopp erzwingen.")
+                    .setPositiveButton("OK",null).show();
+        }
+    }
+
     private void saveSort() {
         getPreferences(MODE_PRIVATE).edit().putBoolean("next_sort",sortByNext).apply();
     }
@@ -226,12 +230,16 @@ public final class MainActivity extends Activity {
             UiKit.placeCard(this,list,empty);
         }
         for (AlarmProfile p : ordered) UiKit.placeCard(this,list,renderCard(p,earliest));
+        // The watch has its own locally scheduled alarm. Do not describe it
+        // as merely mirrored Android notifications.
         TextView hint=UiKit.label(this,
-                "Die Galaxy Watch vibriert nur, wenn Galaxy Wearable die " +
-                "Benachrichtigungen von „Sanftwecker (Test)“ weiterleitet. " +
-                "Im Schlafmodus kann diese Weiterleitung ausbleiben.",
+                "Galaxy Watch: Wecker werden auf der Uhr geplant. " +
+                "Bei fehlenden Uhralarmen die Synchronisierung prüfen.",
                 13,UiKit.MUTED);
         list.addView(hint);
+        list.addView(UiKit.label(this,
+                "Beta · bisherigen zuverlässigen Wecker vorerst beibehalten.",
+                12,UiKit.MUTED));
     }
 
     private LinearLayout renderCard(AlarmProfile p, long earliest) {
@@ -389,6 +397,8 @@ public final class MainActivity extends Activity {
         if (android.os.Build.VERSION.SDK_INT < 34 || fullScreenPermissionButton == null) return;
         boolean allowed = FullScreenPermissionStatus.isAllowed(this);
         fullScreenPermissionStatus.setText(FullScreenPermissionStatus.label(allowed));
+        // Show a setup problem, not a permanent technical status banner.
+        fullScreenPermissionStatus.setVisibility(allowed ? View.GONE : View.VISIBLE);
         fullScreenPermissionButton.setVisibility(allowed ? View.GONE : View.VISIBLE);
     }
 
