@@ -79,7 +79,7 @@ public final class StopwatchActivity extends Activity {
                 "Nach einem Handy-Neustart werden laufende Messungen aus "+
                 "Sicherheitsgründen angehalten. Es werden keine Daten versendet.",
                 13,UiKit.MUTED));
-        setContentView(UiKit.scroll(this,root));
+        setContentView(ClockTabs.pin(this,root,UiKit.scroll(this,root)));
         render();
     }
     private LinearLayout.LayoutParams weight(){
