@@ -153,7 +153,7 @@ public final class MainActivity extends Activity {
                 error("Wecker konnte nicht erstellt werden: " + ex.getMessage());
             }
         });
-        setContentView(page);
+        setContentView(ClockTabs.pin(this,base,page));
         renderList();
     }
 
