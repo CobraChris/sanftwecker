@@ -103,7 +103,7 @@ public final class WorldClockActivity extends Activity {
         base.addView(instruction,hintParams);
         cards=UiKit.column(this);
         base.addView(cards);
-        setContentView(UiKit.scroll(this,base));
+        setContentView(ClockTabs.pin(this,base,UiKit.scroll(this,base)));
     }
 
     private void render(){
