@@ -150,3 +150,31 @@ test('watch notification fallback exposes user-controlled Wear OS permission rep
     assert.doesNotMatch(main,/onCreate\([\s\S]*?requestPermissions\(/,
         'do not automatically trigger an alert permission prompt');
 });
+
+test('alarm home focuses on alarms while preserving all critical maintenance paths',()=>{
+    const main=read('alarm/src/main/java/com/cobrachris/sanftwecker/MainActivity.java');
+    const home=main.split('private void buildScreen()')[1]?.split('private void showMainMenu(')[0];
+    const menu=main.split('private void showMainMenu(')[1]?.split('private void saveSort()')[0];
+    assert.ok(home && menu);
+    // Live alarm access is visible directly, not hidden in the overflow.
+    assert.match(home,/LAUFENDEN WECKER ÖFFNEN/);
+    assert.match(home,/ActiveAlarmState.activeId\(this\)/);
+    assert.match(home,/refreshActiveAlarmButton\(\)/);
+    assert.match(home,/ClockTabs.add\(this,base,ClockTabs.ALARMS\)/);
+    assert.match(home,/this::showMainMenu/);
+    // Non-daily actions remain discoverable without taking screen space.
+    assert.match(menu,/Sortieren: nächste Auslösung/);
+    assert.match(menu,/Sortieren: Uhrzeit/);
+    assert.match(menu,/getMenu\(\)\.add\("App aktualisieren"\)/);
+    assert.match(menu,/new Intent\(this,UpdateActivity.class\)/);
+    assert.match(menu,/Not-Stopp: Ton und Vibration/);
+    assert.match(menu,/PhoneVibration.stop\(\)/);
+    assert.match(menu,/AlarmScheduler.cancelTest\(this\)/);
+    assert.match(menu,/RingingService.STOP/);
+    assert.doesNotMatch(home,/base.addView\(updates\)/);
+    assert.doesNotMatch(home,/base.addView\(stopNow\)/);
+    // The full-screen alert is shown only when permission needs attention.
+    assert.match(main,/fullScreenPermissionStatus.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
+    assert.match(main,/fullScreenPermissionButton.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
+    assert.match(main,/Wecker werden auf der Uhr geplant/);
+});
