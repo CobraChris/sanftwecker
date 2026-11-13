@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
@@ -145,21 +147,16 @@ public final class TimerActivity extends Activity {
                     16,UiKit.TEXT));
             UiKit.placeCard(this,cards,empty);return;
         }
-        // Compact phone screens cannot safely display two interactive timer
-        // cards side by side (titles and restart buttons were clipped).
-        boolean twoColumns=getResources().getConfiguration().screenWidthDp>=600;
-        for(int i=0;i<timers.size();i+=twoColumns?2:1){
-            LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
-            rp.bottomMargin=UiKit.dp(this,10);
-            if(!twoColumns){
-                cards.addView(card(timers.get(i)),rp);
-                continue;
-            }
+        // User-approved two-column timer layout also on phones. Each card
+        // uses compact labels and autosizing below so no actions are clipped.
+        for(int i=0;i<timers.size();i+=2){
             LinearLayout row=UiKit.row(this);
             row.setGravity(Gravity.TOP);
             row.addView(card(timers.get(i)),weighted());
             if(i+1<timers.size())row.addView(card(timers.get(i+1)),weighted());
             else row.addView(new View(this),weighted());
+            LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
+            rp.bottomMargin=UiKit.dp(this,10);
             cards.addView(row,rp);
         }
     }
@@ -186,6 +183,8 @@ public final class TimerActivity extends Activity {
         card.addView(top);
         TextView title=UiKit.label(this,t.name,16,UiKit.TEXT);
         title.setGravity(Gravity.CENTER);title.setMaxLines(2);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setContentDescription(t.name);
         title.setMinHeight(UiKit.dp(this,48));
         card.addView(title);
         long remaining=t.remaining(System.currentTimeMillis(),SystemClock.elapsedRealtime());
@@ -194,6 +193,10 @@ public final class TimerActivity extends Activity {
                 t.state==TimerEntry.FINISHED?0xffffb199:UiKit.BLUE);
         value.setGravity(Gravity.CENTER);
         value.setSingleLine(true);
+        // Custom timer formats can be longer than HH:mm:ss. Keep them readable
+        // instead of cutting off digits in two-column cards.
+        value.setAutoSizeTextTypeUniformWithConfiguration(
+                12,23,1,TypedValue.COMPLEX_UNIT_SP);
         card.addView(value);
         clocks.put(t.id,value);
         String status=t.state==TimerEntry.RUNNING?"Läuft":
@@ -207,7 +210,10 @@ public final class TimerActivity extends Activity {
                             .format(new Date(TimerStartSchedule.get(this,t.id))):
                     "Bereit";
         TextView state=UiKit.label(this,status,13,UiKit.MUTED);
-        state.setGravity(Gravity.CENTER);card.addView(state);
+        state.setGravity(Gravity.CENTER);
+        state.setSingleLine(true);
+        state.setEllipsize(TextUtils.TruncateAt.END);
+        card.addView(state);
         statusViews.put(t.id,state);
         LinearLayout actions=UiKit.row(this);
         Button reset=UiKit.button(this,"↺",false);
@@ -222,7 +228,9 @@ public final class TimerActivity extends Activity {
                 "Timer pausieren":t.state==TimerEntry.FINISHED?"Timer neu starten":"Timer starten");
         actions.addView(start,new LinearLayout.LayoutParams(0,UiKit.dp(this,54),1));
         card.addView(actions);
-        Button restart=UiKit.button(this,"↻ Sofort neu starten",false);
+        Button restart=UiKit.button(this,"Neu starten",false);
+        restart.setTextSize(14);
+        restart.setSingleLine(true);
         restart.setContentDescription("Timer sofort von vorne starten");
         LinearLayout.LayoutParams restartParams=
                 new LinearLayout.LayoutParams(-1,UiKit.dp(this,52));
