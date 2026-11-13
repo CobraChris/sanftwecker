@@ -10,6 +10,9 @@ public final class RescheduleReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c, Intent event) {
         if (event == null) return;
         AlarmVolumeGuard.recoverIfIdle(c);
+        if(Intent.ACTION_MY_PACKAGE_REPLACED.equals(event.getAction())||
+                Intent.ACTION_BOOT_COMPLETED.equals(event.getAction()))
+            ActiveAlarmState.clear(c);
         if(Intent.ACTION_MY_PACKAGE_REPLACED.equals(event.getAction())){
             // A normal in-place update must not silently request special permissions.
             // Record what Android actually reports so a revocation is diagnosable.

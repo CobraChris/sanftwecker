@@ -35,6 +35,7 @@ public final class MainActivity extends Activity {
     private TextView subheading;
     private Button fullScreenPermissionButton;
     private TextView fullScreenPermissionStatus;
+    private Button openActiveAlarm;
     private boolean sortByNext = true;
 
     @Override public void onCreate(Bundle state) {
@@ -65,6 +66,13 @@ public final class MainActivity extends Activity {
             renderList();
         }
         refreshFullScreenPermissionUi();
+        refreshActiveAlarmButton();
+    }
+
+    private void refreshActiveAlarmButton() {
+        if(openActiveAlarm!=null)
+            openActiveAlarm.setVisibility(ActiveAlarmState.activeId(this)>0
+                    ?View.VISIBLE:View.GONE);
     }
 
     private void buildScreen() {
@@ -106,9 +114,20 @@ public final class MainActivity extends Activity {
 
         Button stopNow=UiKit.button(this,"SOFORT STOPPEN – Ton und Vibration",true);
         base.addView(stopNow);
+        openActiveAlarm=UiKit.button(this,"LAUFENDEN WECKER ÖFFNEN – Stoppen / Schlummern",true);
+        base.addView(openActiveAlarm);
+        openActiveAlarm.setOnClickListener(v->{
+            int ringingId=ActiveAlarmState.activeId(this);
+            if(ringingId<=0){refreshActiveAlarmButton();return;}
+            startActivity(new Intent(this,AlarmActivity.class)
+                    .putExtra(AlarmScheduler.EXTRA_ID,ringingId)
+                    .putExtra("from_alarm",true));
+        });
+        refreshActiveAlarmButton();
         stopNow.setOnClickListener(v->{
             PhoneVibration.stop();
             AlarmScheduler.cancelTest(this);
+            if(openActiveAlarm!=null)openActiveAlarm.setVisibility(View.GONE);
             try{
                 startService(new Intent(this,RingingService.class).setAction(RingingService.STOP));
                 new android.app.AlertDialog.Builder(this)

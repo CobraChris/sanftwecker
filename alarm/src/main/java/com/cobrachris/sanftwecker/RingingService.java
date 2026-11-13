@@ -165,6 +165,9 @@ public final class RingingService extends Service {
         final long ringDuration=WakeCascade.duration(toneOnlyPreview,quickTest,
                 profile.cascadeEnabled,profile.autoStopMinutes);
         try {
+            // Store the active occurrence before Android can open the
+            // foreground notification. This is only a UI fallback, not alarm scheduling.
+            if(!toneOnlyPreview)ActiveAlarmState.start(this,ringId,ringWhen);
             startForegroundNotification();
             active = true;
             startedAt = SystemClock.elapsedRealtime();
@@ -286,7 +289,7 @@ public final class RingingService extends Service {
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(toneOnlyPreview ? "Sanftwecker-Tonprobe" : profile.name+" klingelt")
                 .setContentText(toneOnlyPreview ? "Tonprobe – jederzeit stoppen" :
-                        "Sanfter Ton • Stoppen oder schlummern")
+                        "Zum Bedienen antippen • Stoppen / Schlummern")
                 .setContentIntent(openApp())
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setOngoing(true)
@@ -297,6 +300,12 @@ public final class RingingService extends Service {
                 .addAction(action("Stoppen", STOP, android.R.drawable.ic_media_pause, 612));
         if (!toneOnlyPreview) {
             builder.setFullScreenIntent(openApp(), true);
+            // Heads-up on an unlocked Android phone can show only a subset of
+            // actions. Keep STOP first and provide explicit alarm-screen action;
+            // notification body also opens the same screen.
+            builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_lock_idle_alarm,
+                    "Alarmansicht",openApp()).build());
             if (profile.snoozeEnabled)
                 builder.addAction(action("Schlummern", SNOOZE, android.R.drawable.ic_media_play, 613));
         }
@@ -361,6 +370,7 @@ public final class RingingService extends Service {
                 WearAlarmBridge.alarmStopped(this,ringId,ringWhen);
         }
         active = false;
+        ActiveAlarmState.clear(this);
         PhoneVibration.stop();
         AlarmVolumeGuard.restore(this);
         if(wasActive) sendBroadcast(new Intent(RING_FINISHED).setPackage(getPackageName()));
