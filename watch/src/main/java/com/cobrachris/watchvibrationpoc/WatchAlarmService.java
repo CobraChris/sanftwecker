@@ -219,6 +219,9 @@ public final class WatchAlarmService extends Service {
                     android.R.drawable.ic_lock_idle_alarm,
                     "Schlummern · "+activeSnoozeMinutes+" Min.",snoozeAction()).build());
         builder.addAction(new Notification.Action.Builder(
+                android.R.drawable.ic_lock_idle_alarm,
+                "Alarmansicht",openApp(this)).build());
+        builder.addAction(new Notification.Action.Builder(
                 android.R.drawable.ic_media_pause,"Stoppen",stopAction()).build());
         startForeground(NOTIFICATION_ID,builder.build(),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
