@@ -49,3 +49,28 @@ test('empty watch schedule shows a factual status without inferring a signing fa
     assert.match(main,/WatchAlarmService\.STOP/);
     assert.match(main,/WatchAlarmService\.SNOOZE/);
 });
+
+
+test('watch cascade uses finite user-counted pulses and stops all callbacks',()=>{
+    const service=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchAlarmService.java');
+    const schedule=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchScheduleStore.java');
+    const bootstrap=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchDataBootstrap.java');
+    const phone=read('alarm/src/main/java/com/cobrachris/sanftwecker/WearAlarmBridge.java');
+    const ui=read('alarm/src/main/java/com/cobrachris/sanftwecker/DetailActivity.java');
+    assert.match(service,/private final Runnable gentlePulse/);
+    assert.match(service,/gentlePulseLimit/);
+    assert.match(service,/gentleIntervalSeconds\*1000L/);
+    assert.match(service,/gentlePulsesPlayed<gentlePulseLimit/);
+    assert.match(service,/applyHaptic\(WatchCascade.gentleTimings\(activeIntensity\),\s*WatchCascade.gentleAmplitudes\(activeIntensity\),false\)/);
+    assert.match(service,/int repeatIndex=repeat\?0:-1/);
+    assert.match(service,/handler.removeCallbacks\(gentlePulse\)/);
+    assert.match(service,/handler.removeCallbacks\(escalate\)/);
+    assert.match(schedule,/putInt\(key\(slot,"pulse_count"\)/);
+    assert.match(schedule,/putInt\(key\(slot,"pulse_interval_seconds"\)/);
+    assert.match(schedule,/prefs.getInt\(key\(slot,"pulse_count"\),6\)/);
+    assert.match(bootstrap,/WatchCascade.safePulses\(map.getInt\("watch_pulses",6\)\)/);
+    assert.match(bootstrap,/WatchCascade.safeInterval\(map.getInt\("watch_interval_seconds",5\)\)/);
+    assert.match(phone,/data.putInt\("watch_pulses"/);
+    assert.match(phone,/data.putInt\("watch_interval_seconds"/);
+    assert.match(ui,/Anzahl und Abstand die/);
+});
