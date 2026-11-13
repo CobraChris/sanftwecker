@@ -1,7 +1,13 @@
 package com.cobrachris.watchvibrationpoc;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -18,7 +24,8 @@ import java.util.Locale;
 /** Minimal standalone screen; vibration runs from local AlarmManager without UI. */
 public final class WatchMainActivity extends Activity {
     private TextView status;
-    private Button snooze,local,openAlarmScreen,stop,updateWatch;
+    private static final int NOTIFICATION_REQUEST=431;
+    private Button snooze,local,openAlarmScreen,stop,updateWatch,notificationAccess;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable update=new Runnable(){
         @Override public void run(){
@@ -26,6 +33,38 @@ public final class WatchMainActivity extends Activity {
             handler.postDelayed(this,1000L);
         }
     };
+    // Wear OS 4+ may suppress the alarm notification entirely unless the
+    // user grants notification access. Vibration and the local stop screen
+    // remain independent of this permission.
+    private boolean notificationsAllowed(){
+        if(Build.VERSION.SDK_INT>=33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        !=PackageManager.PERMISSION_GRANTED)return false;
+        NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        return manager!=null && manager.areNotificationsEnabled();
+    }
+    private void openNotificationAccess(){
+        if(Build.VERSION.SDK_INT>=33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        !=PackageManager.PERMISSION_GRANTED){
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATION_REQUEST);
+            return;
+        }
+        // Permission granted but notifications switched off in system settings.
+        Intent settings=new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE,getPackageName());
+        try{startActivity(settings);}
+        catch(RuntimeException unsupported){
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.parse("package:"+getPackageName())));
+        }
+    }
+    @Override public void onRequestPermissionsResult(int requestCode,
+            String[] permissions,int[] grantResults){
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode==NOTIFICATION_REQUEST)refresh();
+    }
     private void refresh(){
         long when=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
                 .getLong("when",0);
@@ -37,6 +76,8 @@ public final class WatchMainActivity extends Activity {
         // Keep only actions relevant to the current state on the round screen.
         updateWatch.setVisibility(ringing?View.GONE:View.VISIBLE);
         local.setVisibility(ringing?View.GONE:View.VISIBLE);
+        notificationAccess.setVisibility(!ringing&&!notificationsAllowed()
+                ?View.VISIBLE:View.GONE);
         stop.setVisibility(ringing?View.VISIBLE:View.GONE);
         openAlarmScreen.setVisibility(ringing?View.VISIBLE:View.GONE);
         if(ringing){
@@ -61,6 +102,7 @@ public final class WatchMainActivity extends Activity {
                     ?"Nächster lokaler Wecker:\n"+
                     new SimpleDateFormat("dd.MM. HH:mm",Locale.GERMANY).format(new Date(next))
                     :"Kein kommender Wecker auf der Uhr.\nFalls am Handy einer aktiv ist: Synchronisierung prüfen.");
+            if(!notificationsAllowed())status.append("\nAlarmmeldung auf der Uhr deaktiviert.");
         }
     }
     @Override protected void onCreate(Bundle state){
@@ -78,6 +120,13 @@ public final class WatchMainActivity extends Activity {
         status=new TextView(this);
         status.setTextSize(16);status.setGravity(Gravity.CENTER);
         layout.addView(status);
+        notificationAccess=new Button(this);
+        notificationAccess.setText("Alarmmeldungen erlauben");
+        notificationAccess.setVisibility(View.GONE);
+        layout.addView(notificationAccess);
+        // Only a tap opens Android's permission dialog/settings. No automatic
+        // permission prompt on installation or while the alarm is ringing.
+        notificationAccess.setOnClickListener(v->openNotificationAccess());
         updateWatch=new Button(this);
         updateWatch.setText("Uhr aktualisieren");
         layout.addView(updateWatch);
