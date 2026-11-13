@@ -36,3 +36,29 @@ test('Watch self-update check is above status; no automatic install introduced',
   assert.match(s,/FLAG_GRANT_READ_URI_PERMISSION/);
   assert.doesNotMatch(s,/setRequireUserAction\(.*NOT_REQUIRED/);
 });
+
+test('watch prioritizes Stop above Snooze and secondary actions',()=>{
+  const main=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchMainActivity.java');
+  const ring=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchRingActivity.java');
+  assert.match(main,/layout.addView\(stop,1\)/);
+  assert.ok(main.indexOf('layout.addView(status)')<main.indexOf('layout.addView(stop,1)'));
+  assert.ok(ring.indexOf('root.addView(stop,stopParams)')<
+            ring.indexOf('root.addView(snooze,snoozeParams)'));
+  assert.match(main,/stop.setVisibility\(ringing\?View.VISIBLE:View.GONE\)/);
+  assert.match(main,/openAlarmScreen.setVisibility\(ringing\?View.VISIBLE:View.GONE\)/);
+  assert.match(ring,/WatchAlarmService.STOP/);
+  assert.match(ring,/WatchAlarmService.SNOOZE/);
+});
+
+test('bulk pause controls only occupy space when there is active work',()=>{
+  const timer=read('alarm/src/main/java/com/cobrachris/sanftwecker/TimerActivity.java');
+  const stopwatch=read('alarm/src/main/java/com/cobrachris/sanftwecker/StopwatchActivity.java');
+  assert.match(timer,/timer.state==TimerEntry.RUNNING \|\| timer.state==TimerEntry.WAITING/);
+  assert.match(timer,/pauseAll.setVisibility\(anyActive\?View.VISIBLE:View.GONE\)/);
+  assert.match(timer,/TimerScheduler.pause\(this,t.id\)/);
+  assert.match(timer,/TimerEditor.show\(this,null,this::render\)/);
+  assert.match(stopwatch,/if\(stopwatch.running\)\{anyRunning=true;break;\}/);
+  assert.match(stopwatch,/pauseAll.setVisibility\(anyRunning\?View.VISIBLE:View.GONE\)/);
+  assert.match(stopwatch,/StopwatchRepository.put\(this,s.pause\(wall,now\)\)/);
+  assert.match(stopwatch,/nameEditor\(null\)/);
+});
