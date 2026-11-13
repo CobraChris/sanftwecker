@@ -145,14 +145,21 @@ public final class TimerActivity extends Activity {
                     16,UiKit.TEXT));
             UiKit.placeCard(this,cards,empty);return;
         }
-        for(int i=0;i<timers.size();i+=2){
+        // Compact phone screens cannot safely display two interactive timer
+        // cards side by side (titles and restart buttons were clipped).
+        boolean twoColumns=getResources().getConfiguration().screenWidthDp>=600;
+        for(int i=0;i<timers.size();i+=twoColumns?2:1){
+            LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
+            rp.bottomMargin=UiKit.dp(this,10);
+            if(!twoColumns){
+                cards.addView(card(timers.get(i)),rp);
+                continue;
+            }
             LinearLayout row=UiKit.row(this);
             row.setGravity(Gravity.TOP);
             row.addView(card(timers.get(i)),weighted());
             if(i+1<timers.size())row.addView(card(timers.get(i+1)),weighted());
             else row.addView(new View(this),weighted());
-            LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
-            rp.bottomMargin=UiKit.dp(this,10);
             cards.addView(row,rp);
         }
     }

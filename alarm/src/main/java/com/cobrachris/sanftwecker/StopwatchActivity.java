@@ -102,13 +102,20 @@ public final class StopwatchActivity extends Activity {
                     16,UiKit.TEXT));
             UiKit.placeCard(this,cards,empty);return;
         }
-        for(int i=0;i<all.size();i+=2){
+        // Use available width on phones, including for a single stopwatch.
+        // Only wide tablet layouts should share a row between two cards.
+        boolean twoColumns=getResources().getConfiguration().screenWidthDp>=600;
+        for(int i=0;i<all.size();i+=twoColumns?2:1){
+            LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
+            rp.bottomMargin=UiKit.dp(this,10);
+            if(!twoColumns){
+                cards.addView(card(all.get(i)),rp);
+                continue;
+            }
             LinearLayout row=UiKit.row(this);row.setGravity(Gravity.TOP);
             row.addView(card(all.get(i)),weight());
             if(i+1<all.size())row.addView(card(all.get(i+1)),weight());
             else row.addView(new View(this),weight());
-            LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);
-            rp.bottomMargin=UiKit.dp(this,10);
             cards.addView(row,rp);
         }
     }
