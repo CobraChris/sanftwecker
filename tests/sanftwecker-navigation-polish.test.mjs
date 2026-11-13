@@ -38,13 +38,25 @@ test('alarm card replaces technical details with live remaining hours and minute
   assert.match(main,/Klingelbildschirm erlauben/);
 });
 
-test('timers and stopwatches use full-width cards on phone, two columns only on tablets',()=>{
-  for(const n of ['TimerActivity','StopwatchActivity']){
-    const src=file(n);
-    assert.match(src,/screenWidthDp>=600/,n);
-    assert.match(src,/if\(!twoColumns\)\{[\s\S]*?cards\.addView\(card\(/,n);
-    assert.match(src,/for\(int i=0;i<.*;i\+=twoColumns\?2:1\)/,n);
-  }
-  assert.match(file('TimerActivity'),/TimerScheduler\.restartNow\(this,id\)/);
-  assert.match(file('StopwatchActivity'),/StopwatchRepository\.put\(this,s\.pause\(wall,now\)\)/);
+test('timer cards appear in two columns on phones with short readable controls',()=>{
+  const timer=file('TimerActivity');
+  assert.match(timer,/for\(int i=0;i<timers\.size\(\);i\+=2\)/);
+  assert.match(timer,/row\.addView\(card\(timers\.get\(i\)\),weighted\(\)\)/);
+  assert.match(timer,/if\(i\+1<timers\.size\(\)\)row\.addView\(card\(timers\.get\(i\+1\)\),weighted\(\)\)/);
+  assert.match(timer,/title\.setMaxLines\(2\)/);
+  assert.match(timer,/title\.setEllipsize\(TextUtils\.TruncateAt\.END\)/);
+  assert.match(timer,/title\.setContentDescription\(t\.name\)/);
+  assert.match(timer,/value\.setAutoSizeTextTypeUniformWithConfiguration\(/);
+  assert.match(timer,/Button restart=UiKit\.button\(this,"Neu starten",false\)/);
+  assert.match(timer,/restart\.setSingleLine\(true\)/);
+  assert.match(timer,/restart\.setContentDescription\("Timer sofort von vorne starten"\)/);
+  assert.match(timer,/TimerScheduler\.restartNow\(this,id\)/);
+});
+test('stopwatch stays full-width on phone and navigation contrast improves',()=>{
+  const stopwatch=file('StopwatchActivity');
+  const tabs=file('ClockTabs');
+  assert.match(stopwatch,/screenWidthDp>=600/);
+  assert.match(stopwatch,/if\(!twoColumns\)\{[\s\S]*?cards\.addView\(card\(/);
+  assert.match(stopwatch,/StopwatchRepository\.put\(this,s\.pause\(wall,now\)\)/);
+  assert.match(tabs,/i==selected\?UiKit\.BLUE:Color\.rgb\(194,200,219\)/);
 });
