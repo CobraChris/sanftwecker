@@ -128,3 +128,25 @@ test('unlocked phone has explicit alarm-screen entry and stop without bypassing 
     assert.match(manifest,/android:showWhenLocked="true"/);
     assert.match(manifest,/android:turnScreenOn="true"/);
 });
+
+test('watch notification fallback exposes user-controlled Wear OS permission repair',()=>{
+    const manifest=read('watch/src/main/AndroidManifest.xml');
+    const main=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchMainActivity.java');
+    const service=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchAlarmService.java');
+    assert.match(manifest,/android.permission.POST_NOTIFICATIONS/);
+    assert.match(main,/NotificationManager/);
+    assert.match(main,/areNotificationsEnabled\(\)/);
+    assert.match(main,/checkSelfPermission\(Manifest.permission.POST_NOTIFICATIONS\)/);
+    assert.match(main,/notificationAccess.setVisibility\(!ringing&&!notificationsAllowed\(\)/);
+    assert.match(main,/setText\("Alarmmeldungen erlauben"\)/);
+    assert.match(main,/notificationAccess.setOnClickListener\(v->openNotificationAccess\(\)\)/);
+    assert.match(main,/requestPermissions\(new String\[\]\{Manifest.permission.POST_NOTIFICATIONS\}/);
+    assert.match(main,/Settings.ACTION_APP_NOTIFICATION_SETTINGS/);
+    // A declined permission must not disable local stop, snooze or vibration.
+    assert.match(main,/WatchAlarmService.STOP/);
+    assert.match(main,/WatchAlarmService.SNOOZE/);
+    assert.match(service,/applyHaptic\(WatchCascade.strongTimings\(activeIntensity\)/);
+    assert.match(service,/setContentIntent\(openApp\(this\)\)/);
+    assert.doesNotMatch(main,/onCreate\([\s\S]*?requestPermissions\(/,
+        'do not automatically trigger an alert permission prompt');
+});
