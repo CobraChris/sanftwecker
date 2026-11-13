@@ -31,16 +31,16 @@ public final class WatchCascade {
 
     public static long[] gentleTimings(int intensity){
         switch(safeIntensity(intensity)){
-            case SANFT: return new long[]{0L,45L,17000L};
+            case SANFT: return new long[]{0L,145L,0L};
             case INTENSIV: return new long[]{0L,320L,0L};
-            default: return new long[]{0L,110L,9000L};
+            default: return new long[]{0L,205L,0L};
         }
     }
     public static int[] gentleAmplitudes(int intensity){
         switch(safeIntensity(intensity)){
-            case SANFT: return new int[]{0,20,0};
+            case SANFT: return new int[]{0,64,0};
             case INTENSIV: return new int[]{0,185,0};
-            default: return new int[]{0,48,0};
+            default: return new int[]{0,112,0};
         }
     }
     /** Phase 2 uses a recognizable double pulse, even without amplitude control. */

@@ -34,6 +34,7 @@ public final class MainActivity extends Activity {
     private LinearLayout list;
     private TextView subheading;
     private Button fullScreenPermissionButton;
+    private TextView fullScreenPermissionStatus;
     private boolean sortByNext = true;
 
     @Override public void onCreate(Bundle state) {
@@ -121,6 +122,10 @@ public final class MainActivity extends Activity {
             }
         });
         if(android.os.Build.VERSION.SDK_INT>=34){
+            fullScreenPermissionStatus=UiKit.label(this,
+                    "Klingelbildschirm: Android-Berechtigung wird geprüft …",
+                    13,UiKit.MUTED);
+            base.addView(fullScreenPermissionStatus);
             fullScreenPermissionButton=UiKit.button(this,"Klingelbildschirm erlauben",false);
             base.addView(fullScreenPermissionButton);
             fullScreenPermissionButton.setOnClickListener(v->{
@@ -363,9 +368,8 @@ public final class MainActivity extends Activity {
 
     private void refreshFullScreenPermissionUi() {
         if (android.os.Build.VERSION.SDK_INT < 34 || fullScreenPermissionButton == null) return;
-        android.app.NotificationManager manager =
-                (android.app.NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        boolean allowed = manager != null && manager.canUseFullScreenIntent();
+        boolean allowed = FullScreenPermissionStatus.isAllowed(this);
+        fullScreenPermissionStatus.setText(FullScreenPermissionStatus.label(allowed));
         fullScreenPermissionButton.setVisibility(allowed ? View.GONE : View.VISIBLE);
     }
 

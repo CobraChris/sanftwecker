@@ -123,11 +123,14 @@ public final class WatchScheduleStore {
         int snooze=prefs.getInt(key(slot,"snooze_minutes"),0);
         int intensity=WatchCascade.safeIntensity(prefs.getInt(
                 key(slot,"intensity"),WatchCascade.NORMAL));
+        int pulseCount=WatchCascade.safePulses(
+                prefs.getInt(key(slot,"pulse_count"),6));
+        int intervalSeconds=WatchCascade.safeInterval(
+                prefs.getInt(key(slot,"pulse_interval_seconds"),5));
         forget(c,slot);
         if(id>0&&id<=1000&&WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))
             WatchAlarmService.start(c,id,when,minutes,name,cascade,snooze,intensity,
-                    WatchCascade.safePulses(prefs.getInt(key(slot,"pulse_count"),6)),
-                    WatchCascade.safeInterval(prefs.getInt(key(slot,"pulse_interval_seconds"),5)));
+                    pulseCount,intervalSeconds);
     }
     public static synchronized void restore(Context c){
         SharedPreferences prefs=store(c);

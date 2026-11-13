@@ -279,10 +279,10 @@ public final class DetailActivity extends Activity {
             public void onNothingSelected(AdapterView<?> parent){}
         });
         wrist.addView(UiKit.label(this,
-                "Sanft: ganz kurze Impulse mit langen Pausen; nach 60 Sekunden "+ 
-                "ein deutlicher Doppelimpuls. Normal: bisheriges Muster. "+
-                "Intensiv: kräftig. Nur nach ✓ Speichern aktiv. "+
-                "Die tatsächliche Stärke hängt von der Uhr ab.",13,UiKit.MUTED));
+                "Sanft: leichter spürbarer Impuls, Normal: deutlicher Impuls, "+
+                "Intensiv: kräftig. Anzahl und Abstand stellst du unten ein. "+
+                "Nach 60 Sekunden beginnt die zweite Weckstufe. "+
+                "Nur nach Speichern aktiv; die Stärke hängt von der Uhr ab.",13,UiKit.MUTED));
         pulsesLabel=label("",15);wrist.addView(pulsesLabel);
         pulses=slider(wrist,12);
         intervalLabel=label("",15);wrist.addView(intervalLabel);
@@ -590,8 +590,7 @@ public final class DetailActivity extends Activity {
     private void refreshFullScreenPermissionUi(){
         if(Build.VERSION.SDK_INT<34 || fullScreenPermissionStatus==null ||
                 fullScreenPermissionButton==null)return;
-        NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        boolean allowed=manager!=null && manager.canUseFullScreenIntent();
+        boolean allowed=FullScreenPermissionStatus.isAllowed(this);
         fullScreenPermissionStatus.setText(allowed
                 ?"Vollbild-Wecker: bereits erlaubt – keine erneute Freigabe nötig."
                 :"Vollbild-Wecker: nicht erlaubt. Bitte einmalig in Android freigeben.");

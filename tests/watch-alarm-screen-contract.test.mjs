@@ -74,3 +74,34 @@ test('watch cascade uses finite user-counted pulses and stops all callbacks',()=
     assert.match(phone,/data.putInt\("watch_interval_seconds"/);
     assert.match(ui,/Anzahl und Abstand die/);
 });
+
+
+test('active Watch alarm always has manual screen access from high-priority notification',()=>{
+    const watch=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchAlarmService.java');
+    const main=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchMainActivity.java');
+    assert.match(watch,/"Alarmansicht",openApp\(this\)/);
+    assert.match(watch,/NotificationManager.IMPORTANCE_HIGH/);
+    assert.match(watch,/"Stoppen",stopAction\(\)/);
+    assert.match(main,/openAlarmScreen.setVisibility\(ringing\?View.VISIBLE:View.GONE\)/);
+    assert.match(main,/startActivity\(WatchRingActivity.openIntent\(this\)\)/);
+});
+test('Watch fired captures configured pulse count and interval before deleting schedule',()=>{
+    const store=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchScheduleStore.java');
+    const fired=store.split('public static synchronized void fired(')[1]
+        ?.split('public static synchronized void restore(')[0];
+    assert.ok(fired);
+    assert.ok(fired.indexOf('int pulseCount=')<fired.indexOf('forget(c,slot)'));
+    assert.ok(fired.indexOf('int intervalSeconds=')<fired.indexOf('forget(c,slot)'));
+    assert.match(fired,/pulseCount,intervalSeconds/);
+});
+test('phone only offers full-screen permission when the Android grant is missing',()=>{
+    const main=read('alarm/src/main/java/com/cobrachris/sanftwecker/MainActivity.java');
+    const status=read('alarm/src/main/java/com/cobrachris/sanftwecker/FullScreenPermissionStatus.java');
+    const receiver=read('alarm/src/main/java/com/cobrachris/sanftwecker/RescheduleReceiver.java');
+    assert.match(main,/FullScreenPermissionStatus.isAllowed\(this\)/);
+    assert.match(main,/fullScreenPermissionButton.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
+    assert.match(main,/fullScreenPermissionStatus.setText/);
+    assert.match(status,/canUseFullScreenIntent\(\)/);
+    assert.match(receiver,/Intent.ACTION_MY_PACKAGE_REPLACED/);
+    assert.match(receiver,/FullScreenPermissionStatus.label/);
+});

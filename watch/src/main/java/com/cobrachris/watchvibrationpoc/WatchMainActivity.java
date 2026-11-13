@@ -18,7 +18,7 @@ import java.util.Locale;
 /** Minimal standalone screen; vibration runs from local AlarmManager without UI. */
 public final class WatchMainActivity extends Activity {
     private TextView status;
-    private Button snooze,local,stop,updateWatch;
+    private Button snooze,local,openAlarmScreen,stop,updateWatch;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable update=new Runnable(){
         @Override public void run(){
@@ -38,6 +38,7 @@ public final class WatchMainActivity extends Activity {
         updateWatch.setVisibility(ringing?View.GONE:View.VISIBLE);
         local.setVisibility(ringing?View.GONE:View.VISIBLE);
         stop.setVisibility(ringing?View.VISIBLE:View.GONE);
+        openAlarmScreen.setVisibility(ringing?View.VISIBLE:View.GONE);
         if(ringing){
             boolean cascade=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
                     .getBoolean("cascade",false);
@@ -110,6 +111,12 @@ public final class WatchMainActivity extends Activity {
                 status.setText("Keine Handy-Verbindung für Schlummern");
             }
         });
+        openAlarmScreen=new Button(this);
+        openAlarmScreen.setText("Alarmansicht öffnen");
+        openAlarmScreen.setVisibility(View.GONE);
+        layout.addView(openAlarmScreen);
+        openAlarmScreen.setOnClickListener(v->
+                startActivity(WatchRingActivity.openIntent(this)));
         stop=new Button(this);stop.setText("Alarm beenden");
         layout.addView(stop);
         stop.setOnClickListener(v->{
