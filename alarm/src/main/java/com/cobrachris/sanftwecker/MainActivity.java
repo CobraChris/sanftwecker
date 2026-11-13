@@ -36,6 +36,7 @@ public final class MainActivity extends Activity {
     private Button fullScreenPermissionButton;
     private TextView fullScreenPermissionStatus;
     private Button openActiveAlarm;
+    private Button emergencyStopButton;
     private boolean sortByNext = true;
 
     @Override public void onCreate(Bundle state) {
@@ -70,9 +71,11 @@ public final class MainActivity extends Activity {
     }
 
     private void refreshActiveAlarmButton() {
+        boolean ringing=ActiveAlarmState.activeId(this)>0;
         if(openActiveAlarm!=null)
-            openActiveAlarm.setVisibility(ActiveAlarmState.activeId(this)>0
-                    ?View.VISIBLE:View.GONE);
+            openActiveAlarm.setVisibility(ringing?View.VISIBLE:View.GONE);
+        if(emergencyStopButton!=null)
+            emergencyStopButton.setVisibility(ringing?View.VISIBLE:View.GONE);
     }
 
     private void buildScreen() {
@@ -93,8 +96,8 @@ public final class MainActivity extends Activity {
         base.addView(header);
         ClockTabs.add(this,base,ClockTabs.ALARMS);
 
-        // A running alarm must remain immediately actionable.
-        // Maintenance and emergency controls belong to the explicit menu.
+        // A running alarm and its fallback stop stay one tap away.
+        // When idle, maintenance and emergency fallback remain in the menu.
         openActiveAlarm=UiKit.button(this,"LAUFENDEN WECKER ÖFFNEN – Stoppen / Schlummern",true);
         base.addView(openActiveAlarm);
         openActiveAlarm.setOnClickListener(v->{
@@ -104,6 +107,9 @@ public final class MainActivity extends Activity {
                     .putExtra(AlarmScheduler.EXTRA_ID,ringingId)
                     .putExtra("from_alarm",true));
         });
+        emergencyStopButton=UiKit.button(this,"Not-Stopp: Ton und Vibration",false);
+        base.addView(emergencyStopButton);
+        emergencyStopButton.setOnClickListener(v->emergencyStop());
         refreshActiveAlarmButton();
         if(android.os.Build.VERSION.SDK_INT>=34){
             fullScreenPermissionStatus=UiKit.label(this,
@@ -176,6 +182,7 @@ public final class MainActivity extends Activity {
         PhoneVibration.stop();
         AlarmScheduler.cancelTest(this);
         if(openActiveAlarm!=null)openActiveAlarm.setVisibility(View.GONE);
+        if(emergencyStopButton!=null)emergencyStopButton.setVisibility(View.GONE);
         try{
             startService(new Intent(this,RingingService.class)
                     .setAction(RingingService.STOP));
