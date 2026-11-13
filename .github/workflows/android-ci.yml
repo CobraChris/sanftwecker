@@ -64,6 +64,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v36-release-request.mjs
           node --test tests/sanftwecker-v36-release-request.test.mjs
+      - name: Verify protected v37 original-signer navigation release gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v37-release-request.mjs
+          node --test tests/sanftwecker-v37-release-request.test.mjs
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug :watch:testDebugUnitTest :watch:lintDebug :watch:assembleDebug
       - name: Build unsigned release APK for migration preflight
