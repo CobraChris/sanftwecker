@@ -105,3 +105,26 @@ test('phone only offers full-screen permission when the Android grant is missing
     assert.match(receiver,/Intent.ACTION_MY_PACKAGE_REPLACED/);
     assert.match(receiver,/FullScreenPermissionStatus.label/);
 });
+
+
+test('unlocked phone has explicit alarm-screen entry and stop without bypassing FSI',()=>{
+    const main=read('alarm/src/main/java/com/cobrachris/sanftwecker/MainActivity.java');
+    const service=read('alarm/src/main/java/com/cobrachris/sanftwecker/RingingService.java');
+    const activity=read('alarm/src/main/java/com/cobrachris/sanftwecker/AlarmActivity.java');
+    const state=read('alarm/src/main/java/com/cobrachris/sanftwecker/ActiveAlarmState.java');
+    const manifest=read('alarm/src/main/AndroidManifest.xml');
+    assert.match(service,/ActiveAlarmState\.start\(this,ringId,ringWhen\)/);
+    assert.match(service,/ActiveAlarmState\.clear\(this\)/);
+    assert.match(service,/\.setFullScreenIntent\(openApp\(\), true\)/);
+    assert.match(service,/"Stoppen", STOP/);
+    assert.match(service,/"Alarmansicht",openApp\(\)/);
+    assert.match(main,/LAUFENDEN WECKER ÖFFNEN/);
+    assert.match(main,/ActiveAlarmState\.activeId\(this\)/);
+    assert.match(main,/new Intent\(this,AlarmActivity\.class\)/);
+    assert.match(state,/MAX_AGE=30L\*60_000L/);
+    assert.match(state,/putLong\("started_at",System\.currentTimeMillis\(\)\)/);
+    assert.match(activity,/RingingService\.STOP/);
+    assert.match(activity,/RingingService\.SNOOZE/);
+    assert.match(manifest,/android:showWhenLocked="true"/);
+    assert.match(manifest,/android:turnScreenOn="true"/);
+});
