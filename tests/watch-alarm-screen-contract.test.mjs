@@ -94,18 +94,22 @@ test('Watch fired captures configured pulse count and interval before deleting s
     assert.ok(fired.indexOf('int intervalSeconds=')<fired.indexOf('forget(c,slot)'));
     assert.match(fired,/pulseCount,intervalSeconds/);
 });
-test('phone only offers full-screen permission when the Android grant is missing',()=>{
+test('phone routes full-screen and other grants through user-controlled setup',()=>{
     const main=read('alarm/src/main/java/com/cobrachris/sanftwecker/MainActivity.java');
+    const wizard=read('alarm/src/main/java/com/cobrachris/sanftwecker/SetupAssistantActivity.java');
+    const permission=read('alarm/src/main/java/com/cobrachris/sanftwecker/SetupPermissionStatus.java');
     const status=read('alarm/src/main/java/com/cobrachris/sanftwecker/FullScreenPermissionStatus.java');
     const receiver=read('alarm/src/main/java/com/cobrachris/sanftwecker/RescheduleReceiver.java');
-    assert.match(main,/FullScreenPermissionStatus.isAllowed\(this\)/);
-    assert.match(main,/fullScreenPermissionButton.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
-    assert.match(main,/fullScreenPermissionStatus.setText/);
+    assert.match(main,/new Intent\(this,SetupAssistantActivity.class\)/);
+    assert.match(main,/setupWarning.setVisibility/);
+    assert.match(permission,/FullScreenPermissionStatus.isAllowed\(context\)/);
+    assert.match(wizard,/Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT/);
+    assert.match(wizard,/Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM/);
     assert.match(status,/canUseFullScreenIntent\(\)/);
     assert.match(receiver,/Intent.ACTION_MY_PACKAGE_REPLACED/);
     assert.match(receiver,/FullScreenPermissionStatus.label/);
+    assert.doesNotMatch(main,/fullScreenPermissionButton|fullScreenPermissionStatus/);
 });
-
 
 test('unlocked phone has explicit alarm-screen entry and stop without bypassing FSI',()=>{
     const main=read('alarm/src/main/java/com/cobrachris/sanftwecker/MainActivity.java');
@@ -167,15 +171,16 @@ test('alarm home focuses on alarms while preserving all critical maintenance pat
     assert.match(menu,/Sortieren: Uhrzeit/);
     assert.match(menu,/getMenu\(\)\.add\("App aktualisieren"\)/);
     assert.match(menu,/new Intent\(this,UpdateActivity.class\)/);
-    assert.match(menu,/Not-Stopp: Ton und Vibration/);
+    assert.match(menu,/Alarm zwangsweise stoppen/);
     assert.match(menu,/PhoneVibration.stop\(\)/);
     assert.match(menu,/AlarmScheduler.cancelTest\(this\)/);
     assert.match(menu,/RingingService.STOP/);
     assert.doesNotMatch(home,/base.addView\(updates\)/);
     assert.doesNotMatch(home,/base.addView\(stopNow\)/);
-    // The full-screen alert is shown only when permission needs attention.
-    assert.match(main,/fullScreenPermissionStatus.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
-    assert.match(main,/fullScreenPermissionButton.setVisibility\(allowed \? View.GONE : View.VISIBLE\)/);
+    // The setup indicator replaces the oversized full-screen banner.
+    assert.match(main,/SetupPermissionStatus.missingRequired\(this\)/);
+    assert.match(main,/setupWarning.setVisibility/);
+    assert.doesNotMatch(home,/Klingelbildschirm erlauben/);
     assert.match(main,/Wecker werden auf der Uhr geplant/);
 });
 
