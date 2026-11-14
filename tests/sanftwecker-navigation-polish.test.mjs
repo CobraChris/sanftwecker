@@ -35,7 +35,8 @@ test('alarm card replaces technical details with live remaining hours and minute
   assert.match(main,/ACHTUNG: Wecker nicht eingeplant/);
   assert.match(main,/Ein Termin wird übersprungen/);
   assert.match(main,/Nächste Auslösung einmalig geändert/);
-  assert.match(main,/Klingelbildschirm erlauben/);
+  assert.match(main,/new Intent\(this,SetupAssistantActivity.class\)/);
+  assert.doesNotMatch(main,/Klingelbildschirm erlauben/);
 });
 
 test('timer cards appear in two columns on phones with short readable controls',()=>{

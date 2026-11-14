@@ -37,8 +37,8 @@ public final class MainActivity extends Activity {
     private final String[] dayNames = {"M","D","M","D","F","S","S"};
     private LinearLayout list;
     private TextView subheading;
-    private Button fullScreenPermissionButton;
-    private TextView fullScreenPermissionStatus;
+    private TextView setupWarning;
+    private TextView schedulingWarning;
     private Button openActiveAlarm;
     private Button emergencyStopButton;
     private boolean sortByNext = true;
@@ -78,7 +78,7 @@ public final class MainActivity extends Activity {
             }
             renderList();
         }
-        refreshFullScreenPermissionUi();
+        refreshPermissionWarning();
         refreshActiveAlarmButton();
         countdownHandler.removeCallbacks(countdownTick);
         countdownHandler.post(countdownTick);
@@ -115,9 +115,20 @@ public final class MainActivity extends Activity {
         headerText.addView(UiKit.label(this, "Meine Wecker", 28, UiKit.TEXT));
         subheading = UiKit.label(this, "Noch keine Wecker", 14, UiKit.MUTED);
         headerText.addView(subheading);
+        schedulingWarning=UiKit.label(this,
+                "⚠ Genaue Alarme fehlen – Einrichtung prüfen",13,0xFFFFBB66);
+        schedulingWarning.setVisibility(View.GONE);
+        schedulingWarning.setOnClickListener(v->openSetupAssistant());
+        headerText.addView(schedulingWarning);
         header.addView(headerText, UiKit.weight());
+        setupWarning=UiKit.action(this,"!");
+        setupWarning.setTextColor(0xFFFFBB66);
+        setupWarning.setBackground(UiKit.shape(0xFF49341E,this,12));
+        setupWarning.setContentDescription("Berechtigung fehlt – Einrichtungsassistent öffnen");
+        setupWarning.setOnClickListener(v->openSetupAssistant());
+        header.addView(setupWarning);
         TextView options = UiKit.action(this, "⋮");
-        options.setContentDescription("Weitere Optionen und Sortierung");
+        options.setContentDescription("Weitere Optionen, Sortierung und Einrichtung");
         header.addView(options);
         options.setOnClickListener(this::showMainMenu);
         base.addView(header);
@@ -134,30 +145,13 @@ public final class MainActivity extends Activity {
                     .putExtra(AlarmScheduler.EXTRA_ID,ringingId)
                     .putExtra("from_alarm",true));
         });
-        emergencyStopButton=UiKit.button(this,"Not-Stopp: Ton und Vibration",false);
+        emergencyStopButton=UiKit.button(this,"Alarm zwangsweise stoppen",false);
         base.addView(emergencyStopButton);
         emergencyStopButton.setOnClickListener(v->emergencyStop());
         refreshActiveAlarmButton();
-        if(android.os.Build.VERSION.SDK_INT>=34){
-            fullScreenPermissionStatus=UiKit.label(this,
-                    "Klingelbildschirm: Android-Berechtigung wird geprüft …",
-                    13,UiKit.MUTED);
-            base.addView(fullScreenPermissionStatus);
-            fullScreenPermissionButton=UiKit.button(this,"Klingelbildschirm erlauben",false);
-            base.addView(fullScreenPermissionButton);
-            fullScreenPermissionButton.setOnClickListener(v->{
-                try{
-                    startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
-                            .setData(android.net.Uri.parse("package:"+getPackageName())));
-                }catch(RuntimeException e){
-                    new android.app.AlertDialog.Builder(this)
-                            .setMessage("Bitte Vollbild-Benachrichtigungen für Sanftwecker "+
-                                    "in den Android-Einstellungen freigeben.")
-                            .setPositiveButton("OK",null).show();
-                }
-            });
-            refreshFullScreenPermissionUi();
-        }
+        // All Android permissions are managed from the central setup screen.
+        // Keep the alarm list clear even when full-screen access is missing.
+        refreshPermissionWarning();
 
         list = UiKit.column(this);
         base.addView(list);
@@ -197,10 +191,25 @@ public final class MainActivity extends Activity {
         menu.getMenu().add("App aktualisieren").setOnMenuItemClickListener(item->{
             startActivity(new Intent(this,UpdateActivity.class));return true;
         });
-        menu.getMenu().add("Not-Stopp: Ton und Vibration").setOnMenuItemClickListener(item->{
+        menu.getMenu().add((SetupPermissionStatus.missingRequired(this)>0
+                ? "⚠ " : "✓ ")+"Einrichtungsassistent")
+                .setOnMenuItemClickListener(item->{
+                    openSetupAssistant();return true;
+                });
+        menu.getMenu().add("Alarm zwangsweise stoppen").setOnMenuItemClickListener(item->{
             emergencyStop();return true;
         });
         menu.show();
+    }
+
+    private void openSetupAssistant() {
+        startActivity(new Intent(this,SetupAssistantActivity.class));
+    }
+
+    private void refreshPermissionWarning() {
+        if(setupWarning!=null)setupWarning.setVisibility(
+                SetupPermissionStatus.missingRequired(this)>0
+                        ?View.VISIBLE:View.GONE);
     }
 
     private void emergencyStop(){
@@ -214,7 +223,7 @@ public final class MainActivity extends Activity {
             startService(new Intent(this,RingingService.class)
                     .setAction(RingingService.STOP));
             new AlertDialog.Builder(this)
-                    .setMessage("Not-Stopp angefordert: Ton und Handyvibration beenden.")
+                    .setMessage("Alarm-Stopp angefordert: Ton und Handyvibration beenden.")
                     .setPositiveButton("OK",null).show();
         }catch(RuntimeException e){
             new AlertDialog.Builder(this)
@@ -256,6 +265,11 @@ public final class MainActivity extends Activity {
                 profiles.size() + (profiles.size()==1 ? " Wecker" : " Wecker") +
                 (earliest==Long.MAX_VALUE ? " · keiner aktiv" :
                         " · nächster " + shortTime(earliest)));
+        boolean anyEnabled=false;
+        for(AlarmProfile p:profiles)if(p.enabled){anyEnabled=true;break;}
+        if(schedulingWarning!=null)schedulingWarning.setVisibility(
+                anyEnabled && !SetupPermissionStatus.exactAlarms(this)
+                        ?View.VISIBLE:View.GONE);
         if (profiles.isEmpty()) {
             LinearLayout empty=UiKit.card(this);
             TextView message=UiKit.label(this,
@@ -421,15 +435,6 @@ public final class MainActivity extends Activity {
     private void openDetail(int id) {
         startActivity(new Intent(this,DetailActivity.class)
                 .putExtra(AlarmScheduler.EXTRA_ID,id));
-    }
-
-    private void refreshFullScreenPermissionUi() {
-        if (android.os.Build.VERSION.SDK_INT < 34 || fullScreenPermissionButton == null) return;
-        boolean allowed = FullScreenPermissionStatus.isAllowed(this);
-        fullScreenPermissionStatus.setText(FullScreenPermissionStatus.label(allowed));
-        // Show a setup problem, not a permanent technical status banner.
-        fullScreenPermissionStatus.setVisibility(allowed ? View.GONE : View.VISIBLE);
-        fullScreenPermissionButton.setVisibility(allowed ? View.GONE : View.VISIBLE);
     }
 
     private void showAlarmPermission() {
