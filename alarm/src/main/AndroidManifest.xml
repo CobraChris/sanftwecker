@@ -25,6 +25,7 @@
         <activity android:name=".DetailActivity" android:exported="false"/>
         <activity android:name=".TonePickerActivity" android:exported="false"/>
         <activity android:name=".UpdateActivity" android:exported="false"/>
+        <activity android:name=".SetupAssistantActivity" android:exported="false"/>
         <activity android:name=".WatchUpdateActivity" android:exported="false"/>
         <provider
             android:name="androidx.core.content.FileProvider"
