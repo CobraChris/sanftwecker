@@ -80,6 +80,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v39-release-request.mjs
           node --test tests/sanftwecker-v39-release-request.test.mjs
+      - name: Verify protected v40 original-signer permission setup test release gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v40-release-request.mjs
+          node --test tests/sanftwecker-v40-release-request.test.mjs
       - name: Tests, lint and unsigned debug build
         run: gradle --no-daemon :alarm:testDebugUnitTest :alarm:lintDebug :alarm:assembleDebug :watch:testDebugUnitTest :watch:lintDebug :watch:assembleDebug
       - name: Build unsigned release APK for migration preflight
