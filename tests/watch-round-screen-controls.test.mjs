@@ -65,10 +65,10 @@ test('bulk pause controls only occupy space when there is active work',()=>{
 
 test('alarm home retains direct emergency stop during an active alarm',()=>{
   const main=read('alarm/src/main/java/com/cobrachris/sanftwecker/MainActivity.java');
-  assert.match(main,/emergencyStopButton=UiKit.button\(this,"Not-Stopp: Ton und Vibration",false\)/);
+  assert.match(main,/emergencyStopButton=UiKit.button\(this,"Alarm zwangsweise stoppen",false\)/);
   assert.match(main,/emergencyStopButton.setVisibility\(ringing\?View.VISIBLE:View.GONE\)/);
   assert.match(main,/emergencyStopButton.setOnClickListener\(v->emergencyStop\(\)\)/);
-  assert.match(main,/menu.getMenu\(\).add\("Not-Stopp: Ton und Vibration"\)/);
+  assert.match(main,/menu.getMenu\(\).add\("Alarm zwangsweise stoppen"\)/);
   assert.match(main,/PhoneVibration.stop\(\)/);
   assert.match(main,/RingingService.STOP/);
 });
