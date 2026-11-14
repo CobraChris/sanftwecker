@@ -277,33 +277,46 @@ public final class MainActivity extends Activity {
             empty.addView(message);
             UiKit.placeCard(this,list,empty);
         }
-        for (AlarmProfile p : ordered) UiKit.placeCard(this,list,renderCard(p,earliest));
+        for (AlarmProfile p : ordered) {
+            LinearLayout card=renderCard(p,earliest);
+            LinearLayout.LayoutParams spacing=new LinearLayout.LayoutParams(-1,-2);
+            spacing.bottomMargin=UiKit.dp(this,8);
+            list.addView(card,spacing);
+        }
         // Setup and Watch caveats live under ⋮ > Einrichtungsassistent.
         // Keep this screen focused on saved alarms and their controls.
     }
 
     private LinearLayout renderCard(AlarmProfile p, long earliest) {
         LinearLayout card=UiKit.card(this);
+        // Only alarm cards are compact; other views keep their original spacing.
+        card.setPadding(UiKit.dp(this,18),UiKit.dp(this,8),
+                UiKit.dp(this,18),UiKit.dp(this,10));
         card.setAlpha(p.enabled?1f:0.74f);
-        LinearLayout top=UiKit.row(this);
+        // Two vertical tracks save a full row of height without reducing
+        // the 48dp accessibility targets on overflow and alarm toggle.
+        LinearLayout header=UiKit.row(this);
+        LinearLayout alarmInfo=UiKit.column(this);
         TextView name=UiKit.label(this,p.name,16,UiKit.MUTED);
         name.setMaxLines(1);
-        top.addView(name,UiKit.weight());
-        TextView menu=UiKit.action(this,"⋯");
-        menu.setContentDescription("Weitere Aktionen für "+p.name);
-        top.addView(menu);
-        card.addView(top);
-
-        LinearLayout middle=UiKit.row(this);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        alarmInfo.addView(name);
         TextView time=UiKit.label(this,
                 String.format(Locale.GERMANY,"%02d:%02d",p.hour,p.minute),
-                59,p.enabled?UiKit.BLUE:UiKit.MUTED);
-        middle.addView(time,UiKit.weight());
+                53,p.enabled?UiKit.BLUE:UiKit.MUTED);
+        alarmInfo.addView(time);
+        header.addView(alarmInfo,UiKit.weight());
+
+        LinearLayout actions=UiKit.column(this);
+        TextView menu=UiKit.action(this,"⋯");
+        menu.setContentDescription("Weitere Aktionen für "+p.name);
+        actions.addView(menu);
         Switch active=UiKit.toggle(this);
         active.setChecked(p.enabled);
         active.setContentDescription(p.name + (p.enabled?" deaktivieren":" aktivieren"));
-        middle.addView(active);
-        card.addView(middle);
+        actions.addView(active);
+        header.addView(actions);
+        card.addView(header);
 
         LinearLayout days=UiKit.row(this);
         for(int i=0;i<7;i++){
