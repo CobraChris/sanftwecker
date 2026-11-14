@@ -181,7 +181,9 @@ test('alarm home focuses on alarms while preserving all critical maintenance pat
     assert.match(main,/SetupPermissionStatus.missingRequired\(this\)/);
     assert.match(main,/setupWarning.setVisibility/);
     assert.doesNotMatch(home,/Klingelbildschirm erlauben/);
-    assert.match(main,/Wecker werden auf der Uhr geplant/);
+    const assistant=read('alarm/src/main/java/com/cobrachris/sanftwecker/SetupAssistantActivity.java');
+    assert.doesNotMatch(main,/Wecker werden auf der Uhr geplant/);
+    assert.match(assistant,/Wecker werden direkt auf der Uhr geplant/);
 });
 
 test('four clock navigation tabs remain pinned while each content page scrolls',()=>{

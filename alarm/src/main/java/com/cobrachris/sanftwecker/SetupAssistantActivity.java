@@ -88,7 +88,9 @@ public final class SetupAssistantActivity extends Activity {
         watchCard.addView(watchStatus);
         watchCard.addView(UiKit.label(this,
                 "Die Uhr hat eigene Alarm- und Benachrichtigungsrechte. " +
-                "Diese lassen sich nicht auf diesem Handy vergeben.",14,UiKit.MUTED));
+                "Wecker werden direkt auf der Uhr geplant. " +
+                "Fehlt ein Alarm, die Synchronisierung prüfen. " +
+                "Berechtigungen müssen auf der Uhr vergeben werden.",14,UiKit.MUTED));
         Button watchHelp=UiKit.button(this,"Anleitung für die Uhr",false);
         watchCard.addView(watchHelp);
         watchHelp.setOnClickListener(v->new AlertDialog.Builder(this)
@@ -97,7 +99,9 @@ public final class SetupAssistantActivity extends Activity {
                         "Erscheint dort „Alarmmeldungen erlauben“, tippe darauf. " +
                         "Android zeigt dann die Berechtigungsabfrage oder die " +
                         "Benachrichtigungseinstellungen auf der Uhr an. " +
-                        "Wenn kein Alarm auf der Uhr ankommt, Synchronisierung prüfen.")
+                        "Wenn kein Alarm auf der Uhr ankommt, Synchronisierung prüfen. " +
+                        "Während der Beta-Phase einen bewährten Wecker " +
+                        "als zusätzliche Absicherung beibehalten.")
                 .setPositiveButton("OK",null).show());
         UiKit.placeCard(this,root,watchCard);
         setContentView(UiKit.scroll(this,root));

@@ -66,3 +66,23 @@ test('alarm home keeps all original safety actions while moving banners to menu'
   assert.doesNotMatch(main,/fullScreenPermissionButton|fullScreenPermissionStatus|refreshFullScreenPermissionUi/);
   assert.doesNotMatch(main,/base.addView\(fullScreenPermission/);
 });
+
+test('alarm home shows enabled alarm count and keeps Watch guidance in setup only',()=>{
+  const home=java('MainActivity');
+  const setup=java('SetupAssistantActivity');
+  assert.match(home,/subheading = UiKit.label\(this, "Aktive Wecker: 0"/);
+  assert.match(home,/for\(AlarmProfile p:profiles\)if\(p.enabled\)enabledCount\+\+/);
+  assert.match(home,/subheading.setText\("Aktive Wecker: " \+ enabledCount\)/);
+  assert.match(home,/boolean anyEnabled=enabledCount>0/);
+  assert.match(home,/anyEnabled && !SetupPermissionStatus.exactAlarms\(this\)/);
+  assert.doesNotMatch(home,/"Meine Wecker"|" · keiner aktiv"|" · nächster "/);
+  assert.doesNotMatch(home,/list.addView\(hint\)|"Galaxy Watch: Wecker|"Beta · bisherigen/);
+  assert.match(setup,/Wecker werden direkt auf der Uhr geplant/);
+  assert.match(setup,/Fehlt ein Alarm, die Synchronisierung prüfen/);
+  assert.match(setup,/Während der Beta-Phase einen bewährten Wecker/);
+  // Menus, core alarm stop and permission repair remain accessible.
+  assert.match(home,/showMainMenu/);
+  assert.match(home,/openSetupAssistant\(\)/);
+  assert.match(home,/emergencyStop\(\)/);
+  assert.match(home,/AlarmScheduler.toggle\(this,p.id,isChecked\)/);
+});
