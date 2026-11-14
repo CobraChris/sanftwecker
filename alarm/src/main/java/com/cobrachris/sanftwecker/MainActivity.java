@@ -112,8 +112,9 @@ public final class MainActivity extends Activity {
 
         LinearLayout header = UiKit.row(this);
         LinearLayout headerText = UiKit.column(this);
-        headerText.addView(UiKit.label(this, "Meine Wecker", 28, UiKit.TEXT));
-        subheading = UiKit.label(this, "Noch keine Wecker", 14, UiKit.MUTED);
+        // Keep the home header short. The status counts enabled alarms,
+        // not merely future timestamps, so missing scheduling stays visible.
+        subheading = UiKit.label(this, "Aktive Wecker: 0", 20, UiKit.TEXT);
         headerText.addView(subheading);
         schedulingWarning=UiKit.label(this,
                 "⚠ Genaue Alarme fehlen – Einrichtung prüfen",13,0xFFFFBB66);
@@ -261,12 +262,10 @@ public final class MainActivity extends Activity {
             long time=AlarmRepository.next(this,p.id);
             if (time>0) earliest=Math.min(earliest,time);
         }
-        subheading.setText(profiles.isEmpty() ? "Noch keine Wecker" :
-                profiles.size() + (profiles.size()==1 ? " Wecker" : " Wecker") +
-                (earliest==Long.MAX_VALUE ? " · keiner aktiv" :
-                        " · nächster " + shortTime(earliest)));
-        boolean anyEnabled=false;
-        for(AlarmProfile p:profiles)if(p.enabled){anyEnabled=true;break;}
+        int enabledCount=0;
+        for(AlarmProfile p:profiles)if(p.enabled)enabledCount++;
+        subheading.setText("Aktive Wecker: " + enabledCount);
+        boolean anyEnabled=enabledCount>0;
         if(schedulingWarning!=null)schedulingWarning.setVisibility(
                 anyEnabled && !SetupPermissionStatus.exactAlarms(this)
                         ?View.VISIBLE:View.GONE);
@@ -279,16 +278,8 @@ public final class MainActivity extends Activity {
             UiKit.placeCard(this,list,empty);
         }
         for (AlarmProfile p : ordered) UiKit.placeCard(this,list,renderCard(p,earliest));
-        // The watch has its own locally scheduled alarm. Do not describe it
-        // as merely mirrored Android notifications.
-        TextView hint=UiKit.label(this,
-                "Galaxy Watch: Wecker werden auf der Uhr geplant. " +
-                "Fehlende Alarme? Synchronisierung prüfen.",
-                13,UiKit.MUTED);
-        list.addView(hint);
-        list.addView(UiKit.label(this,
-                "Beta · bisherigen zuverlässigen Wecker vorerst beibehalten.",
-                12,UiKit.MUTED));
+        // Setup and Watch caveats live under ⋮ > Einrichtungsassistent.
+        // Keep this screen focused on saved alarms and their controls.
     }
 
     private LinearLayout renderCard(AlarmProfile p, long earliest) {
