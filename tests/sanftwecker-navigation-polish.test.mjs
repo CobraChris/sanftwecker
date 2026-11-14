@@ -61,3 +61,29 @@ test('stopwatch stays full-width on phone and navigation contrast improves',()=>
   assert.match(stopwatch,/StopwatchRepository\.put\(this,s\.pause\(wall,now\)\)/);
   assert.match(tabs,/i==selected\?UiKit\.BLUE:Color\.rgb\(194,200,219\)/);
 });
+
+test('alarm cards are vertically compact without sacrificing critical controls',()=>{
+  const main=file('MainActivity');
+  const card=main.slice(main.indexOf('private LinearLayout renderCard('),
+                        main.indexOf('private LinearLayout renderCard(')+5800);
+  assert.match(card,/card\.setPadding\(UiKit\.dp\(this,18\),UiKit\.dp\(this,8\),/);
+  assert.match(card,/UiKit\.dp\(this,18\),UiKit\.dp\(this,10\)\)/);
+  assert.match(card,/LinearLayout alarmInfo=UiKit\.column\(this\)/);
+  assert.match(card,/LinearLayout actions=UiKit\.column\(this\)/);
+  assert.match(card,/alarmInfo\.addView\(name\)/);
+  assert.match(card,/alarmInfo\.addView\(time\)/);
+  assert.match(card,/actions\.addView\(menu\)/);
+  assert.match(card,/actions\.addView\(active\)/);
+  assert.match(card,/name\.setEllipsize\(android\.text\.TextUtils\.TruncateAt\.END\)/);
+  assert.match(card,/for\(int i=0;i<7;i\+\+\)/);
+  assert.match(card,/UiKit\.chip\(this,dayNames\[i\],\(p\.days&\(1<<i\)\)!=0\)/);
+  assert.match(card,/menu\.setOnClickListener\(v->showMenu\(menu,p\)\)/);
+  assert.match(card,/active\.setOnCheckedChangeListener/);
+  assert.match(card,/AlarmScheduler\.toggle\(this,p\.id,isChecked\)/);
+  assert.match(card,/card\.setOnClickListener\(v->openDetail\(p\.id\)\)/);
+  assert.match(card,/AlarmCountdown\.label/);
+  assert.match(card,/ACHTUNG: Wecker nicht eingeplant/);
+  assert.match(main,/spacing\.bottomMargin=UiKit\.dp\(this,8\)/);
+  // Other page layouts do not inherit the alarm-specific compact padding.
+  assert.doesNotMatch(file('UiKit'),/card\.setPadding\(dp\(c,18\), dp\(c,8\)/);
+});
