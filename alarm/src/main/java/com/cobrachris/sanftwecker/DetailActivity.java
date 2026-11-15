@@ -23,10 +23,10 @@ public final class DetailActivity extends Activity {
     private boolean loading,dirty;
     private AlarmProfile saved;
     private EditText name;
-    private TextView clock,status,advanced,nextDisplay,fullScreenPermissionStatus;
+    private TextView clock,status,advanced,nextDisplay;
     private TextView toneSummary,watchSummary,snoozeSummary,modeDescription;
     private LinearLayout manualToneOptions;
-    private Button fullScreenPermissionButton,tonePicker;
+    private Button tonePicker;
     private final TextView[] chips=new TextView[7];
     private final boolean[] days=new boolean[7];
     private Switch enabled,rising,watch,snoozeEnabled,audibleWhenMuted,cascade;
@@ -46,7 +46,6 @@ public final class DetailActivity extends Activity {
     }
     @Override public void onResume(){
         super.onResume();
-        refreshFullScreenPermissionUi();
         if(status!=null)diagnostics();
     }
     private TextView label(String s,int size){return UiKit.label(this,s,size,UiKit.TEXT);}
@@ -587,16 +586,6 @@ public final class DetailActivity extends Activity {
                     "last_status","Noch keine Rückmeldung der neuen Uhr-App")+
                     "\nWatch-DND: Betriebssystem entscheidet über tatsächliche Vibration.");
         }
-    }
-
-    private void refreshFullScreenPermissionUi(){
-        if(Build.VERSION.SDK_INT<34 || fullScreenPermissionStatus==null ||
-                fullScreenPermissionButton==null)return;
-        boolean allowed=FullScreenPermissionStatus.isAllowed(this);
-        fullScreenPermissionStatus.setText(allowed
-                ?"Vollbild-Wecker: bereits erlaubt – keine erneute Freigabe nötig."
-                :"Vollbild-Wecker: nicht erlaubt. Bitte einmalig in Android freigeben.");
-        fullScreenPermissionButton.setVisibility(allowed?View.GONE:View.VISIBLE);
     }
 
     private void more(View anchor){
