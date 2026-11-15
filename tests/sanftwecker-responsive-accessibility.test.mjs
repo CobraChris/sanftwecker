@@ -9,7 +9,7 @@ const policy=read(base+'AlarmDetailLayoutPolicy.java');
 const kit=read(base+'UiKit.java');
 const home=read(base+'MainActivity.java');
 
-test('weekday layout accounts for narrow window and enlarged font without clipping',()=>{
+test('single-letter weekdays fit in one row at 360dp and wrap for narrow windows or larger text',()=>{
   assert.match(detail,/AlarmDetailLayoutPolicy\.weekdayColumns\(/);
   assert.match(detail,/getResources\(\)\.getConfiguration\(\)\.screenWidthDp/);
   assert.match(detail,/getResources\(\)\.getConfiguration\(\)\.fontScale/);
@@ -17,10 +17,14 @@ test('weekday layout accounts for narrow window and enlarged font without clippi
   assert.match(detail,/daysGrid\.addView\(dayRow\)/);
   assert.match(detail,/dayRow\.addView\(chips\[i\],p\)/);
   assert.match(detail,/chips\[i\]\.setMinWidth\(UiKit\.dp\(this,dayMin\)\)/);
-  assert.match(detail,/chips\[i\]\.setMinHeight\(UiKit\.dp\(this,48\)\)/);
-  assert.match(detail,/0,UiKit\.dp\(this,48\),1/);
+  assert.match(detail,/chips\[i\]\.setMinHeight\(UiKit\.dp\(this,AlarmDetailLayoutPolicy\.DAY_HEIGHT_DP\)\)/);
+  assert.match(detail,/0,UiKit\.dp\(this,AlarmDetailLayoutPolicy\.DAY_HEIGHT_DP\),1/);
+  assert.match(policy,/COMPACT_DAY_WIDTH_DP = 40/);
+  assert.match(policy,/DAY_HEIGHT_DP = 44/);
   assert.match(policy,/MIN_TOUCH_TARGET_DP = 48/);
+  assert.match(policy,/if\(safeScale <= 1\.3f\) return COMPACT_DAY_WIDTH_DP;/);
   assert.match(policy,/Math\.max\(MIN_TOUCH_TARGET_DP,/);
+  assert.match(detail,/weekdays=\{"M","D","M","D","F","S","S"\}/);
   assert.match(policy,/weekdayColumns\(int screenWidthDp, float fontScale\)/);
   assert.doesNotMatch(detail,/UiKit\.dp\(this,38\),1/);
 });
