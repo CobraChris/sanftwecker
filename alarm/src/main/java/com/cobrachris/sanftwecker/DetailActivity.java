@@ -18,7 +18,7 @@ import java.util.*;
 public final class DetailActivity extends Activity {
     private static final int NOTIFY_REQ=18;
     private static final int TONE_PICKER_REQ=24;
-    private final String[] weekdays={"Mo","Di","Mi","Do","Fr","Sa","So"};
+    private final String[] weekdays={"M","D","M","D","F","S","S"};
     private final String[] weekdayNames={"Montag","Dienstag","Mittwoch",
             "Donnerstag","Freitag","Samstag","Sonntag"};
     private int id,hour,minute,selectedTone;
@@ -187,8 +187,8 @@ public final class DetailActivity extends Activity {
         enabled.setOnCheckedChangeListener((b,value)->changed());
         time.addView(enabled);
         top.addView(time);
-        // Never compress seven selectable days into sub-48dp touch targets.
-        // The number of columns adapts to the window width and Android font scale.
+        // Keep seven one-letter chips on a single row on ordinary phones.
+        // Wrap only for narrow split-screen windows or enlarged system fonts.
         int columns=AlarmDetailLayoutPolicy.weekdayColumns(
                 getResources().getConfiguration().screenWidthDp,
                 getResources().getConfiguration().fontScale);
@@ -204,10 +204,10 @@ public final class DetailActivity extends Activity {
             final int which=i;
             chips[i]=UiKit.chip(this,weekdays[i],false);
             chips[i].setMinWidth(UiKit.dp(this,dayMin));
-            chips[i].setMinHeight(UiKit.dp(this,48));
+            chips[i].setMinHeight(UiKit.dp(this,AlarmDetailLayoutPolicy.DAY_HEIGHT_DP));
             chips[i].setFocusable(true);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(
-                    0,UiKit.dp(this,48),1);
+                    0,UiKit.dp(this,AlarmDetailLayoutPolicy.DAY_HEIGHT_DP),1);
             // The final chip in a row must not consume an extra 4dp margin.
             p.rightMargin=(i%columns==columns-1 || i==6) ? 0 :
                     UiKit.dp(this,AlarmDetailLayoutPolicy.DAY_GAP_DP);
