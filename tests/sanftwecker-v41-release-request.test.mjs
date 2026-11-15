@@ -9,7 +9,7 @@ import {
 const source='a'.repeat(40),after='b'.repeat(40);
 const valid={
   intent:'signed-native-wear-v41',
-  request_id:'2026-11-14-central-permission-setup',
+  request_id:'2026-11-15-responsive-detail-layout',
   expected_version_code:41,source_sha:source,
   watch_application_id:'com.cobrachris.sanftwecker',
   confirmation:'SIGN_PHONE_AND_WATCH_V41_WITH_EXISTING_V40_CERTIFICATE'
@@ -41,7 +41,7 @@ test('one added immutable approval file, zero modified code or scripts',()=>{
   assert.throws(()=>validateDiff(source,source,'A\t'+REQUEST+'\n',source));
 });
 
-test('GitHub owner and private original repo only',()=>{
+test('GitHub owner and original repo only',()=>{
   const good={GITHUB_REPOSITORY:REPO,GITHUB_ACTOR:'CobraChris',
     GITHUB_REF:'refs/heads/main',GITHUB_EVENT_NAME:'push'};
   validateActor(good);
@@ -54,7 +54,7 @@ test('GitHub owner and private original repo only',()=>{
   ])assert.throws(()=>validateActor({...good,...patch}));
 });
 
-test('dual-device signed v41 navigation release requires exact owner approval',()=>{
+test('dual-device signed v41 responsive detail release requires exact owner approval',()=>{
   const yml=readFileSync(new URL(
     '../.github/workflows/sanftwecker-v41-release.yml',import.meta.url),'utf8');
   const checks=[
@@ -79,7 +79,7 @@ test('dual-device signed v41 navigation release requires exact owner approval',(
     "versionCode='40'",
     "versionCode='41'",
     'assert expected==41',
-    'assert e[\'versionCode\']==40',
+    'assert e[\'versionCode\']==41',
     'android.hardware.type.watch',
     'APP_SIGNING_KEYSTORE_BASE64',
     'APP_SIGNING_STORE_PASSWORD',
