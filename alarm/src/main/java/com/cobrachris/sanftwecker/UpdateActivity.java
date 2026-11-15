@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -42,53 +43,97 @@ public final class UpdateActivity extends Activity {
     private TextView status;
     private static final int INSTALL_SOURCE_REQUEST=721;
     private Button check, install, browser;
+    private TextView moreOptions;
+    private LinearLayout secondaryOptions;
     private Candidate candidate;
     private boolean downloading=false;
+    private boolean checking=false;
     private boolean waitingForSourceApproval=false;
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         UiKit.window(this);
         LinearLayout root=UiKit.mainColumn(this);
-        root.addView(UiKit.heading(this,"App aktualisieren"));
-        ClockTabs.add(this,root,ClockTabs.ALARMS);
-        root.addView(UiKit.label(this,"Installierte Version: "+
+
+        // This is a settings subpage, not one of the four main clock tabs.
+        LinearLayout heading=UiKit.row(this);
+        TextView back=UiKit.action(this,"‹");
+        back.setContentDescription("Zurück zur Weckerübersicht");
+        back.setOnClickListener(v->finish());
+        heading.addView(back);
+        heading.addView(UiKit.heading(this,"App aktualisieren"),UiKit.weight());
+        root.addView(heading);
+
+        root.addView(UiKit.label(this,"Installiert: "+
                 getCurrentVersionName()+" (Build "+getCurrentVersion()+")",
                 16,UiKit.TEXT));
-        root.addView(UiKit.label(this,
-                "Eine neue APK kann die vorhandene App ersetzen, wenn sie mit "+
-                "demselben dauerhaften Schlüssel signiert wurde. "+
-                "Deine gespeicherten Wecker und Berechtigungen bleiben bei einem "+
-                "regulären Update normalerweise erhalten.",
-                14,UiKit.MUTED));
-        status=UiKit.label(this,"Noch nicht geprüft.",15,UiKit.TEXT);
+        status=UiKit.label(this,"Noch nicht nach Updates gesucht.",15,UiKit.TEXT);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
-        p.topMargin=UiKit.dp(this,18);p.bottomMargin=UiKit.dp(this,14);
+        p.topMargin=UiKit.dp(this,18);
+        p.bottomMargin=UiKit.dp(this,14);
         root.addView(status,p);
-        install=UiKit.button(this,"Update installieren",true);
-        install.setEnabled(false);
-        root.addView(install);
-        install.setOnClickListener(v->installUpdate());
-        check=UiKit.button(this,"Nach Update suchen",false);
+
+        // Primary action until a newer, verifiable release has been discovered.
+        check=UiKit.button(this,"Nach Updates suchen",true);
         root.addView(check);
         check.setOnClickListener(v->checkUpdates());
-        browser=UiKit.button(this,"Alternativ im Browser herunterladen",false);
-        browser.setEnabled(false);
-        root.addView(browser);
+
+        // Do not show a misleading blue install action before discovery.
+        install=UiKit.button(this,"Update installieren",true);
+        root.addView(install);
+        install.setOnClickListener(v->installUpdate());
+
+        moreOptions=UiKit.action(this,"Weitere Möglichkeiten ▾");
+        moreOptions.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
+        moreOptions.setTextSize(16);
+        moreOptions.setContentDescription("Weitere Möglichkeiten öffnen");
+        root.addView(moreOptions);
+        secondaryOptions=UiKit.column(this);
+        root.addView(secondaryOptions);
+        secondaryOptions.setVisibility(View.GONE);
+        moreOptions.setOnClickListener(v->{
+            boolean expand=secondaryOptions.getVisibility()!=View.VISIBLE;
+            secondaryOptions.setVisibility(expand?View.VISIBLE:View.GONE);
+            moreOptions.setText(expand?"Weitere Möglichkeiten ▴":"Weitere Möglichkeiten ▾");
+            moreOptions.setContentDescription(expand
+                    ?"Weitere Möglichkeiten schließen":"Weitere Möglichkeiten öffnen");
+        });
+
+        browser=UiKit.button(this,"APK im Browser herunterladen",false);
+        secondaryOptions.addView(browser);
         browser.setOnClickListener(v->openBrowser());
         Button watchDownload=UiKit.button(this,
-                "Galaxy Watch: APK ohne Browser laden",false);
-        root.addView(watchDownload);
+                "Galaxy Watch aktualisieren",false);
+        secondaryOptions.addView(watchDownload);
         watchDownload.setOnClickListener(v->startActivity(
                 new Intent(this,WatchUpdateActivity.class)));
+
         root.addView(UiKit.label(this,
-                "„Update installieren“ lädt die geprüfte APK direkt in der App herunter "+
-                "und öffnet den Android-Installationsdialog. Beim ersten Mal muss "+
-                "Android eventuell die Installation aus Sanftwecker erlauben. "+
-                "Es wird niemals automatisch bestätigt, deinstalliert oder gelöscht. "+
-                "Bei einer Signaturfehlermeldung bitte abbrechen, nicht deinstallieren.",
+                "Zuerst nach Updates suchen. Vor der Installation werden "+
+                "APK-Prüfsumme und Originalsignatur geprüft. Android fragt "+
+                "anschließend ausdrücklich nach deiner Bestätigung. "+
+                "Bei Signaturfehlern nicht deinstallieren.",
                 13,UiKit.MUTED));
+        updateActions();
         setContentView(UiKit.scroll(this,root));
+    }
+
+    /** Exactly one primary action: check first, install only for a newer release. */
+    private void updateActions(){
+        if(check==null||install==null||browser==null)return;
+        boolean hasCandidate=candidate!=null;
+        boolean busy=checking||downloading;
+        check.setEnabled(!busy);
+        check.setText(checking?"Suche nach Updates …":
+                hasCandidate?"Erneut nach Updates suchen":"Nach Updates suchen");
+        check.setBackground(UiKit.shape(hasCandidate?UiKit.CARD_2:UiKit.BLUE,this,16));
+        check.setTextColor(hasCandidate?UiKit.TEXT:UiKit.BG);
+        install.setVisibility(hasCandidate?View.VISIBLE:View.GONE);
+        install.setText(hasCandidate?"Update auf v"+candidate.code+" installieren":
+                "Update installieren");
+        install.setEnabled(hasCandidate&&!busy);
+        browser.setVisibility(hasCandidate?View.VISIBLE:View.GONE);
+        browser.setEnabled(hasCandidate&&!busy);
     }
 
     private long getCurrentVersion(){
@@ -177,9 +222,11 @@ public final class UpdateActivity extends Activity {
 
     private void installUpdate(){
         Candidate selected=candidate;
-        if(selected==null||downloading)return;
+        if(selected==null||downloading||checking)return;
         if(!VerifiedUpdatePolicy.isNewerApprovedUpdate(
                 selected.url,selected.sha256,selected.code,getCurrentVersion())){
+            candidate=null;
+            updateActions();
             status.setText("Updatequelle ist nicht mehr gültig. Bitte erneut prüfen.");
             return;
         }
@@ -197,9 +244,7 @@ public final class UpdateActivity extends Activity {
             return;
         }
         downloading=true;
-        install.setEnabled(false);
-        check.setEnabled(false);
-        browser.setEnabled(false);
+        updateActions();
         status.setText("Lade geprüfte APK herunter …");
         new Thread(()->{
             try{
@@ -212,9 +257,7 @@ public final class UpdateActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     downloading=false;
-                    install.setEnabled(true);
-                    check.setEnabled(true);
-                    browser.setEnabled(true);
+                    updateActions();
                     try{
                         Intent intent=new Intent(Intent.ACTION_VIEW);
                         intent.setDataAndType(verified,VerifiedApkDownloader.mimeType());
@@ -232,9 +275,7 @@ public final class UpdateActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     downloading=false;
-                    install.setEnabled(true);
-                    check.setEnabled(true);
-                    browser.setEnabled(true);
+                    updateActions();
                     status.setText("Update nicht gestartet: "+e.getMessage()+
                             ". Bitte erneut prüfen oder Browser verwenden.");
                 });
@@ -252,10 +293,11 @@ public final class UpdateActivity extends Activity {
     }
 
     private void checkUpdates(){
-        if(downloading)return;
+        if(downloading||checking)return;
+        checking=true;
+        candidate=null;
+        updateActions();
         status.setText("Prüfe GitHub-Veröffentlichungen …");
-        candidate=null;install.setEnabled(false);browser.setEnabled(false);
-        check.setEnabled(false);
         new Thread(()->{
             Candidate best=null;
             int checked=0;
@@ -275,21 +317,20 @@ public final class UpdateActivity extends Activity {
             final boolean networkFailed=checked==0;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                check.setEnabled(true);
+                checking=false;
                 if(networkFailed){
                     status.setText("Updateprüfung fehlgeschlagen. Bitte Internetverbindung prüfen.");
                 }else if(selected==null){
                     status.setText("Noch keine freigegebene Sanftwecker-APK veröffentlicht.");
                 }else if(!UpdateUrlPolicy.isNewer(selected.code,getCurrentVersion())){
-                    status.setText("Die installierte Version ist aktuell. "+
+                    status.setText("Du verwendest die aktuelle Version. "+
                             "(Veröffentlichter Build "+selected.code+")");
                 }else{
-                    status.setText("Update verfügbar: Build "+selected.code+
-                            ". Android installiert es erst nach deiner Bestätigung.");
+                    status.setText("Neue Version verfügbar: v"+selected.code+
+                            ". Die Installation erfolgt nur nach deiner Bestätigung.");
                     candidate=selected;
-                    install.setEnabled(true);
-                    browser.setEnabled(true);
                 }
+                updateActions();
             });
         },"Sanftwecker-Update-Check").start();
     }
