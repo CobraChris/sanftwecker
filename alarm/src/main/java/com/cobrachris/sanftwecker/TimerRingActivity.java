@@ -43,14 +43,14 @@ public final class TimerRingActivity extends Activity {
         root.addView(timerName);
 
         TextView help=UiKit.label(this,
-                "Alarmton und Vibration laufen bis zum Stoppen, maximal 3 Minuten.",
+                "Ton und Vibration laufen bis zum Stoppen, maximal 3 Minuten. Die Überziehungszeit läuft weiter.",
                 16,UiKit.MUTED);
         help.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams labelParams=new LinearLayout.LayoutParams(-1,-2);
         labelParams.topMargin=UiKit.dp(this,24);
         root.addView(help,labelParams);
 
-        Button stop=UiKit.button(this,"TIMER STOPPEN",true);
+        Button stop=UiKit.button(this,"ALARM STOPPEN",true);
         stop.setMinHeight(UiKit.dp(this,72));
         LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(-1,UiKit.dp(this,72));
         stopParams.topMargin=UiKit.dp(this,36);
