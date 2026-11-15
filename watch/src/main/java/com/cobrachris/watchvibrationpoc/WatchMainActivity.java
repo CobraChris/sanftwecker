@@ -75,7 +75,9 @@ public final class WatchMainActivity extends Activity {
         boolean ringing=when>0&&activeId>0;
         android.content.SharedPreferences timerState=
                 getSharedPreferences(WatchTimerAlertService.ACTIVE_PREF,MODE_PRIVATE);
-        boolean timerRinging=timerState.getInt("count",0)>0;
+        long timerWhen=timerState.getLong("when",0);
+        boolean timerRinging=timerState.getInt("count",0)>0 &&
+                timerWhen>0&&System.currentTimeMillis()<timerWhen+180_000L;
         // Clock alarm takes priority; a timer cannot replace its Stop/Snooze UI.
         stopTimer.setVisibility(!ringing&&timerRinging?View.VISIBLE:View.GONE);
         updateWatch.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
@@ -133,7 +135,7 @@ public final class WatchMainActivity extends Activity {
         status.setTextSize(16);status.setGravity(Gravity.CENTER);
         layout.addView(status);
         stopTimer=new Button(this);
-        stopTimer.setText("Timer stoppen");
+        stopTimer.setText("Alarm stoppen");
         stopTimer.setVisibility(View.GONE);
         layout.addView(stopTimer);
         stopTimer.setOnClickListener(v->{
