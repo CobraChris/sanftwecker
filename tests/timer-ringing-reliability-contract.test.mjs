@@ -56,7 +56,7 @@ test('lock screen offers one-tap STOP but never dismisses security',()=>{
   assert.match(manifest,/android:foregroundServiceType="mediaPlayback"/);
   assert.match(screen,/setShowWhenLocked\(true\)/);
   assert.match(screen,/setTurnScreenOn\(true\)/);
-  assert.match(screen,/UiKit\.button\(this,"TIMER STOPPEN",true\)/);
+  assert.match(screen,/UiKit\.button\(this,"ALARM STOPPEN",true\)/);
   assert.match(screen,/setAction\(TimerRingingService\.ACTION_STOP_ALL\)/);
   assert.match(screen,/setOnClickListener\(v->\{/);
   assert.match(service,/manager\.canUseFullScreenIntent\(\)/);
