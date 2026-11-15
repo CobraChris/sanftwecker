@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.Button;
@@ -84,9 +83,8 @@ public final class TimerRingActivity extends Activity {
         super.onResume();
         if(!registered){
             IntentFilter f=new IntentFilter(TimerRingingService.ACTION_FINISHED);
-            if(Build.VERSION.SDK_INT>=33)
-                registerReceiver(finished,f,Context.RECEIVER_NOT_EXPORTED);
-            else registerReceiver(finished,f);
+            androidx.core.content.ContextCompat.registerReceiver(
+                    this,finished,f,androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
             registered=true;
         }
     }
