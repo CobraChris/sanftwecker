@@ -53,7 +53,7 @@ public final class TimerActivity extends Activity {
                     render();break;
                 }
                 TextView time=clocks.get(t.id);
-                if(time!=null)time.setText(TimerDisplay.time(t.remaining(wall,elapsed),
+                if(time!=null)time.setText(TimerDisplay.visible(t,wall,elapsed,
                         TimerAlertSettings.timeFormat(TimerActivity.this,t.id)));
                 TextView stateView=statusViews.get(t.id);
                 if(stateView!=null && t.state==TimerEntry.WAITING){
@@ -119,9 +119,9 @@ public final class TimerActivity extends Activity {
         p.topMargin=UiKit.dp(this,16);
         root.addView(cards,p);
         root.addView(UiKit.label(this,
-                "Fertige Timer melden sich mit einer einmaligen Android-Benachrichtigung. "+
-                "Für Benachrichtigungen auf der Galaxy Watch muss diese App in "+
-                "Galaxy Wearable freigegeben sein; Samsungs Ruhemodus kann sie unterdrücken.",
+                "Nach Ablauf zählt der Timer mit + weiter. Handy und gekoppelte "+
+                "Galaxy Watch alarmieren bis zum Stoppen (maximal 3 Minuten). "+
+                "Bei unterbrochener Uhrverbindung kann der Uhralarm ausbleiben.",
                 13,UiKit.MUTED));
         setContentView(ClockTabs.pin(this,root,UiKit.scroll(this,root)));
         render();
@@ -188,7 +188,8 @@ public final class TimerActivity extends Activity {
         title.setMinHeight(UiKit.dp(this,48));
         card.addView(title);
         long remaining=t.remaining(System.currentTimeMillis(),SystemClock.elapsedRealtime());
-        TextView value=UiKit.label(this,TimerDisplay.time(remaining,
+        TextView value=UiKit.label(this,TimerDisplay.visible(t,
+                        System.currentTimeMillis(),SystemClock.elapsedRealtime(),
                         TimerAlertSettings.timeFormat(this,t.id)),23,
                 t.state==TimerEntry.FINISHED?0xffffb199:UiKit.BLUE);
         value.setGravity(Gravity.CENTER);
@@ -204,7 +205,7 @@ public final class TimerActivity extends Activity {
                     (t.delayRemaining(System.currentTimeMillis(),SystemClock.elapsedRealtime())>0?
                         "Start verzögert":"Läuft"):
                 t.state==TimerEntry.PAUSED?"Pausiert":
-                t.state==TimerEntry.FINISHED?"FERTIG":
+                t.state==TimerEntry.FINISHED?"Überzogen":
                 TimerStartSchedule.get(this,t.id)>0?
                     "Start "+new SimpleDateFormat("dd.MM. HH:mm",Locale.GERMANY)
                             .format(new Date(TimerStartSchedule.get(this,t.id))):
