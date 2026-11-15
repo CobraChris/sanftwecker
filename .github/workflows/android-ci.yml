@@ -54,6 +54,8 @@ jobs:
         run: node --test tests/setup-assistant-contract.test.mjs
       - name: Verify compact alarm detail without functionality regressions
         run: node --test tests/alarm-detail-ux-contract.test.mjs
+      - name: Verify responsive alarm detail and accessibility contracts
+        run: node --test tests/sanftwecker-responsive-accessibility.test.mjs
       - name: Verify protected v33 self-update test release gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v33-release-request.mjs
