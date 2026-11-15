@@ -60,7 +60,7 @@ test('watch listens to timer data/messages and provides ongoing local haptics',(
   assert.match(service,/NotificationManager\.IMPORTANCE_HIGH/);
   assert.match(service,/setCategory\(Notification\.CATEGORY_ALARM\)/);
   assert.match(service,/setOngoing\(true\)/);
-  assert.match(service,/Timer stoppen/);
+  assert.match(service,/Alarm stoppen/);
   assert.match(service,/handler\.postDelayed\(this,INTERVAL_MS\)/);
   assert.match(service,/MAX_MS=180_000L/);
   assert.match(service,/VibrationAttributes\.USAGE_ALARM/);
@@ -68,7 +68,7 @@ test('watch listens to timer data/messages and provides ongoing local haptics',(
   assert.match(service,/VibrationEffect\.createWaveform\(/);
   assert.match(service,/clockAlarmActive\(\)/);
   assert.match(service,/WatchAlarmService\.ACTIVE_PREF/);
-  assert.match(screen,/stopTimer\.setText\("Timer stoppen"\)/);
+  assert.match(screen,/stopTimer\.setText\("Alarm stoppen"\)/);
   assert.match(screen,/WatchTimerAlertService\.STOP_ALL/);
   assert.match(manifest,/pathPrefix="\/sanftwecker\/timer\/v1"/);
   assert.match(manifest,/\.WatchTimerAlertService/);
