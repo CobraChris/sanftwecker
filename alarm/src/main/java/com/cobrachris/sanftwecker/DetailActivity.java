@@ -87,7 +87,8 @@ public final class DetailActivity extends Activity {
         if(summary!=null)labels.addView(summary);
         header.addView(labels,UiKit.weight());
         TextView arrow=UiKit.action(this,"⌄");
-        arrow.setContentDescription(title+" öffnen");
+        // Only the complete row is announced as an expandable action.
+        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         header.addView(arrow);
         LinearLayout content=UiKit.column(this);
         content.setVisibility(View.GONE);
