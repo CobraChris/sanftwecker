@@ -22,7 +22,7 @@ test('timer completion no longer ends with one transient notification',()=>{
   assert.match(service,/c\.startForegroundService\(i\)/);
   assert.match(service,/startForeground\(NOTIFICATION_ID,notification/);
   assert.match(service,/ServiceInfo\.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK/);
-  assert.match(service,/Notification\.IMPORTANCE_HIGH/);
+  assert.match(service,/NotificationManager\.IMPORTANCE_HIGH/);
   assert.match(service,/setCategory\(Notification\.CATEGORY_ALARM\)/);
   assert.match(service,/setOngoing\(true\)/);
   assert.match(service,/\.addAction\(new Notification\.Action\.Builder\(/);
