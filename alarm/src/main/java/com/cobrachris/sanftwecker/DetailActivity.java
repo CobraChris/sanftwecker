@@ -207,7 +207,9 @@ public final class DetailActivity extends Activity {
             chips[i].setFocusable(true);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(
                     0,UiKit.dp(this,48),1);
-            p.rightMargin=UiKit.dp(this,AlarmDetailLayoutPolicy.DAY_GAP_DP);
+            // The final chip in a row must not consume an extra 4dp margin.
+            p.rightMargin=(i%columns==columns-1 || i==6) ? 0 :
+                    UiKit.dp(this,AlarmDetailLayoutPolicy.DAY_GAP_DP);
             p.bottomMargin=UiKit.dp(this,4);
             dayRow.addView(chips[i],p);
             applyDayState(i);
