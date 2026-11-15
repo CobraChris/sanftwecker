@@ -485,7 +485,7 @@ public final class TimerDetailActivity extends Activity {
                     TimerAlertSettings.timeFormat(this,timerId)));
         }else if(info==TimerAlertSettings.EXTRA_TARGET){
             target.setText(t.state==TimerEntry.FINISHED?
-                    "Abgelaufen um: "+formatTime(t.dueWallMs>0?t.dueWallMs:now):
+                    t.dueWallMs>0?"Abgelaufen um: "+formatTime(t.dueWallMs):"Timer abgelaufen":
                     (t.state==TimerEntry.RUNNING || t.state==TimerEntry.WAITING?
                             "Ziel-Uhrzeit: ":
                     "Ziel-Uhrzeit bei Start jetzt: ")+
