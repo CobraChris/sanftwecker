@@ -33,6 +33,7 @@ public final class WatchTimerAlertService extends Service {
     public static final String START="com.cobrachris.sanftwecker.WATCH_TIMER_START";
     public static final String STOP="com.cobrachris.sanftwecker.WATCH_TIMER_STOP";
     public static final String STOP_ALL="com.cobrachris.sanftwecker.WATCH_TIMER_STOP_ALL";
+    public static final String ACTIVE_PREF="sanftwecker_watch_timer_active_v1";
     private static final String CHANNEL="sanftwecker_watch_timer_alarm_v1";
     private static final String PREF="sanftwecker_watch_timer_ack_v1";
     private static final int NOTIFICATION_ID=4840;
@@ -175,6 +176,10 @@ public final class WatchTimerAlertService extends Service {
     }
     private void foreground(){
         if(active.isEmpty())return;
+        Entry first=active.values().iterator().next();
+        getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
+                .putInt("id",first.id).putLong("when",first.when)
+                .putString("name",first.name).putInt("count",active.size()).apply();
         String title=active.size()==1?
                 active.values().iterator().next().name+" abgelaufen":
                 active.size()+" Timer abgelaufen";
@@ -242,6 +247,7 @@ public final class WatchTimerAlertService extends Service {
     }
     private void shutdown(){
         handler.removeCallbacks(pulse);
+        getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit().clear().apply();
         cancelVibration();
         if(wakeLock!=null&&wakeLock.isHeld())wakeLock.release();
         if(inForeground){
