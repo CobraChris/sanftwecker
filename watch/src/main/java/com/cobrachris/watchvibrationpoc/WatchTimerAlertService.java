@@ -206,7 +206,7 @@ public final class WatchTimerAlertService extends Service {
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .addAction(new Notification.Action.Builder(
-                        android.R.drawable.ic_media_pause,"Timer stoppen",stop).build())
+                        android.R.drawable.ic_media_pause,"Alarm stoppen",stop).build())
                 .build();
         startForeground(NOTIFICATION_ID,notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
