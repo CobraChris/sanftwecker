@@ -12,6 +12,19 @@ public final class TimerDisplay {
         return String.format(Locale.GERMANY,"%02d:%02d:%02d",
                 seconds/3600,(seconds/60)%60,seconds%60);
     }
+    /** A finished countdown counts upwards, without changing its stored deadline. */
+    public static String overrun(long elapsedMs,int format){
+        long seconds=Math.max(0,elapsedMs/1000L);
+        if(format==TimerAlertSettings.FORMAT_MS)
+            return String.format(Locale.GERMANY,"+%02d:%02d",seconds/60,seconds%60);
+        return String.format(Locale.GERMANY,"+%02d:%02d:%02d",
+                seconds/3600,(seconds/60)%60,seconds%60);
+    }
+    public static String visible(TimerEntry item,long wallNow,long elapsedNow,int format){
+        return item.state==TimerEntry.FINISHED && item.dueWallMs>0
+                ?overrun(item.overrun(wallNow,elapsedNow),format)
+                :time(item.remaining(wallNow,elapsedNow),format);
+    }
     public static String formatLabel(int format){
         return format==TimerAlertSettings.FORMAT_MS?"Min.:Sek.":"Std.:Min.:Sek.";
     }
