@@ -31,7 +31,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.text.SimpleDateFormat;
 
-/** Independent parallel countdowns. No direct vibrator or ringing-service reuse. */
+/** Independent parallel countdowns; completion has its own timer-only alarm service. */
 public final class TimerActivity extends Activity {
     private LinearLayout cards;
     private Button pauseAll;
