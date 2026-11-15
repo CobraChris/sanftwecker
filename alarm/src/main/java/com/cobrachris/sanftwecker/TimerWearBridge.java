@@ -24,6 +24,11 @@ public final class TimerWearBridge {
         message(app,TimerWatchPacket.START,
                 TimerWatchPacket.start(t.id,t.dueWallMs,vibrate,t.name));
     }
+    public static boolean isCurrent(Context c,int id,long when){
+        return TimerWatchPacket.validId(id)&&when>0 &&
+                c.getSharedPreferences(PREF,Context.MODE_PRIVATE)
+                        .getLong("when_"+id,0)==when;
+    }
     public static void stopped(Context c,int id){
         if(!TimerWatchPacket.validId(id))return;
         Context app=c.getApplicationContext();
