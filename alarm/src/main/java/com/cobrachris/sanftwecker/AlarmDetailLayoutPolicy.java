@@ -10,7 +10,7 @@ public final class AlarmDetailLayoutPolicy {
     public static final int COMPACT_DAY_WIDTH_DP = 40;
     public static final int DAY_HEIGHT_DP = 44;
     public static final int DAY_GAP_DP = 2;
-    private static final int SIDE_RESERVE_DP = 18 + 16 + 8;
+    private static final int SIDE_RESERVE_DP = 18 + 16;
     private AlarmDetailLayoutPolicy() { }
 
     public static int dayMinimumWidthDp(float fontScale) {
