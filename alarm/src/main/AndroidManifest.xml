@@ -60,6 +60,10 @@
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sanftwecker/alarm/v1"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sanftwecker/timer/v1"/>
+            </intent-filter>
         </service>
         <service android:name=".RingingService" android:exported="false"
             android:foregroundServiceType="mediaPlayback"

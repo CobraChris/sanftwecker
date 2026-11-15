@@ -60,6 +60,8 @@ jobs:
         run: node --test tests/update-action-order-contract.test.mjs
       - name: Verify sustained timer ringing and lockscreen control contracts
         run: node --test tests/timer-ringing-reliability-contract.test.mjs
+      - name: Verify timer overrun and paired Galaxy Watch alerts
+        run: node --test tests/timer-watch-overrun-contract.test.mjs
       - name: Verify large and readable stopwatch time
         run: node --test tests/stopwatch-large-display-contract.test.mjs
       - name: Verify protected v33 self-update test release gate (unsigned only)

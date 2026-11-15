@@ -157,6 +157,7 @@ public final class TimerScheduler {
         TimerMilestoneScheduler.cancel(c,id);
         TimerRepository.put(c,current.finish());
         TimerAlerts.show(c,current);
+        TimerWearBridge.finished(c,current,TimerAlertSettings.vibration(c,id));
         AlarmRepository.diagnostic(c,"Timer beendet: "+current.name);
         if(TimerAlertSettings.oneShot(c,id)){
             // Preserve the completion notification; remove only the finished

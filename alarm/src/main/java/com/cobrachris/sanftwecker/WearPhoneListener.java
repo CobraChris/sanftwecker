@@ -10,6 +10,19 @@ import java.nio.charset.StandardCharsets;
 /** Records actual acknowledgements from the native watch companion. */
 public final class WearPhoneListener extends WearableListenerService {
     @Override public void onMessageReceived(MessageEvent event){
+        if(TimerWatchPacket.WATCH_STOP.equals(event.getPath())){
+            String stop=new String(event.getData(),StandardCharsets.UTF_8);
+            if(!stop.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}"))return;
+            String[] p=stop.split(":");
+            int id=Integer.parseInt(p[0]);
+            long when=Long.parseLong(p[1]);
+            // Ignore stale or forged commands for an earlier timer occurrence.
+            if(TimerWearBridge.isCurrent(this,id,when)){
+                TimerAlerts.dismiss(this,id);
+                AlarmRepository.diagnostic(this,"Timer auf Galaxy Watch gestoppt: "+id);
+            }
+            return;
+        }
         boolean watchStop=WearAlarmBridge.STOP.equals(event.getPath());
         boolean watchSnooze=WearAlarmBridge.SNOOZE.equals(event.getPath());
         if(watchStop||watchSnooze){

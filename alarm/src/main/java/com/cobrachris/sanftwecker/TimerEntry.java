@@ -65,8 +65,20 @@ public final class TimerEntry {
         return new TimerEntry(id,name,durationMs,remaining(wallNow,elapsedNow),PAUSED,
                 0,0,0,favorite);
     }
+    /** Preserve the original deadline so completed timers can count upwards. */
     public TimerEntry finish(){
-        return new TimerEntry(id,name,durationMs,0,FINISHED,0,0,0,favorite);
+        return new TimerEntry(id,name,durationMs,0,FINISHED,
+                dueWallMs,dueElapsedMs,bootOffsetMs,favorite);
+    }
+
+    /** Positive elapsed time since the deadline; survives process death and reboot. */
+    public long overrun(long wallNow,long elapsedNow){
+        if(state!=FINISHED||dueWallMs<=0)return 0;
+        boolean sameBoot=dueElapsedMs>0 &&
+                Math.abs((wallNow-elapsedNow)-bootOffsetMs)<60_000;
+        long due=sameBoot?dueElapsedMs:dueWallMs;
+        long now=sameBoot?elapsedNow:wallNow;
+        return Math.max(0,now-due);
     }
     public TimerEntry reset(){
         return new TimerEntry(id,name,durationMs,durationMs,READY,0,0,0,favorite);

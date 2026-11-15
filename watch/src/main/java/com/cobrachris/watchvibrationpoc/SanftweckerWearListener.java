@@ -18,6 +18,19 @@ public final class SanftweckerWearListener extends WearableListenerService {
                 WatchDataBootstrap.apply(this,event.getDataItem());
     }
     @Override public void onMessageReceived(MessageEvent event){
+        String path=event.getPath();
+        if(WatchTimerProtocol.START.equals(path)){
+            WatchTimerProtocol.Packet timer=WatchTimerProtocol.start(
+                    new String(event.getData(),StandardCharsets.UTF_8));
+            WatchTimerAlertService.start(this,timer);
+            return;
+        }
+        if(WatchTimerProtocol.STOP.equals(path)){
+            WatchTimerProtocol.Packet timer=WatchTimerProtocol.stop(
+                    new String(event.getData(),StandardCharsets.UTF_8));
+            if(timer!=null)WatchTimerAlertService.stop(this,timer.id,timer.when);
+            return;
+        }
         WatchAlarmProtocol.Packet packet=WatchAlarmProtocol.parse(
                 new String(event.getData(),StandardCharsets.UTF_8));
         if(packet==null)return;

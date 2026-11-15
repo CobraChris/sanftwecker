@@ -136,6 +136,7 @@ public final class TimerAlerts {
         }
     }
     public static void dismiss(Context c,int id){
+        TimerWearBridge.stopped(c,id);
         TimerRingingService.dismiss(c,id);
         NotificationManager m=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
         if(m!=null){

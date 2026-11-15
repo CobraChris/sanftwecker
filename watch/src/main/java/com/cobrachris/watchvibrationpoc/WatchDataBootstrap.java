@@ -28,7 +28,25 @@ public final class WatchDataBootstrap {
     }
     public static void apply(Context c,DataItem item){
         String path=item.getUri().getPath();
-        if(path==null||!path.startsWith(WatchAlarmProtocol.PREFIX+"/"))return;
+        if(path==null)return;
+        if(path.startsWith(WatchTimerProtocol.STATE)){
+            try{
+                String suffix=path.substring(WatchTimerProtocol.STATE.length());
+                if(!suffix.matches("[1-9][0-9]{0,3}"))return;
+                DataMap timer=DataMapItem.fromDataItem(item).getDataMap();
+                int id=Integer.parseInt(suffix);
+                long when=timer.getLong("when");
+                if(id!=timer.getInt("id")||id>9999||when<=0)return;
+                if(timer.getBoolean("active")){
+                    WatchTimerAlertService.start(c,new WatchTimerProtocol.Packet(id,when,
+                            timer.getBoolean("vibrate",true),timer.getString("name")));
+                }else WatchTimerAlertService.stop(c,id,when);
+            }catch(RuntimeException ex){
+                Log.w("SanftweckerWatch","Invalid synchronized timer",ex);
+            }
+            return;
+        }
+        if(!path.startsWith(WatchAlarmProtocol.PREFIX+"/"))return;
         try{
             DataMap map=DataMapItem.fromDataItem(item).getDataMap();
             if(path.startsWith(WatchAlarmProtocol.SCHEDULE)){

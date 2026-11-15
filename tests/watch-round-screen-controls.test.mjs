@@ -11,11 +11,13 @@ test('watch idle view shows Update before Vibration test and hides unused Stop',
   assert.ok(update>0&&vibration>0&&stop>0);
   assert.ok(update<vibration,'Update must be first visible action at idle');
   assert.ok(vibration<stop,'Local test remains available when the alarm is idle');
-  assert.match(s,/updateWatch\.setVisibility\(ringing\?View\.GONE:View\.VISIBLE\)/);
-  assert.match(s,/local\.setVisibility\(ringing\?View\.GONE:View\.VISIBLE\)/);
+  assert.match(s,/updateWatch\.setVisibility\(ringing\|\|timerRinging\?View\.GONE:View\.VISIBLE\)/);
+  assert.match(s,/local\.setVisibility\(ringing\|\|timerRinging\?View\.GONE:View\.VISIBLE\)/);
   assert.match(s,/stop\.setVisibility\(ringing\?View\.VISIBLE:View\.GONE\)/);
   assert.match(s,/snooze\.setVisibility\(snoozeMinutes>0\?View\.VISIBLE:View\.GONE\)/);
-  assert.match(s,/WatchAlarmService\.STOP/);
+  assert.match(s,/stopTimer.setVisibility\(!ringing&&timerRinging\?View.VISIBLE:View.GONE\)/);
+  assert.match(s,/WatchTimerAlertService.STOP_ALL/);
+  assert.match(s,/WatchAlarmService.STOP/);
   assert.match(s,/WatchAlarmService\.SNOOZE/);
 });
 test('main view and self-updater preserve scrolling on a circular viewport',()=>{

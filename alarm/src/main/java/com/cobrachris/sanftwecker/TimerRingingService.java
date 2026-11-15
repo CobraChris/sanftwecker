@@ -49,7 +49,12 @@ public final class TimerRingingService extends Service {
     private final Runnable pulse=new Runnable(){
         @Override public void run(){
             if(!active.hasAlerts())return;
+            int[] before=active.ids();
             boolean expired=active.expire(SystemClock.elapsedRealtime());
+            if(expired){
+                for(int id:before)if(!active.contains(id))TimerWearBridge.stopped(
+                        TimerRingingService.this,id);
+            }
             if(!active.hasAlerts()){shutdown();return;}
             if(expired){
                 try{showForeground();}catch(RuntimeException e){
@@ -113,13 +118,17 @@ public final class TimerRingingService extends Service {
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         String action=intent==null?null:intent.getAction();
         if(ACTION_STOP_ALL.equals(action)){
+            for(int id:active.ids())TimerWearBridge.stopped(this,id);
             active.removeAll();
             shutdown();
             return START_NOT_STICKY;
         }
         if(ACTION_STOP.equals(action)){
             int id=intent.getIntExtra(TimerScheduler.EXTRA_ID,-1);
-            if(id>0)active.remove(id);
+            if(id>0){
+                active.remove(id);
+                TimerWearBridge.stopped(this,id);
+            }
             if(!active.hasAlerts())shutdown();
             else refresh();
             return START_NOT_STICKY;
