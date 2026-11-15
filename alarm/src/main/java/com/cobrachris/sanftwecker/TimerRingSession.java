@@ -42,6 +42,13 @@ public final class TimerRingSession {
         return changed;
     }
     public int count(){return active.size();}
+    public boolean contains(int id){return active.containsKey(id);}
+    public int[] ids(){
+        int[] result=new int[active.size()];
+        int i=0;
+        for(Integer id:active.keySet())result[i++]=id;
+        return result;
+    }
     public boolean hasAlerts(){return !active.isEmpty();}
     public boolean wantsTone(){
         for(Entry item:active.values())if(item.tone)return true;
