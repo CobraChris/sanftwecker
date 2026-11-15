@@ -38,7 +38,7 @@ test('the timer explicitly sends a separate watch event with fast and durable de
   assert.match(bridge,/Wearable\.getDataClient\(c\)\.putDataItem\(/);
   assert.match(bridge,/\.setUrgent\(\)/);
   assert.match(bridge,/TimerWatchPacket\.STATE\+id/);
-  assert.match(bridge,/TimerWatchPacket\.WATCH_STOP/);
+  assert.match(pkt,/WATCH_STOP=PREFIX\+"\/watch-stop"/);
   assert.match(pkt,/PREFIX="\/sanftwecker\/timer\/v1"/);
   assert.match(pkt,/MAX_AGE_MS=180_000L/);
   assert.match(alarm,/PREFIX="\/sanftwecker\/alarm\/v1"/);
