@@ -20,6 +20,8 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.util.Log;
+import com.google.android.gms.wearable.Wearable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -120,7 +122,10 @@ public final class WatchTimerAlertService extends Service {
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         String action=intent==null?null:intent.getAction();
         if(STOP_ALL.equals(action)){
-            for(Entry entry:active.values())markStopped(entry.id,entry.when);
+            for(Entry entry:active.values()){
+                markStopped(entry.id,entry.when);
+                sendStopToPhone(entry);
+            }
             active.clear();
             shutdown();
             return START_NOT_STICKY;
@@ -231,6 +236,21 @@ public final class WatchTimerAlertService extends Service {
             }
         }catch(RuntimeException e){
             Log.w("SanftweckerWatch","Timer haptic blocked by system",e);
+        }
+    }
+    private void sendStopToPhone(Entry entry){
+        final String payload=entry.id+":"+entry.when;
+        try{
+            Wearable.getNodeClient(this).getConnectedNodes().addOnSuccessListener(nodes->{
+                for(com.google.android.gms.wearable.Node node:nodes)
+                    Wearable.getMessageClient(this).sendMessage(node.getId(),
+                            WatchTimerProtocol.WATCH_STOP,
+                            payload.getBytes(StandardCharsets.UTF_8))
+                            .addOnFailureListener(e->
+                                    Log.w("SanftweckerWatch","Phone timer stop not delivered",e));
+            }).addOnFailureListener(e->Log.w("SanftweckerWatch","Phone offline",e));
+        }catch(RuntimeException ex){
+            Log.w("SanftweckerWatch","Watch timer stopped locally; phone offline",ex);
         }
     }
     private boolean acknowledged(int id,long when){
