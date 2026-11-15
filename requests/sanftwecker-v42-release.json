@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V42_WITH_EXISTING_V41_CERTIFICATE",
+  "expected_version_code": 42,
+  "intent": "signed-native-wear-v42",
+  "request_id": "2026-11-15-explicit-v42-phone-watch-approval",
+  "source_sha": "b6892b8ae137c7c33834dfda3f22bdf5b9dfc02a",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
