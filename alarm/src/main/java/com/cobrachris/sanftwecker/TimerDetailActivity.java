@@ -330,10 +330,10 @@ public final class TimerDetailActivity extends Activity {
         vibration=UiKit.toggle(this);
         vibRow.addView(vibration);
         alert.addView(vibRow);
-        addHint(alert,"Beim Ablauf klingelt oder vibriert der Timer bis zum Stoppen "+
-                "(maximal 3 Minuten), auch bei gesperrtem Bildschirm. "+
-                "Die Alarm-Lautstärke und der Nicht-stören-Modus von Android "+
-                "können Ton und Vibration begrenzen.");
+        addHint(alert,"Nach dem Ablauf zählt der Timer aufwärts (+00:01 usw.). "+
+                "Handy und gekoppelte Galaxy Watch melden das Ende bis zum Stoppen "+
+                "(maximal 3 Minuten). Nicht stören und fehlende Verbindung können "+
+                "den Uhralarm einschränken.");
         tone.setOnCheckedChangeListener((view,enabled)->{
             if(updating)return;
             try{TimerAlertSettings.setTone(this,timerId,enabled);}
@@ -458,7 +458,8 @@ public final class TimerDetailActivity extends Activity {
         }
         title.setText(t.name);
         plannedStartLabel.setText(scheduleLabel(TimerStartSchedule.get(this,timerId)));
-        time.setText(TimerDisplay.time(left,TimerAlertSettings.timeFormat(this,timerId)));
+        time.setText(TimerDisplay.visible(t,System.currentTimeMillis(),
+                SystemClock.elapsedRealtime(),TimerAlertSettings.timeFormat(this,timerId)));
         star.setText(t.favorite?"★":"☆");
         star.setContentDescription(t.favorite?"Favorit entfernen":"Als Favorit markieren");
         int completed=(int)Math.max(0,Math.min(1000,
@@ -470,7 +471,7 @@ public final class TimerDetailActivity extends Activity {
                     TimerDisplay.time(delay,TimerAlertSettings.FORMAT_MS):"Läuft");
             primary.setText("Ⅱ  Pausieren");
         }else if(t.state==TimerEntry.FINISHED){
-            state.setText("Fertig");
+            state.setText("Überzogen – seit Ablauf");
             primary.setText("▶  Neu starten");
         }else{
             state.setText(t.state==TimerEntry.PAUSED?"Pausiert":"Bereit");
@@ -484,7 +485,7 @@ public final class TimerDetailActivity extends Activity {
                     TimerAlertSettings.timeFormat(this,timerId)));
         }else if(info==TimerAlertSettings.EXTRA_TARGET){
             target.setText(t.state==TimerEntry.FINISHED?
-                    "Timer abgelaufen":
+                    "Abgelaufen um: "+formatTime(t.dueWallMs>0?t.dueWallMs:now):
                     (t.state==TimerEntry.RUNNING || t.state==TimerEntry.WAITING?
                             "Ziel-Uhrzeit: ":
                     "Ziel-Uhrzeit bei Start jetzt: ")+
