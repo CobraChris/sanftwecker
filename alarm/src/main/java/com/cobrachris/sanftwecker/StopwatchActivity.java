@@ -138,10 +138,20 @@ public final class StopwatchActivity extends Activity {
         name.setGravity(Gravity.CENTER);name.setMaxLines(2);
         name.setMinHeight(UiKit.dp(this,45));
         card.addView(name);
+        // Full-width stopwatch cards deserve the same visual priority as the timer.
+        // Autosizing keeps long hour values, split-screen and large system fonts legible.
         TextView display=UiKit.label(this,
                 ClockFormat.stopwatch(s.elapsed(System.currentTimeMillis(),
-                        SystemClock.elapsedRealtime())),18,UiKit.BLUE);
-        display.setGravity(Gravity.CENTER);display.setSingleLine(true);
+                        SystemClock.elapsedRealtime())),44,UiKit.BLUE);
+        display.setGravity(Gravity.CENTER);
+        display.setSingleLine(true);
+        display.setMaxLines(1);
+        display.setIncludeFontPadding(false);
+        display.setTypeface(android.graphics.Typeface.MONOSPACE);
+        display.setMinHeight(UiKit.dp(this,60));
+        display.setAutoSizeTextTypeUniformWithConfiguration(
+                22,44,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        display.setContentDescription("Gemessene Zeit");
         faces.put(s.id,display);
         card.addView(display);
 
