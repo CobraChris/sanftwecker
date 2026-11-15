@@ -151,7 +151,6 @@ public final class StopwatchActivity extends Activity {
         display.setMinHeight(UiKit.dp(this,60));
         display.setAutoSizeTextTypeUniformWithConfiguration(
                 22,44,1,android.util.TypedValue.COMPLEX_UNIT_SP);
-        display.setContentDescription("Gemessene Zeit");
         faces.put(s.id,display);
         card.addView(display);
 
