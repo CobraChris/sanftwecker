@@ -115,8 +115,8 @@ public final class WatchTimerAlertService extends Service {
             manager.createNotificationChannel(channel);
         }
         if(Build.VERSION.SDK_INT>=31){
-            VibratorManager manager=(VibratorManager)getSystemService(VIBRATOR_MANAGER_SERVICE);
-            vibrator=manager==null?null:manager.getDefaultVibrator();
+            VibratorManager motors=(VibratorManager)getSystemService(VIBRATOR_MANAGER_SERVICE);
+            vibrator=motors==null?null:motors.getDefaultVibrator();
         }else vibrator=(Vibrator)getSystemService(VIBRATOR_SERVICE);
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId){
