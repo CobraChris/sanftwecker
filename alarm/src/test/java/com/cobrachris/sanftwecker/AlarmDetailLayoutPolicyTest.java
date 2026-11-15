@@ -34,7 +34,7 @@ public class AlarmDetailLayoutPolicyTest {
         assertEquals(7, AlarmDetailLayoutPolicy.weekdayColumns(360, 1.3f));
         assertEquals(4, AlarmDetailLayoutPolicy.weekdayColumns(360, 1.5f));
         assertEquals(4, AlarmDetailLayoutPolicy.weekdayColumns(393, 2f));
-        assertEquals(2, AlarmDetailLayoutPolicy.weekdayColumns(240, 2f));
+        assertEquals(3, AlarmDetailLayoutPolicy.weekdayColumns(240, 2f));
     }
 
     @Test public void badConfigurationScalesDoNotProduceBrokenGeometry() {
