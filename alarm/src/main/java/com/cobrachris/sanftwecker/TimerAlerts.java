@@ -8,7 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 
-/** One finite system notification when a countdown completes. No direct vibration loop. */
+/** Timer completion uses sustained foreground output; short milestones stay finite. */
 public final class TimerAlerts {
     private static final String CHANNEL="sanftwecker_timer_done_v1";
     private static final int BASE_ID=42000;
@@ -40,6 +40,20 @@ public final class TimerAlerts {
         m.createNotificationChannel(ch);
     }
     public static void show(Context c,TimerEntry timer){
+        boolean tone=TimerAlertSettings.tone(c,timer.id);
+        boolean vibration=TimerAlertSettings.vibration(c,timer.id);
+        try{
+            // An exact countdown is allowed to start a foreground alarm service.
+            TimerRingingService.start(c,timer,tone,vibration);
+        }catch(RuntimeException startupFailure){
+            AlarmRepository.diagnostic(c,
+                    "FEHLER: Timer-Daueralarm konnte nicht gestartet werden");
+            showFallback(c,timer.id,timer.name,tone,vibration);
+        }
+    }
+
+    /** Only when Android refuses to start the sustained foreground alarm. */
+    static void showFallback(Context c,int id,String name,boolean tone,boolean vibration){
         ensureChannel(c);
         NotificationManager m=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
         if(m==null||!m.areNotificationsEnabled()){
@@ -47,26 +61,24 @@ public final class TimerAlerts {
             return;
         }
         Intent open=new Intent(c,TimerActivity.class);
-        PendingIntent launch=PendingIntent.getActivity(c,BASE_ID+timer.id,open,
+        PendingIntent launch=PendingIntent.getActivity(c,BASE_ID+id,open,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Intent dismiss=new Intent(c,TimerReceiver.class)
-                .setAction(TimerReceiver.ACTION_DISMISS).putExtra(TimerScheduler.EXTRA_ID,timer.id);
-        PendingIntent stop=PendingIntent.getBroadcast(c,BASE_ID+timer.id,dismiss,
+                .setAction(TimerReceiver.ACTION_DISMISS).putExtra(TimerScheduler.EXTRA_ID,id);
+        PendingIntent stop=PendingIntent.getBroadcast(c,BASE_ID+id,dismiss,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        String channelId=TimerAlertSettings.channelId(
-                TimerAlertSettings.tone(c,timer.id),
-                TimerAlertSettings.vibration(c,timer.id));
+        String channelId=TimerAlertSettings.channelId(tone,vibration);
         Notification notification=new Notification.Builder(c,channelId)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(timer.name+" ist fertig")
+                .setContentTitle((name==null?"Timer":name)+" ist fertig")
                 .setContentText("Timer abgelaufen – öffnen oder quittieren")
-                .setCategory(Notification.CATEGORY_REMINDER)
+                .setCategory(Notification.CATEGORY_ALARM)
                 .setContentIntent(launch)
                 .setAutoCancel(true)
                 .addAction(new Notification.Action.Builder(
                         android.R.drawable.ic_menu_close_clear_cancel,"Quittieren",stop).build())
                 .build();
-        try{m.notify(BASE_ID+timer.id,notification);}
+        try{m.notify(BASE_ID+id,notification);}
         catch(RuntimeException ex){AlarmRepository.diagnostic(c,"Timer-Benachrichtigung fehlgeschlagen");}
     }
     /** Brief, non-fullscreen event; Android notification channel respects user controls. */
@@ -124,6 +136,7 @@ public final class TimerAlerts {
         }
     }
     public static void dismiss(Context c,int id){
+        TimerRingingService.dismiss(c,id);
         NotificationManager m=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
         if(m!=null){
             m.cancel(BASE_ID+id);

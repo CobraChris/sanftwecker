@@ -330,8 +330,10 @@ public final class TimerDetailActivity extends Activity {
         vibration=UiKit.toggle(this);
         vibRow.addView(vibration);
         alert.addView(vibRow);
-        addHint(alert,"Gilt nur für diesen Timer. Android-Benachrichtigungskanäle "+
-                "können Ton und Vibration zusätzlich begrenzen.");
+        addHint(alert,"Beim Ablauf klingelt oder vibriert der Timer bis zum Stoppen "+
+                "(maximal 3 Minuten), auch bei gesperrtem Bildschirm. "+
+                "Die Alarm-Lautstärke und der Nicht-stören-Modus von Android "+
+                "können Ton und Vibration begrenzen.");
         tone.setOnCheckedChangeListener((view,enabled)->{
             if(updating)return;
             try{TimerAlertSettings.setTone(this,timerId,enabled);}
