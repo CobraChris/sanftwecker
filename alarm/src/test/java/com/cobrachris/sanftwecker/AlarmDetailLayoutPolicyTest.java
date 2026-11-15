@@ -11,7 +11,9 @@ public class AlarmDetailLayoutPolicyTest {
             for (float scale : scales) {
                 int columns = AlarmDetailLayoutPolicy.weekdayColumns(width, scale);
                 int target = AlarmDetailLayoutPolicy.dayMinimumWidthDp(scale);
-                assertTrue("minimum 48dp target", target >= 48);
+                assertTrue("compact day width remains usable", target >= 40);
+                if(scale > 1.3f)
+                    assertTrue("large text uses 48dp target", target >= 48);
                 assertTrue("at least one column", columns >= 1);
                 assertTrue("at most seven", columns <= 7);
                 if (columns > 1) {
@@ -24,19 +26,21 @@ public class AlarmDetailLayoutPolicyTest {
         }
     }
 
-    @Test public void mostPhonesUseMultipleRowsWith48dpOrLargerTargets() {
+    @Test public void standardPhonesShowAllSevenInitialsOnOneRow() {
         assertEquals(4, AlarmDetailLayoutPolicy.weekdayColumns(320, 1f));
-        assertEquals(4, AlarmDetailLayoutPolicy.weekdayColumns(393, 1f));
+        assertEquals(7, AlarmDetailLayoutPolicy.weekdayColumns(360, 1f));
+        assertEquals(7, AlarmDetailLayoutPolicy.weekdayColumns(393, 1f));
         assertEquals(7, AlarmDetailLayoutPolicy.weekdayColumns(480, 1f));
-        assertEquals(3, AlarmDetailLayoutPolicy.weekdayColumns(320, 2f));
+        assertEquals(7, AlarmDetailLayoutPolicy.weekdayColumns(360, 1.3f));
+        assertEquals(4, AlarmDetailLayoutPolicy.weekdayColumns(360, 1.5f));
         assertEquals(4, AlarmDetailLayoutPolicy.weekdayColumns(393, 2f));
         assertEquals(2, AlarmDetailLayoutPolicy.weekdayColumns(240, 2f));
     }
 
     @Test public void badConfigurationScalesDoNotProduceBrokenGeometry() {
-        assertEquals(48, AlarmDetailLayoutPolicy.dayMinimumWidthDp(0f));
-        assertEquals(48, AlarmDetailLayoutPolicy.dayMinimumWidthDp(Float.NaN));
-        assertEquals(48, AlarmDetailLayoutPolicy.dayMinimumWidthDp(Float.POSITIVE_INFINITY));
+        assertEquals(40, AlarmDetailLayoutPolicy.dayMinimumWidthDp(0f));
+        assertEquals(40, AlarmDetailLayoutPolicy.dayMinimumWidthDp(Float.NaN));
+        assertEquals(40, AlarmDetailLayoutPolicy.dayMinimumWidthDp(Float.POSITIVE_INFINITY));
         assertEquals(0, AlarmDetailLayoutPolicy.availableWeekdayWidthDp(30));
         assertEquals(1, AlarmDetailLayoutPolicy.weekdayColumns(30, 2f));
     }
