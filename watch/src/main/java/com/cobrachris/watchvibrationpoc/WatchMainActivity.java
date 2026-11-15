@@ -25,7 +25,7 @@ import java.util.Locale;
 public final class WatchMainActivity extends Activity {
     private TextView status;
     private static final int NOTIFICATION_REQUEST=431;
-    private Button snooze,local,openAlarmScreen,stop,updateWatch,notificationAccess;
+    private Button snooze,local,openAlarmScreen,stop,stopTimer,updateWatch,notificationAccess;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable update=new Runnable(){
         @Override public void run(){
@@ -73,9 +73,13 @@ public final class WatchMainActivity extends Activity {
         int activeId=getSharedPreferences(WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE)
                 .getInt("id",0);
         boolean ringing=when>0&&activeId>0;
-        // Keep only actions relevant to the current state on the round screen.
-        updateWatch.setVisibility(ringing?View.GONE:View.VISIBLE);
-        local.setVisibility(ringing?View.GONE:View.VISIBLE);
+        android.content.SharedPreferences timerState=
+                getSharedPreferences(WatchTimerAlertService.ACTIVE_PREF,MODE_PRIVATE);
+        boolean timerRinging=timerState.getInt("count",0)>0;
+        // Clock alarm takes priority; a timer cannot replace its Stop/Snooze UI.
+        stopTimer.setVisibility(!ringing&&timerRinging?View.VISIBLE:View.GONE);
+        updateWatch.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
+        local.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
         notificationAccess.setVisibility(!ringing&&!notificationsAllowed()
                 ?View.VISIBLE:View.GONE);
         stop.setVisibility(ringing?View.VISIBLE:View.GONE);
@@ -95,6 +99,14 @@ public final class WatchMainActivity extends Activity {
             }else status.setText("Sanftwecker klingelt");
             snooze.setVisibility(snoozeMinutes>0?View.VISIBLE:View.GONE);
             snooze.setText("Schlummern · "+snoozeMinutes+" Min.");
+        }else if(timerRinging){
+            snooze.setVisibility(View.GONE);
+            int count=timerState.getInt("count",1);
+            String name=timerState.getString("name","Timer");
+            status.setText(count>1?count+" Timer abgelaufen":
+                    name+" abgelaufen");
+            if(!notificationsAllowed())
+                status.append("\nTimer-Benachrichtigungen erlauben");
         }else{
             snooze.setVisibility(View.GONE);
             long next=WatchScheduleStore.next(this);
@@ -120,6 +132,18 @@ public final class WatchMainActivity extends Activity {
         status=new TextView(this);
         status.setTextSize(16);status.setGravity(Gravity.CENTER);
         layout.addView(status);
+        stopTimer=new Button(this);
+        stopTimer.setText("Timer stoppen");
+        stopTimer.setVisibility(View.GONE);
+        layout.addView(stopTimer);
+        stopTimer.setOnClickListener(v->{
+            Intent stopRequest=new Intent(this,WatchTimerAlertService.class)
+                    .setAction(WatchTimerAlertService.STOP_ALL);
+            try{startService(stopRequest);}
+            catch(RuntimeException error){
+                status.setText("Timer auf der Uhr konnte nicht gestoppt werden");
+            }
+        });
         notificationAccess=new Button(this);
         notificationAccess.setText("Alarmmeldungen erlauben");
         notificationAccess.setVisibility(View.GONE);
