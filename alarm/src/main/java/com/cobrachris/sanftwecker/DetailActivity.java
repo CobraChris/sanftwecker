@@ -19,6 +19,8 @@ public final class DetailActivity extends Activity {
     private static final int NOTIFY_REQ=18;
     private static final int TONE_PICKER_REQ=24;
     private final String[] weekdays={"Mo","Di","Mi","Do","Fr","Sa","So"};
+    private final String[] weekdayNames={"Montag","Dienstag","Mittwoch",
+            "Donnerstag","Freitag","Samstag","Sonntag"};
     private int id,hour,minute,selectedTone;
     private boolean loading,dirty;
     private AlarmProfile saved;
@@ -63,6 +65,7 @@ public final class DetailActivity extends Activity {
     }
     private SeekBar slider(LinearLayout card,int max){
         SeekBar s=UiKit.seek(this,max);
+        s.setMinHeight(UiKit.dp(this,48));
         card.addView(s);
         s.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(SeekBar b,int p,boolean user){
@@ -84,7 +87,8 @@ public final class DetailActivity extends Activity {
         if(summary!=null)labels.addView(summary);
         header.addView(labels,UiKit.weight());
         TextView arrow=UiKit.action(this,"⌄");
-        arrow.setContentDescription(title+" öffnen");
+        // Only the complete row is announced as an expandable action.
+        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         header.addView(arrow);
         LinearLayout content=UiKit.column(this);
         content.setVisibility(View.GONE);
@@ -132,6 +136,13 @@ public final class DetailActivity extends Activity {
                     " · Auto-Stopp "+(autoStop.getProgress()+1)+" Min.");
     }
 
+    private void applyDayState(int index) {
+        UiKit.setChip(this,chips[index],days[index]);
+        chips[index].setSelected(days[index]);
+        chips[index].setContentDescription(weekdayNames[index] +
+                (days[index] ? " ausgewählt" : " nicht ausgewählt"));
+    }
+
     private void build(){
         LinearLayout root=UiKit.mainColumn(this);
         LinearLayout header=UiKit.row(this);
@@ -139,8 +150,11 @@ public final class DetailActivity extends Activity {
         back.setContentDescription("Zurück");
         back.setOnClickListener(v->back());
         header.addView(back);
-        header.addView(UiKit.heading(this,"Wecker bearbeiten"),UiKit.weight());
+        TextView pageTitle=UiKit.heading(this,"Wecker");
+        pageTitle.setContentDescription("Wecker bearbeiten");
+        header.addView(pageTitle,UiKit.weight());
         TextView overflow=UiKit.action(this,"⋮");
+        overflow.setContentDescription("Weitere Aktionen");
         overflow.setOnClickListener(v->more(overflow));
         header.addView(overflow);
         root.addView(header);
@@ -149,6 +163,7 @@ public final class DetailActivity extends Activity {
         top.setPadding(UiKit.dp(this,16),UiKit.dp(this,12),UiKit.dp(this,16),UiKit.dp(this,12));
         name=new EditText(this);
         name.setSingleLine(true);name.setTextSize(19);name.setTextColor(UiKit.TEXT);
+        name.setMinHeight(UiKit.dp(this,48));
         name.setHint("Weckername");name.setHintTextColor(UiKit.MUTED);
         name.addTextChangedListener(new TextWatcher(){
             public void beforeTextChanged(CharSequence s,int a,int c,int f){}
@@ -158,6 +173,10 @@ public final class DetailActivity extends Activity {
         top.addView(name);
         LinearLayout time=UiKit.row(this);
         clock=UiKit.label(this,"07:00",58,UiKit.BLUE);
+        clock.setSingleLine(true);
+        clock.setMinHeight(UiKit.dp(this,48));
+        clock.setAutoSizeTextTypeUniformWithConfiguration(
+                26,58,2,android.util.TypedValue.COMPLEX_UNIT_SP);
         clock.setContentDescription("Uhrzeit ändern");
         time.addView(clock,UiKit.weight());
         clock.setOnClickListener(v->new TimePickerDialog(this,(picker,h,m)->{
@@ -168,20 +187,40 @@ public final class DetailActivity extends Activity {
         enabled.setOnCheckedChangeListener((b,value)->changed());
         time.addView(enabled);
         top.addView(time);
-        LinearLayout row=UiKit.row(this);
+        // Never compress seven selectable days into sub-48dp touch targets.
+        // The number of columns adapts to the window width and Android font scale.
+        int columns=AlarmDetailLayoutPolicy.weekdayColumns(
+                getResources().getConfiguration().screenWidthDp,
+                getResources().getConfiguration().fontScale);
+        int dayMin=AlarmDetailLayoutPolicy.dayMinimumWidthDp(
+                getResources().getConfiguration().fontScale);
+        LinearLayout daysGrid=UiKit.column(this);
+        LinearLayout dayRow=null;
         for(int i=0;i<7;i++){
+            if(i%columns==0){
+                dayRow=UiKit.row(this);
+                daysGrid.addView(dayRow);
+            }
             final int which=i;
             chips[i]=UiKit.chip(this,weekdays[i],false);
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,UiKit.dp(this,38),1);
-            p.rightMargin=UiKit.dp(this,4);
-            row.addView(chips[i],p);
+            chips[i].setMinWidth(UiKit.dp(this,dayMin));
+            chips[i].setMinHeight(UiKit.dp(this,48));
+            chips[i].setFocusable(true);
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(
+                    0,UiKit.dp(this,48),1);
+            // The final chip in a row must not consume an extra 4dp margin.
+            p.rightMargin=(i%columns==columns-1 || i==6) ? 0 :
+                    UiKit.dp(this,AlarmDetailLayoutPolicy.DAY_GAP_DP);
+            p.bottomMargin=UiKit.dp(this,4);
+            dayRow.addView(chips[i],p);
+            applyDayState(i);
             chips[i].setOnClickListener(v->{
                 days[which]=!days[which];
-                UiKit.setChip(this,chips[which],days[which]);
+                applyDayState(which);
                 changed();
             });
         }
-        top.addView(row);
+        top.addView(daysGrid);
         nextDisplay=UiKit.label(this,"Noch nicht geplant",15,UiKit.MUTED);
         top.addView(nextDisplay);
         UiKit.placeCard(this,root,top);
@@ -260,6 +299,7 @@ public final class DetailActivity extends Activity {
                 "Handy-Vibrationsmuster (Watch-Impulse separat einstellen)",15,UiKit.MUTED));
         vibration=new Spinner(this);
         vibration.setContentDescription("Vibrationsrhythmus auswählen");
+        vibration.setMinimumHeight(UiKit.dp(this,48));
         vibration.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item,VibrationPresets.LABELS));
         vibrationCard.addView(vibration);
@@ -313,6 +353,7 @@ public final class DetailActivity extends Activity {
                 "Watch-Vibration bei zweistufiger Kaskade (pro Wecker)",15,UiKit.MUTED));
         watchIntensity=new Spinner(this);
         watchIntensity.setContentDescription("Watch-Intensität auswählen");
+        watchIntensity.setMinimumHeight(UiKit.dp(this,48));
         watchIntensity.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item,WatchIntensity.LABELS));
         wrist.addView(watchIntensity);
@@ -402,7 +443,7 @@ public final class DetailActivity extends Activity {
         enabled.setChecked(p.enabled);
         for(int i=0;i<7;i++){
             days[i]=(p.days&(1<<i))!=0;
-            UiKit.setChip(this,chips[i],days[i]);
+            applyDayState(i);
         }
         selectedTone=ToneCatalog.safe(p.tone);
         tonePicker.setText("Klingelton: "+ToneCatalog.LABELS[selectedTone]+"  ›");
