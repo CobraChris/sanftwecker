@@ -38,14 +38,16 @@ test('Wear OS notification remains actionable without unsupported full-screen in
 });
 
 
-test('empty watch schedule shows a factual status without inferring a signing failure',()=>{
+test('empty watch schedule shows a factual read-only dashboard without claiming sync success',()=>{
     const main=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchMainActivity.java');
-    assert.match(main,/long next=WatchScheduleStore\.next\(this\)/);
-    assert.match(main,/Kein kommender Wecker auf der Uhr/);
-    assert.match(main,/Falls am Handy einer aktiv ist: Synchronisierung prüfen/);
+    const dashboard=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchDashboardView.java');
+    assert.match(main,/dashboard\.render\(WatchScheduleStore\.upcoming\(this\)\)/);
+    assert.match(dashboard,/Kein kommender Wecker auf der Uhr/);
+    assert.match(dashboard,/Falls am Handy einer aktiv ist: Synchronisierung prüfen/);
     assert.doesNotMatch(main,/Noch kein Uhralarm synchronisiert/);
     assert.doesNotMatch(main,/Handy- und Uhr-App müssen dieselbe Signatur haben/);
-    assert.match(main,/Nächster lokaler Wecker/);
+    assert.match(dashboard,/NÄCHSTER WECKER/);
+    assert.match(dashboard,/WECKER AUF DER UHR/);
     assert.match(main,/WatchAlarmService\.STOP/);
     assert.match(main,/WatchAlarmService\.SNOOZE/);
 });

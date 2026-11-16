@@ -145,6 +145,11 @@ public final class WatchScheduleStore {
             else clear(c,slot);
         }
     }
+    /** Read-only snapshot for the dashboard; never alters scheduled alarms. */
+    public static java.util.List<WatchAgenda.Entry> upcoming(Context c){
+        return WatchAgenda.upcoming(store(c).getAll(),System.currentTimeMillis());
+    }
+
     public static long next(Context c){
         long first=Long.MAX_VALUE,now=System.currentTimeMillis();
         for(Map.Entry<String,?> entry:store(c).getAll().entrySet()){
