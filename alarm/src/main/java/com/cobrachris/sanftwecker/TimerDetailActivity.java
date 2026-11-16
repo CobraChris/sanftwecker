@@ -45,7 +45,7 @@ public final class TimerDetailActivity extends Activity {
         }
     };
     private int timerId;
-    private TextView title,time,target,state,star,plannedStartLabel;
+    private TextView title,time,extraInfoText,state,star,plannedStartLabel;
     private ProgressBar progress;
     private Button primary,reset;
     private Switch tone,vibration,repeat,prepareCue,oneShot;
@@ -124,9 +124,9 @@ public final class TimerDetailActivity extends Activity {
         time.setOnClickListener(v->editTimer());
         time.setContentDescription("Timerdauer bearbeiten");
         overview.addView(time);
-        target=UiKit.label(this,"",15,UiKit.MUTED);
-        target.setGravity(Gravity.CENTER);
-        overview.addView(target);
+        extraInfoText=UiKit.label(this,"",15,UiKit.MUTED);
+        extraInfoText.setGravity(Gravity.CENTER);
+        overview.addView(extraInfoText);
         progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
         progress.setMax(1000);
         progress.setProgressTintList(android.content.res.ColorStateList.valueOf(UiKit.BLUE));
@@ -195,12 +195,17 @@ public final class TimerDetailActivity extends Activity {
         });
         extraInfoChoice=choiceRow(display,"Zusatz-Info unter dem Timer",
                 TimerDisplay.extraLabel(TimerAlertSettings.extraInfo(this,timerId)),()->{
-            final String[] values={"Ziel-Uhrzeit","Ursprüngliche Dauer","Keine"};
+            final String[] values={"Ursprüngliche Dauer","Keine"};
+            final int[] options={TimerAlertSettings.EXTRA_DURATION,
+                    TimerAlertSettings.EXTRA_NONE};
+            int selected=TimerAlertSettings.extraInfo(this,timerId)==
+                    TimerAlertSettings.EXTRA_DURATION?0:1;
             new AlertDialog.Builder(this).setTitle("Zusatz-Info")
-                .setSingleChoiceItems(values,TimerAlertSettings.extraInfo(this,timerId),
+                .setSingleChoiceItems(values,selected,
                     (dialog,which)->{
                         dialog.dismiss();
-                        try{TimerAlertSettings.setExtraInfo(this,timerId,which);updateState();}
+                        try{TimerAlertSettings.setExtraInfo(this,timerId,options[which]);
+                            updateState();}
                         catch(RuntimeException e){showError(e.getMessage());}
                     })
                 .setNegativeButton("Abbrechen",null).show();
@@ -479,18 +484,11 @@ public final class TimerDetailActivity extends Activity {
                     "▶  Jetzt starten":"▶  Starten");
         }
         int info=TimerAlertSettings.extraInfo(this,timerId);
-        target.setVisibility(info==TimerAlertSettings.EXTRA_NONE?View.GONE:View.VISIBLE);
-        if(info==TimerAlertSettings.EXTRA_DURATION){
-            target.setText("Dauer: "+TimerDisplay.time(t.durationMs,
+        boolean showDuration=info==TimerAlertSettings.EXTRA_DURATION;
+        extraInfoText.setVisibility(showDuration?View.VISIBLE:View.GONE);
+        if(showDuration){
+            extraInfoText.setText("Dauer: "+TimerDisplay.time(t.durationMs,
                     TimerAlertSettings.timeFormat(this,timerId)));
-        }else if(info==TimerAlertSettings.EXTRA_TARGET){
-            target.setText(t.state==TimerEntry.FINISHED?
-                    t.dueWallMs>0?"Abgelaufen um: "+formatTime(t.dueWallMs):"Timer abgelaufen":
-                    (t.state==TimerEntry.RUNNING || t.state==TimerEntry.WAITING?
-                            "Ziel-Uhrzeit: ":
-                    "Ziel-Uhrzeit bei Start jetzt: ")+
-                    formatTime((t.state==TimerEntry.RUNNING ||
-                            t.state==TimerEntry.WAITING)?t.dueWallMs:now+left));
         }
         timeFormatChoice.setText(TimerDisplay.formatLabel(
                 TimerAlertSettings.timeFormat(this,timerId))+"  ›");
@@ -507,9 +505,6 @@ public final class TimerDetailActivity extends Activity {
         prepareCue.setChecked(TimerAlertSettings.prepareCue(this,timerId));
         oneShot.setChecked(TimerAlertSettings.oneShot(this,timerId));
         updating=false;
-    }
-    private static String formatTime(long when){
-        return new SimpleDateFormat("HH:mm:ss",Locale.GERMANY).format(new Date(when));
     }
     private void editTimer(){
         TimerEntry entry=TimerRepository.get(this,timerId);
