@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -21,9 +23,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/** Minimal standalone screen; vibration runs from local AlarmManager without UI. */
+/** Watch home dashboard; actual alarm/vibration always runs in independent services. */
 public final class WatchMainActivity extends Activity {
     private TextView status;
+    private WatchDashboardView dashboard;
     private static final int NOTIFICATION_REQUEST=431;
     private Button snooze,local,openAlarmScreen,stop,stopTimer,updateWatch,notificationAccess;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -79,6 +82,7 @@ public final class WatchMainActivity extends Activity {
         boolean timerRinging=timerState.getInt("count",0)>0 &&
                 timerWhen>0&&System.currentTimeMillis()<timerWhen+180_000L;
         // Clock alarm takes priority; a timer cannot replace its Stop/Snooze UI.
+        dashboard.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
         stopTimer.setVisibility(!ringing&&timerRinging?View.VISIBLE:View.GONE);
         updateWatch.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
         local.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
@@ -111,31 +115,39 @@ public final class WatchMainActivity extends Activity {
                 status.append("\nTimer-Benachrichtigungen erlauben");
         }else{
             snooze.setVisibility(View.GONE);
-            long next=WatchScheduleStore.next(this);
-            status.setText(next>0
-                    ?"Nächster lokaler Wecker:\n"+
-                    new SimpleDateFormat("dd.MM. HH:mm",Locale.GERMANY).format(new Date(next))
-                    :"Kein kommender Wecker auf der Uhr.\nFalls am Handy einer aktiv ist: Synchronisierung prüfen.");
+            status.setText("SANFTWECKER");
+            // Display only the alarms actually planned on the watch. A disabled
+            // or not-yet-synced phone alarm is not falsely shown as scheduled.
+            dashboard.render(WatchScheduleStore.upcoming(this));
             if(!notificationsAllowed())status.append("\nAlarmmeldung auf der Uhr deaktiviert.");
         }
     }
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
+        getWindow().setStatusBarColor(WatchDashboardView.backgroundColor());
+        getWindow().setNavigationBarColor(WatchDashboardView.backgroundColor());
         LinearLayout layout=new LinearLayout(this);
         layout.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
         layout.setOrientation(LinearLayout.VERTICAL);
         float density=getResources().getDisplayMetrics().density;
         layout.setPadding(Math.round(18*density),Math.round(40*density),
                 Math.round(18*density),Math.round(88*density));
+        layout.setBackgroundColor(WatchDashboardView.backgroundColor());
         // A square Android window overestimates the usable circular viewport.
         // Ensure a real scroll range even if the round edges clip a control.
         layout.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+
                 Math.round(64*density));
         status=new TextView(this);
         status.setTextSize(16);status.setGravity(Gravity.CENTER);
+        status.setTextColor(Color.rgb(157,192,255));
+        status.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        status.setMinHeight(Math.round(42*density));
         layout.addView(status);
+        dashboard=new WatchDashboardView(this);
+        layout.addView(dashboard);
         stopTimer=new Button(this);
         stopTimer.setText("Alarm stoppen");
+        WatchDashboardView.styleButton(stopTimer,false,true);
         stopTimer.setVisibility(View.GONE);
         layout.addView(stopTimer);
         stopTimer.setOnClickListener(v->{
@@ -148,6 +160,7 @@ public final class WatchMainActivity extends Activity {
         });
         notificationAccess=new Button(this);
         notificationAccess.setText("Alarmmeldungen erlauben");
+        WatchDashboardView.styleButton(notificationAccess,true,false);
         notificationAccess.setVisibility(View.GONE);
         layout.addView(notificationAccess);
         // Only a tap opens Android's permission dialog/settings. No automatic
@@ -155,16 +168,19 @@ public final class WatchMainActivity extends Activity {
         notificationAccess.setOnClickListener(v->openNotificationAccess());
         updateWatch=new Button(this);
         updateWatch.setText("Uhr aktualisieren");
+        WatchDashboardView.styleButton(updateWatch,false,false);
         layout.addView(updateWatch);
         updateWatch.setOnClickListener(v->startActivity(
                 new Intent(this,WatchSelfUpdateActivity.class)));
         local=new Button(this);
         local.setText("Alarmvibration testen");
+        WatchDashboardView.styleButton(local,false,false);
         layout.addView(local);
         local.setOnClickListener(v->WatchAlarmService.start(
                 this,1,System.currentTimeMillis(),1,"Uhr-Vibrationstest"));
         snooze=new Button(this);
         snooze.setText("Schlummern");
+        WatchDashboardView.styleButton(snooze,true,false);
         snooze.setVisibility(View.GONE);
         layout.addView(snooze);
         snooze.setOnClickListener(v->{
@@ -188,14 +204,22 @@ public final class WatchMainActivity extends Activity {
         });
         openAlarmScreen=new Button(this);
         openAlarmScreen.setText("Alarmansicht öffnen");
+        WatchDashboardView.styleButton(openAlarmScreen,false,false);
         openAlarmScreen.setVisibility(View.GONE);
         layout.addView(openAlarmScreen);
         openAlarmScreen.setOnClickListener(v->
                 startActivity(WatchRingActivity.openIntent(this)));
         stop=new Button(this);stop.setText("Alarm beenden");
+        WatchDashboardView.styleButton(stop,false,true);
         // On the circular watch the first visible action must be STOP.
         // Insert directly below status; snooze and secondary navigation follow.
         layout.addView(stop,1);
+        // Keep Snooze and the alarm screen immediately below the emergency stop
+        // rather than after the long list of upcoming alarms and maintenance tools.
+        layout.removeView(snooze);
+        layout.addView(snooze,2);
+        layout.removeView(openAlarmScreen);
+        layout.addView(openAlarmScreen,3);
         stop.setOnClickListener(v->{
             // Local user can always cancel an ongoing alarm without the phone.
             Intent i=new Intent(this,WatchAlarmService.class).setAction(WatchAlarmService.STOP)
@@ -204,6 +228,8 @@ public final class WatchMainActivity extends Activity {
         });
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(false);
+        scroll.setBackgroundColor(WatchDashboardView.backgroundColor());
+        scroll.setVerticalScrollBarEnabled(false);
         scroll.addView(layout);
         setContentView(scroll);
         refresh();
@@ -211,6 +237,7 @@ public final class WatchMainActivity extends Activity {
     }
     @Override protected void onResume(){
         super.onResume();
+        dashboard.invalidateSnapshot();
         handler.removeCallbacks(update);
         handler.post(update);
     }
