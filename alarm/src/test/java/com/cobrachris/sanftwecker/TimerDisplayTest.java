@@ -17,7 +17,7 @@ public final class TimerDisplayTest {
         assertEquals("1440:00",TimerDisplay.time(86_400_000L,TimerAlertSettings.FORMAT_MS));
     }
     @Test public void secondaryLabelOptionsAreDistinct(){
-        assertEquals("Ziel-Uhrzeit",TimerDisplay.extraLabel(TimerAlertSettings.EXTRA_TARGET));
+        assertEquals("Keine",TimerDisplay.extraLabel(TimerAlertSettings.EXTRA_TARGET));
         assertEquals("Ursprüngliche Dauer",TimerDisplay.extraLabel(TimerAlertSettings.EXTRA_DURATION));
         assertEquals("Keine",TimerDisplay.extraLabel(TimerAlertSettings.EXTRA_NONE));
         assertEquals("Min.:Sek.",TimerDisplay.formatLabel(TimerAlertSettings.FORMAT_MS));

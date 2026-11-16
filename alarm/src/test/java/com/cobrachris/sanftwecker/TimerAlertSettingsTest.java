@@ -4,6 +4,18 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class TimerAlertSettingsTest {
+    @Test public void oldLiveTargetSelectionBecomesNoExtraInformation(){
+        assertEquals(TimerAlertSettings.EXTRA_NONE,
+                TimerAlertSettings.normalizeExtraInfo(TimerAlertSettings.EXTRA_TARGET));
+        assertEquals(TimerAlertSettings.EXTRA_NONE,
+                TimerAlertSettings.normalizeExtraInfo(-1));
+        assertEquals(TimerAlertSettings.EXTRA_NONE,
+                TimerAlertSettings.normalizeExtraInfo(999));
+        assertEquals(TimerAlertSettings.EXTRA_DURATION,
+                TimerAlertSettings.normalizeExtraInfo(TimerAlertSettings.EXTRA_DURATION));
+        assertEquals(TimerAlertSettings.EXTRA_NONE,
+                TimerAlertSettings.normalizeExtraInfo(TimerAlertSettings.EXTRA_NONE));
+    }
     @Test public void allFourSelectionsUseStableDistinctAndroidChannels(){
         assertEquals("sanftwecker_timer_done_v1",
                 TimerAlertSettings.channelId(true,true));

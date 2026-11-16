@@ -33,7 +33,12 @@ public final class TimerAlertSettings {
             throw new IllegalStateException("Vibration-Einstellung konnte nicht gespeichert werden");
     }
     public static final int FORMAT_HMS=0, FORMAT_MS=1;
+    // Value 0 existed in v42 and older. Retain it as a legacy storage marker,
+    // but never expose its confusing live target-time display in the UI.
     public static final int EXTRA_TARGET=0, EXTRA_DURATION=1, EXTRA_NONE=2;
+    public static int normalizeExtraInfo(int saved){
+        return saved==EXTRA_DURATION?EXTRA_DURATION:EXTRA_NONE;
+    }
     public static final long MIN_REPEAT_MS=10_000L;
     public static boolean canRepeat(long durationMs){
         return durationMs>=MIN_REPEAT_MS && durationMs<=TimerEntry.MAX_MS;
@@ -43,8 +48,10 @@ public final class TimerAlertSettings {
         return v==FORMAT_MS?FORMAT_MS:FORMAT_HMS;
     }
     public static int extraInfo(Context c,int id){
-        int v=prefs(c).getInt(key("extra",id),EXTRA_TARGET);
-        return v>=EXTRA_TARGET && v<=EXTRA_NONE?v:EXTRA_TARGET;
+        // Missing or previously stored TARGET (0) is treated as "Keine";
+        // no rewrite/reset of existing timer state is required.
+        int v=prefs(c).getInt(key("extra",id),EXTRA_NONE);
+        return normalizeExtraInfo(v);
     }
     public static boolean autoRepeat(Context c,int id){
         return prefs(c).getBoolean(key("repeat",id),false);
@@ -104,7 +111,7 @@ public final class TimerAlertSettings {
             throw new IllegalStateException("Zeitformat konnte nicht gespeichert werden");
     }
     public static void setExtraInfo(Context c,int id,int value){
-        if(value<EXTRA_TARGET||value>EXTRA_NONE)
+        if(value!=EXTRA_DURATION && value!=EXTRA_NONE)
             throw new IllegalArgumentException("Unbekannte Zusatz-Info");
         if(!prefs(c).edit().putInt(key("extra",id),value).commit())
             throw new IllegalStateException("Zusatz-Info konnte nicht gespeichert werden");

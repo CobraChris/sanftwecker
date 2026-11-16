@@ -30,7 +30,6 @@ public final class TimerDisplay {
     }
     public static String extraLabel(int extra){
         if(extra==TimerAlertSettings.EXTRA_DURATION)return "Ursprüngliche Dauer";
-        if(extra==TimerAlertSettings.EXTRA_NONE)return "Keine";
-        return "Ziel-Uhrzeit";
+        return "Keine";
     }
 }
