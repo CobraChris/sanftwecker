@@ -48,6 +48,8 @@ jobs:
         run: node --test tests/watch-self-update-contract.test.mjs
       - name: Verify round Watch controls and updater access
         run: node --test tests/watch-round-screen-controls.test.mjs
+      - name: Verify Watch alarm dashboard and read-only schedule projection
+        run: node --test tests/watch-dashboard-upcoming-alarms-contract.test.mjs
       - name: Verify final navigation and alarm countdown UI contracts
         run: node --test tests/sanftwecker-navigation-polish.test.mjs
       - name: Verify permission wizard and alarm safety UI contracts
