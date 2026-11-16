@@ -55,7 +55,7 @@ test('critical watch stop and snooze controls remain above scrolling dashboard',
   assert.match(main,/WatchAlarmService\.SNOOZE/);
   assert.match(main,/WatchTimerAlertService\.STOP_ALL/);
   assert.match(main,/startActivity\(WatchRingActivity\.openIntent\(this\)\)/);
-  assert.match(alarm,/WatchScheduleStore/);
+  assert.match(alarm,/class WatchAlarmService extends Service/);
 });
 
 test('maintenance actions, notification consent and original signing identity survive',()=>{
