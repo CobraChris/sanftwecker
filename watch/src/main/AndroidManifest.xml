@@ -21,6 +21,10 @@
             android:turnScreenOn="true"
             android:excludeFromRecents="true"
             android:launchMode="singleTop" />
+        <activity android:name=".WatchTimerRingActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true" />
         <activity android:name=".WatchSelfUpdateActivity" android:exported="false" />
         <receiver android:name=".WatchUpdateInstalledReceiver" android:exported="false">
             <intent-filter>
