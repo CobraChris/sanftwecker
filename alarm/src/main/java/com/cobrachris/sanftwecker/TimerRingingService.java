@@ -35,6 +35,9 @@ public final class TimerRingingService extends Service {
     private static final String EXTRA_LABEL="timer_ring_name";
     private static final String EXTRA_TONE="timer_ring_tone";
     private static final String EXTRA_VIBRATION="timer_ring_vibration";
+    private static final String EXTRA_DUE_WALL="timer_ring_due_wall";
+    private static final String EXTRA_DUE_ELAPSED="timer_ring_due_elapsed";
+    private static final String EXTRA_BOOT_OFFSET="timer_ring_boot_offset";
     private static final String CHANNEL="sanftwecker_timer_active_alarm_v1";
     private static final int NOTIFICATION_ID=42570;
     private static final long REPEAT_MS=1700L;
@@ -89,7 +92,10 @@ public final class TimerRingingService extends Service {
                 .putExtra(TimerScheduler.EXTRA_ID,item.id)
                 .putExtra(EXTRA_LABEL,item.name)
                 .putExtra(EXTRA_TONE,tone)
-                .putExtra(EXTRA_VIBRATION,vibration);
+                .putExtra(EXTRA_VIBRATION,vibration)
+                .putExtra(EXTRA_DUE_WALL,item.dueWallMs)
+                .putExtra(EXTRA_DUE_ELAPSED,item.dueElapsedMs)
+                .putExtra(EXTRA_BOOT_OFFSET,item.bootOffsetMs);
         if(Build.VERSION.SDK_INT>=26)c.startForegroundService(i);
         else c.startService(i);
     }
@@ -143,7 +149,10 @@ public final class TimerRingingService extends Service {
         boolean vibration=intent.getBooleanExtra(EXTRA_VIBRATION,true);
         if(id<1||id>9999){if(!active.hasAlerts())shutdown();return START_NOT_STICKY;}
         try{
-            active.add(id,name,tone,vibration,SystemClock.elapsedRealtime());
+            active.add(id,name,tone,vibration,SystemClock.elapsedRealtime(),
+                    intent.getLongExtra(EXTRA_DUE_WALL,0L),
+                    intent.getLongExtra(EXTRA_DUE_ELAPSED,0L),
+                    intent.getLongExtra(EXTRA_BOOT_OFFSET,0L));
             refresh();
             AlarmRepository.diagnostic(this,"Timer-Alarm gestartet: "+active.label());
         }catch(RuntimeException failure){
@@ -171,6 +180,10 @@ public final class TimerRingingService extends Service {
     private PendingIntent openAlarm(){
         Intent open=new Intent(this,TimerRingActivity.class)
                 .putExtra(TimerRingActivity.EXTRA_LABEL,active.label())
+                .putExtra(TimerRingActivity.EXTRA_ID,active.firstId())
+                .putExtra(TimerRingActivity.EXTRA_DUE_WALL,active.firstDueWallMs())
+                .putExtra(TimerRingActivity.EXTRA_DUE_ELAPSED,active.firstDueElapsedMs())
+                .putExtra(TimerRingActivity.EXTRA_BOOT_OFFSET,active.firstBootOffsetMs())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         return PendingIntent.getActivity(this,7192,open,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);

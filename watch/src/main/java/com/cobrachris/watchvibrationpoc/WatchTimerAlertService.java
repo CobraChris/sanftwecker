@@ -188,8 +188,8 @@ public final class WatchTimerAlertService extends Service {
         String title=active.size()==1?
                 active.values().iterator().next().name+" abgelaufen":
                 active.size()+" Timer abgelaufen";
-        Intent show=new Intent(this,WatchMainActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent show=new Intent(this,WatchTimerRingActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent open=PendingIntent.getActivity(this,4861,show,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop=PendingIntent.getService(this,4862,

@@ -8,6 +8,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.text.TextUtils;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -32,7 +38,7 @@ public final class WatchRingActivity extends Activity {
             handler.postDelayed(this,1000L);
         }
     };
-    private TextView state;
+    private TextView state,alarmTitle,alarmTime;
     private Button snooze,stop;
     private long createdAt,requestedSnoozeAt;
     private boolean alarmWasVisible,screenResumed,ackSent;
@@ -62,22 +68,42 @@ public final class WatchRingActivity extends Activity {
         setShowWhenLocked(true);
         setTurnScreenOn(true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().setStatusBarColor(WatchDashboardView.backgroundColor());
+        getWindow().setNavigationBarColor(WatchDashboardView.backgroundColor());
         createdAt=SystemClock.elapsedRealtime();
 
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER);
-        root.setPadding(dp(this,14),dp(this,6),dp(this,14),dp(this,6));
+        root.setBackgroundColor(WatchDashboardView.backgroundColor());
+        root.setPadding(dp(this,18),dp(this,6),dp(this,18),dp(this,6));
 
         state=new TextView(this);
-        state.setTextSize(17);
+        state.setTextSize(15);
+        state.setTextColor(0xff9dc0ff);
         state.setGravity(Gravity.CENTER);
         root.addView(state,new LinearLayout.LayoutParams(-1,-2));
+        alarmTitle=new TextView(this);
+        alarmTitle.setTextSize(17);
+        alarmTitle.setTextColor(Color.WHITE);
+        alarmTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        alarmTitle.setGravity(Gravity.CENTER);
+        alarmTitle.setMaxLines(2);
+        alarmTitle.setEllipsize(TextUtils.TruncateAt.END);
+        root.addView(alarmTitle,new LinearLayout.LayoutParams(-1,-2));
+        alarmTime=new TextView(this);
+        alarmTime.setTextSize(33);
+        alarmTime.setTextColor(0xff9dc0ff);
+        alarmTime.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);
+        alarmTime.setGravity(Gravity.CENTER);
+        alarmTime.setSingleLine(true);
+        alarmTime.setMinHeight(dp(this,54));
+        root.addView(alarmTime,new LinearLayout.LayoutParams(-1,-2));
 
         // Critical action first: visible on a small, circular watch screen.
         stop=new Button(this);
         stop.setText("ALARM BEENDEN");
-        stop.setTextSize(16);
+        WatchDashboardView.styleButton(stop,false,true);
         LinearLayout.LayoutParams stopParams=params(dp(this,56));
         stopParams.topMargin=dp(this,5);
         root.addView(stop,stopParams);
@@ -85,7 +111,7 @@ public final class WatchRingActivity extends Activity {
 
         snooze=new Button(this);
         snooze.setText("Schlummern");
-        snooze.setTextSize(16);
+        WatchDashboardView.styleButton(snooze,true,false);
         LinearLayout.LayoutParams snoozeParams=params(dp(this,56));
         snoozeParams.topMargin=dp(this,5);
         root.addView(snooze,snoozeParams);
@@ -120,6 +146,8 @@ public final class WatchRingActivity extends Activity {
         long when=current.getLong("when",0L);
         boolean ringing=WatchAlarmUiPolicy.active(id,when);
         if(!ringing){
+            alarmTitle.setVisibility(View.GONE);
+            alarmTime.setVisibility(View.GONE);
             snooze.setVisibility(View.GONE);
             stop.setEnabled(false);
             if(alarmWasVisible){
@@ -134,6 +162,12 @@ public final class WatchRingActivity extends Activity {
             return;
         }
         alarmWasVisible=true;
+        alarmTitle.setVisibility(View.VISIBLE);
+        alarmTime.setVisibility(View.VISIBLE);
+        String title=current.getString("title","Sanftwecker");
+        alarmTitle.setText(title==null||title.trim().isEmpty()?"Sanftwecker":title);
+        alarmTime.setText(new SimpleDateFormat("HH:mm",Locale.GERMANY)
+                .format(new Date(when)));
         if(screenResumed&&!ackSent){
             ackSent=true;
             WatchAlarmScreenAck.visible(this,id);
