@@ -44,6 +44,8 @@ jobs:
           node --test tests/sanftwecker-v26-release-request.test.mjs
       - name: Verify Watch alarm screen and fallback regression contracts
         run: node --test tests/watch-alarm-screen-contract.test.mjs
+      - name: Verify visible Watch alarm and timer notification safeguards
+        run: node --test tests/watch-visible-alarm-notification-contract.test.mjs
       - name: Verify secure Watch self-update contracts
         run: node --test tests/watch-self-update-contract.test.mjs
       - name: Verify round Watch controls and updater access

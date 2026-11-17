@@ -65,6 +65,7 @@ public final class WatchTimerAlertService extends Service {
             for(Entry entry:new ArrayList<>(active.values())){
                 if(now>=entry.expiresAt){
                     active.remove(entry.id);
+                    WatchAlarmNotice.clearTimer(WatchTimerAlertService.this,entry.id);
                     markStopped(entry.id,entry.when);
                     changed=true;
                 }
@@ -123,6 +124,7 @@ public final class WatchTimerAlertService extends Service {
         String action=intent==null?null:intent.getAction();
         if(STOP_ALL.equals(action)){
             for(Entry entry:active.values()){
+                WatchAlarmNotice.clearTimer(this,entry.id);
                 markStopped(entry.id,entry.when);
                 sendStopToPhone(entry);
             }
@@ -135,7 +137,10 @@ public final class WatchTimerAlertService extends Service {
             long when=intent.getLongExtra("when",0);
             markStopped(id,when);
             Entry old=active.get(id);
-            if(old!=null&&old.when==when)active.remove(id);
+            if(old!=null&&old.when==when){
+                WatchAlarmNotice.clearTimer(this,id);
+                active.remove(id);
+            }
             if(active.isEmpty())shutdown();
             else refresh();
             return START_NOT_STICKY;
@@ -157,9 +162,15 @@ public final class WatchTimerAlertService extends Service {
                 name==null||name.trim().isEmpty()?"Timer":name));
         try{
             refresh();
+            // A second high-priority notification is needed for the watch
+            // display; the permanent vibration foreground notification is
+            // intentionally silent. The notification opens the same existing
+            // STOP_ALL screen and never changes haptic playback.
+            showVisibleTimerNotice(active.get(id));
             Log.i("SanftweckerWatch","Watch timer alert started");
         }catch(RuntimeException ex){
             Log.e("SanftweckerWatch","Timer alert failed",ex);
+            WatchAlarmNotice.clearTimer(this,id);
             active.remove(id);
             if(active.isEmpty())shutdown();
         }
@@ -178,6 +189,17 @@ public final class WatchTimerAlertService extends Service {
         }
         handler.removeCallbacks(pulse);
         handler.post(pulse);
+    }
+    private void showVisibleTimerNotice(Entry entry){
+        if(entry==null)return;
+        Intent view=new Intent(this,WatchTimerRingActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent open=PendingIntent.getActivity(this,4861,view,
+                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent stop=PendingIntent.getService(this,4862,
+                new Intent(this,WatchTimerAlertService.class).setAction(STOP_ALL),
+                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        WatchAlarmNotice.timer(this,entry.id,entry.name+" abgelaufen",open,stop);
     }
     private void foreground(){
         if(active.isEmpty())return;

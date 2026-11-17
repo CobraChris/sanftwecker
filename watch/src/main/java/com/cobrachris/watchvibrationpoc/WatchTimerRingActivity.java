@@ -51,6 +51,10 @@ public final class WatchTimerRingActivity extends Activity {
     }
     @Override protected void onCreate(Bundle saved){
         super.onCreate(saved);
+        // When the user opens the urgent notification while the watch is
+        // sleeping, ask the OS to reveal the timer controls on the lockscreen.
+        setShowWhenLocked(true);
+        setTurnScreenOn(true);
         int bg=WatchDashboardView.backgroundColor();
         getWindow().setStatusBarColor(bg);
         getWindow().setNavigationBarColor(bg);
