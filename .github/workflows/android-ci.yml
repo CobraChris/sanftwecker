@@ -56,6 +56,8 @@ jobs:
         run: node --test tests/setup-assistant-contract.test.mjs
       - name: Verify compact alarm detail without functionality regressions
         run: node --test tests/alarm-detail-ux-contract.test.mjs
+      - name: Verify instant alarm time save and accessible stop without bypass
+        run: node --test tests/alarm-time-auto-save-stop-accessibility-contract.test.mjs
       - name: Verify responsive alarm detail and accessibility contracts
         run: node --test tests/sanftwecker-responsive-accessibility.test.mjs
       - name: Verify updater action order and signature safety remain intact
