@@ -22,6 +22,7 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -180,6 +181,26 @@ public final class AlarmActivity extends Activity {
             }
         });
 
+        // Keep a direct stop for TalkBack and switch-access users without
+        // a prominent one-tap bypass in the ordinary alarm screen. This is an
+        // accessibility action only; tapping the slider does not stop it.
+        swipe.setAccessibilityDelegate(new View.AccessibilityDelegate(){
+            @Override public void onInitializeAccessibilityNodeInfo(
+                    View host,AccessibilityNodeInfo info){
+                super.onInitializeAccessibilityNodeInfo(host,info);
+                info.addAction(new AccessibilityNodeInfo.AccessibilityAction(
+                        AccessibilityNodeInfo.ACTION_CLICK,"Wecker sofort stoppen"));
+            }
+            @Override public boolean performAccessibilityAction(
+                    View host,int action,Bundle args){
+                if(action==AccessibilityNodeInfo.ACTION_CLICK){
+                    stopAlarm();
+                    return true;
+                }
+                return super.performAccessibilityAction(host,action,args);
+            }
+        });
+
         if(profile.snoozeEnabled){
             Button snooze=new Button(this);
             snooze.setAllCaps(false);
@@ -194,14 +215,8 @@ public final class AlarmActivity extends Activity {
             snooze.setOnClickListener(v->snoozeAlarm());
         }
 
-        // Accessible alternative for screen readers and users who cannot swipe.
-        TextView accessibleStop=text("Alternativ: direkt stoppen",13,0xffb0d0d0);
-        accessibleStop.setMinHeight(dp(48));
-        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(48));
-        ap.topMargin=dp(4);
-        page.addView(accessibleStop,ap);
-        accessibleStop.setOnClickListener(v->stopAlarm());
-        accessibleStop.setContentDescription("Wecker sofort stoppen");
+        // Notification STOP and the Watch STOP remain independent fallback
+        // paths for users who cannot operate the slider.
         setContentView(screen);
     }
 
