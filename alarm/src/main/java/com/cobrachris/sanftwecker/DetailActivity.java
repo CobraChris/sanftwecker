@@ -14,7 +14,7 @@ import android.view.*;
 import android.widget.*;
 import java.util.*;
 
-/** Dark alarm details screen. Input state is only saved through explicit action. */
+/** Dark alarm details; time confirmation saves immediately, other edits remain explicit. */
 public final class DetailActivity extends Activity {
     private static final int NOTIFY_REQ=18;
     private static final int TONE_PICKER_REQ=24;
@@ -23,9 +23,10 @@ public final class DetailActivity extends Activity {
             "Donnerstag","Freitag","Samstag","Sonntag"};
     private int id,hour,minute,selectedTone;
     private boolean loading,dirty;
-    private AlarmProfile saved;
+    private AlarmProfile saved,undoTimeBefore,undoTimeAfter;
     private EditText name;
-    private TextView clock,status,advanced,nextDisplay;
+    private TextView clock,status,advanced,nextDisplay,timeSavedLabel,timeUndoAction;
+    private LinearLayout timeUndoRow;
     private TextView toneSummary,watchSummary,snoozeSummary,modeDescription;
     private LinearLayout manualToneOptions;
     private Button tonePicker;
@@ -179,14 +180,25 @@ public final class DetailActivity extends Activity {
                 26,58,2,android.util.TypedValue.COMPLEX_UNIT_SP);
         clock.setContentDescription("Uhrzeit ändern");
         time.addView(clock,UiKit.weight());
-        clock.setOnClickListener(v->new TimePickerDialog(this,(picker,h,m)->{
-            hour=h;minute=m;showTime();changed();
-        },hour,minute,true).show());
+        clock.setOnClickListener(v->new TimePickerDialog(this,(picker,h,m)->
+                saveSelectedTime(h,m),hour,minute,true).show());
         enabled=UiKit.toggle(this);
         enabled.setContentDescription("Wecker aktivieren");
         enabled.setOnCheckedChangeListener((b,value)->changed());
         time.addView(enabled);
         top.addView(time);
+        // Appears only after a successful instant time save, so the normal
+        // detail card stays compact and the user can reverse an accidental edit.
+        timeUndoRow=UiKit.row(this);
+        timeSavedLabel=UiKit.label(this,"Weckzeit gespeichert",13,UiKit.MUTED);
+        timeUndoRow.addView(timeSavedLabel,UiKit.weight());
+        timeUndoAction=UiKit.action(this,"Rückgängig");
+        timeUndoAction.setContentDescription("Automatisch gespeicherte Weckzeit rückgängig machen");
+        timeUndoAction.setMinHeight(UiKit.dp(this,48));
+        timeUndoAction.setOnClickListener(v->undoSavedTime());
+        timeUndoRow.addView(timeUndoAction);
+        timeUndoRow.setVisibility(View.GONE);
+        top.addView(timeUndoRow);
         // Keep seven one-letter chips on a single row on ordinary phones.
         // Wrap only for narrow split-screen windows or enlarged system fonts.
         int columns=AlarmDetailLayoutPolicy.weekdayColumns(
@@ -423,6 +435,86 @@ public final class DetailActivity extends Activity {
         updateSummaries();
     }
     private void showTime(){clock.setText(String.format(Locale.GERMANY,"%02d:%02d",hour,minute));}
+
+    private void clearTimeUndo(){
+        undoTimeBefore=null;
+        undoTimeAfter=null;
+        if(timeUndoRow!=null)timeUndoRow.setVisibility(View.GONE);
+    }
+
+    /** The time-picker OK is the sole auto-commit boundary: no intermediate
+     * spinner changes or unrelated unsaved sliders are persisted. */
+    private void saveSelectedTime(int h,int m){
+        AlarmProfile before=AlarmRepository.get(this,id);
+        if(before==null){notice("Wecker existiert nicht mehr.");return;}
+        AlarmProfile after;
+        try{after=before.withTimeAndEnabled(h,m);}
+        catch(RuntimeException invalid){notice("Ungültige Weckzeit.");return;}
+        if(after.sameConfiguration(before)){
+            loading=true;hour=h;minute=m;showTime();enabled.setChecked(true);
+            loading=false;changed();return;
+        }
+        if(!AlarmScheduler.canSchedule(this)){
+            requestExactAlarmAccess();
+            return;
+        }
+        try{
+            AlarmRepository.put(this,after);
+            AlarmScheduler.reschedule(this,id);
+            saved=after;
+            loading=true;hour=h;minute=m;showTime();enabled.setChecked(true);
+            loading=false;
+            changed();diagnostics();
+            undoTimeBefore=before;
+            undoTimeAfter=after;
+            timeSavedLabel.setText("Weckzeit gespeichert · Aktiv");
+            timeUndoRow.setVisibility(View.VISIBLE);
+        }catch(RuntimeException failure){
+            try{AlarmRepository.put(this,before);AlarmScheduler.reschedule(this,id);}
+            catch(RuntimeException ignored){}
+            notice("Weckzeit konnte nicht übernommen werden: "+failure.getMessage());
+        }
+    }
+
+    private void undoSavedTime(){
+        if(undoTimeBefore==null||undoTimeAfter==null)return;
+        AlarmProfile current=AlarmRepository.get(this,id);
+        if(current==null||!current.sameConfiguration(undoTimeAfter)){
+            clearTimeUndo();
+            notice("Wecker wurde inzwischen geändert. Bitte die aktuelle Einstellung prüfen.");
+            return;
+        }
+        if(undoTimeBefore.enabled&&!AlarmScheduler.canSchedule(this)){
+            requestExactAlarmAccess();return;
+        }
+        AlarmProfile prior=undoTimeBefore;
+        try{
+            AlarmRepository.put(this,prior);
+            AlarmScheduler.reschedule(this,id);
+            saved=prior;
+            loading=true;hour=prior.hour;minute=prior.minute;showTime();
+            enabled.setChecked(prior.enabled);
+            loading=false;
+            clearTimeUndo();
+            changed();diagnostics();
+        }catch(RuntimeException failure){
+            try{AlarmRepository.put(this,current);AlarmScheduler.reschedule(this,id);}
+            catch(RuntimeException ignored){}
+            notice("Rückgängig fehlgeschlagen: "+failure.getMessage());
+        }
+    }
+
+    private void requestExactAlarmAccess(){
+        new AlertDialog.Builder(this).setTitle("Exakte Alarme erlauben")
+                .setMessage("Ohne Android-Berechtigung kann der Wecker nicht aktiviert werden. "+
+                        "Die bisherige Weckzeit bleibt unverändert.")
+                .setNegativeButton("Abbrechen",null)
+                .setPositiveButton("Einstellungen",(d,w)->{
+                    try{startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                            .setData(Uri.parse("package:"+getPackageName())));}
+                    catch(RuntimeException e){notice("Bitte speziellen App-Zugriff erlauben.");}
+                }).show();
+    }
     private void updateLabels(){
         if(delayLabel!=null&&delay!=null)delayLabel.setText("Tonstart: +"+delay.getProgress()*10+" Sekunden");
         if(rampLabel!=null&&ramp!=null)rampLabel.setText("Anstieg: "+(ramp.getProgress()+1)+" Minuten");
@@ -462,7 +554,7 @@ public final class DetailActivity extends Activity {
         autoStop.setProgress(p.autoStopMinutes-1);
         ramp.setEnabled(p.rampEnabled);
         pulses.setEnabled(p.watchPulses>0);interval.setEnabled(p.watchPulses>0);
-        loading=false;dirty=false;updateLabels();refreshModeUi();diagnostics();
+        loading=false;dirty=false;clearTimeUndo();updateLabels();refreshModeUi();diagnostics();
     }
 
     private AlarmProfile read(){
@@ -485,21 +577,14 @@ public final class DetailActivity extends Activity {
             notice("Bitte mindestens einen Wochentag auswählen.");return false;
         }
         if(update.enabled&&!AlarmScheduler.canSchedule(this)){
-            new AlertDialog.Builder(this).setTitle("Exakte Alarme erlauben")
-                .setMessage("Ohne Android-Berechtigung kann der Wecker nicht aktiviert werden.")
-                .setNegativeButton("Abbrechen",null)
-                .setPositiveButton("Einstellungen",(d,w)->{
-                    try{startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                            .setData(Uri.parse("package:"+getPackageName())));}
-                    catch(RuntimeException e){notice("Bitte speziellen App-Zugriff erlauben.");}
-                }).show();
+            requestExactAlarmAccess();
             return false;
         }
         AlarmProfile old=AlarmRepository.get(this,id);
         if(old==null){notice("Wecker existiert nicht mehr.");return false;}
         try{
             AlarmRepository.put(this,update);AlarmScheduler.reschedule(this,id);
-            saved=update;dirty=false;diagnostics();return true;
+            saved=update;dirty=false;clearTimeUndo();diagnostics();return true;
         }catch(RuntimeException e){
             try{AlarmRepository.put(this,old);AlarmScheduler.reschedule(this,id);}
             catch(RuntimeException ignored){}
@@ -701,6 +786,10 @@ public final class DetailActivity extends Activity {
     private void back(){
         if(!dirty){finish();return;}
         new AlertDialog.Builder(this).setTitle("Änderungen speichern?")
+                .setMessage(undoTimeAfter==null?
+                        "Noch nicht gespeicherte Einstellungen übernehmen?":
+                        "Die neue Weckzeit ist bereits aktiv und gespeichert. "+
+                        "Nur die übrigen Änderungen sind noch offen.")
                 .setPositiveButton("Speichern",(d,w)->{if(save())finish();})
                 .setNeutralButton("Verwerfen",(d,w)->{dirty=false;finish();})
                 .setNegativeButton("Weiter bearbeiten",null).show();
