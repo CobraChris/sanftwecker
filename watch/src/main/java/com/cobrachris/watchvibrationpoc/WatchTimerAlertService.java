@@ -65,7 +65,7 @@ public final class WatchTimerAlertService extends Service {
             for(Entry entry:new ArrayList<>(active.values())){
                 if(now>=entry.expiresAt){
                     active.remove(entry.id);
-                    WatchAlarmNotice.clearTimer(this,entry.id);
+                    WatchAlarmNotice.clearTimer(WatchTimerAlertService.this,entry.id);
                     markStopped(entry.id,entry.when);
                     changed=true;
                 }
