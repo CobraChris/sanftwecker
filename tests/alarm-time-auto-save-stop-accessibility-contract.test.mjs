@@ -40,7 +40,7 @@ test('pending watch, tone and weekday edits stay unsaved and time can be undone'
   assert.match(detail,/undoTimeAfter=after/);
   assert.match(detail,/timeUndoRow\.setVisibility\(View\.VISIBLE\)/);
   assert.match(detail,/timeUndoAction=UiKit\.action\(this,"Rückgängig"\)/);
-  assert.match(detail,/undoTimeAction\.setOnClickListener\(v->undoSavedTime\(\)\)/);
+  assert.match(detail,/timeUndoAction\.setOnClickListener\(v->undoSavedTime\(\)\)/);
   assert.match(detail,/current\.sameConfiguration\(undoTimeAfter\)/);
   assert.match(detail,/AlarmRepository\.put\(this,prior\);\s*AlarmScheduler\.reschedule\(this,id\)/);
   assert.match(detail,/if\(!dirty\)\{finish\(\);return;\}/);
