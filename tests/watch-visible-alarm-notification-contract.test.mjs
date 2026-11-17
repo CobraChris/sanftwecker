@@ -59,7 +59,7 @@ test('timer notification opens existing live overrun window and is cleared on st
   assert.match(timer,/if\(current!=null && current\.when==when\)return START_NOT_STICKY/);
   assert.match(timer,/sendStopToPhone\(entry\)/);
   assert.match(timer,/WatchTimerProtocol\.WATCH_STOP/);
-  assert.match(timer,/WatchTimerAlertService\.STOP_ALL/);
+  assert.match(timer,/new Intent\(this,WatchTimerAlertService\.class\)\.setAction\(STOP_ALL\)/);
   assert.match(timerUi,/setShowWhenLocked\(true\)/);
   assert.match(timerUi,/setTurnScreenOn\(true\)/);
   assert.match(timerUi,/clock\.setText\(overrun\(System\.currentTimeMillis\(\)-due\)\)/);
