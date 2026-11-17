@@ -64,6 +64,8 @@ jobs:
         run: node --test tests/timer-ringing-reliability-contract.test.mjs
       - name: Verify timer overrun and paired Galaxy Watch alerts
         run: node --test tests/timer-watch-overrun-contract.test.mjs
+      - name: Verify phone live timer screen and both Watch stop paths
+        run: node --test tests/live-timer-and-watch-stop-contract.test.mjs
       - name: Verify timer live target time is removed without lost settings
         run: node --test tests/timer-remove-live-target-contract.test.mjs
       - name: Verify large and readable stopwatch time
