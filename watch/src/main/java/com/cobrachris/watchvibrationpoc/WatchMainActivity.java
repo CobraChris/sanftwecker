@@ -44,7 +44,8 @@ public final class WatchMainActivity extends Activity {
                 checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                         !=PackageManager.PERMISSION_GRANTED)return false;
         NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        return manager!=null && manager.areNotificationsEnabled();
+        return manager!=null && manager.areNotificationsEnabled() &&
+                !WatchAlarmNotice.channelBlocked(this);
     }
     private void openNotificationAccess(){
         if(Build.VERSION.SDK_INT>=33 &&
