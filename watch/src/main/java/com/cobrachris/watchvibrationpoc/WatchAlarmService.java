@@ -290,6 +290,16 @@ public final class WatchAlarmService extends Service {
                 Math.min(15,i.getIntExtra("minutes",5)));
         try{
             foreground(i.getStringExtra("title"));
+            // Foreground-service notifications are deliberately quiet; this
+            // separate high-priority visible notice enables Samsung's
+            // "wake display on notification" setting for a real alarm.
+            // Never fire it for the manual vibration-only preview.
+            if(!"Uhr-Vibrationstest".equals(activeTitle)){
+                WatchAlarmNotice.clock(this,id,activeTitle,
+                        openApp(this),stopAction(),
+                        activeSnoozeMinutes>0?snoozeAction():null,
+                        Math.min(MAX_DURATION,minutes*60_000L)+5000L);
+            }
             PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);
             if(pm!=null){
                 wake=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"Sanftwecker:WatchAlarm");
@@ -355,6 +365,7 @@ public final class WatchAlarmService extends Service {
         if(wake!=null&&wake.isHeld())wake.release();
         wake=null;
         int oldId=activeId;
+        WatchAlarmNotice.clearClock(this,oldId);
         activeWhen=0;activeId=0;
         if(oldId>0&&acknowledged)sendAck("STOPPED",oldId);
         stopForeground(STOP_FOREGROUND_REMOVE);
