@@ -31,7 +31,7 @@ test('cascade only hides irrelevant manual sound controls and retains stored val
   assert.match(detail,/volume=slider\(music,95\)/);
   assert.match(detail,/watchIntensity\.setSelection\(p\.watchIntensity\)/);
   assert.match(detail,/cascade\.setChecked\(p\.cascadeEnabled\)/);
-  assert.match(detail,/loading=false;dirty=false;updateLabels\(\);refreshModeUi\(\);diagnostics\(\)/);
+  assert.match(detail,/loading=false;dirty=false;clearTimeUndo\(\);updateLabels\(\);refreshModeUi\(\);diagnostics\(\)/);
   assert.match(detail,/audibleWhenMuted\.isChecked\(\),cascade\.isChecked\(\)/);
   assert.match(detail,/AlarmRepository\.put\(this,update\);AlarmScheduler\.reschedule\(this,id\)/);
   assert.match(detail,/if\(!dirty\)\{finish\(\);return;\}/);

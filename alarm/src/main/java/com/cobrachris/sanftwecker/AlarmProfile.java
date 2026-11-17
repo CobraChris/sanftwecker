@@ -120,6 +120,21 @@ public final class AlarmProfile {
         this.replacedAt = replacedAt;
     }
 
+    /**
+     * Confirming a new wake time activates that existing alarm immediately.
+     * Keep every other user-configured setting as saved; exceptions for the
+     * old clock time are invalid only if hour/minute actually changed.
+     */
+    public AlarmProfile withTimeAndEnabled(int newHour,int newMinute) {
+        boolean changedTime=newHour!=hour || newMinute!=minute;
+        return new AlarmProfile(id,name,true,newHour,newMinute,days,
+                delaySeconds,rampSeconds,maxVolume,watchPulses,watchIntervalSeconds,
+                snoozeMinutes,tone,rampEnabled,autoStopMinutes,
+                changedTime?0L:skipAt,changedTime?0L:oneTimeAt,
+                changedTime?0L:replacedAt,snoozeEnabled,vibrationMode,
+                audibleWhenMuted,cascadeEnabled,watchIntensity);
+    }
+
     public AlarmProfile withEnabled(boolean enabled) {
         return new AlarmProfile(id, name, enabled, hour, minute, days,
                 delaySeconds, rampSeconds, maxVolume, watchPulses, watchIntervalSeconds,
