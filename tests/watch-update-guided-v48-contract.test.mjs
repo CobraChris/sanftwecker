@@ -42,9 +42,9 @@ test('existing v46 Watch receiver remains compatible, and manual install is mand
  assert.match(watch,/notifyReady\(context,code\)/);
  assert.match(activity,/setPositiveButton\("Weiter"/);
  assert.match(activity,/PhoneDeliveredWatchUpdate\.verifiedPending\(this\)/);
- const phone=src(phone+'WatchUpdateActivity.java');
- assert.match(phone,/shareWithInstaller/);
- assert.match(phone,/saveToDownloads/);
+ const phoneUi=src(phone+'WatchUpdateActivity.java');
+ assert.match(phoneUi,/shareWithInstaller/);
+ assert.match(phoneUi,/saveToDownloads/);
 });
 
 test('v48 version and strict original release gate match',()=>{
