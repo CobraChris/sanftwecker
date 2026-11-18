@@ -147,6 +147,13 @@ public final class WatchSelfUpdateActivity extends Activity {
     }
     private void checkUpdate(){
         if(busy||!idle())return;
+        try{
+            if(PhoneDeliveredWatchUpdate.verifiedPending(this)!=null){
+                offerPhoneDelivered();
+                return;
+            }
+        }catch(Exception ignored){}
+
         busy=true;candidate=null;verified=null;
         show("Prüfe offizielle GitHub-Releases …");
         buttons();
