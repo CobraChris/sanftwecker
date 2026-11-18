@@ -97,6 +97,20 @@ public final class WatchSelfUpdateActivity extends Activity {
         setContentView(scroll);
         refreshVersion();
         buttons();
+        offerPhoneDelivered();
+    }
+    private void offerPhoneDelivered(){
+        try{
+            Uri fromPhone=PhoneDeliveredWatchUpdate.verifiedPending(this);
+            if(fromPhone==null)return;
+            long code=PhoneDeliveredWatchUpdate.pendingCode(this);
+            candidate=new WatchSelfUpdateClient.Candidate(
+                "sanftwecker-v"+code,"phone-relay","",code);
+            verified=fromPhone;
+            show("Vom Handy empfangen: Watch v"+code+" geprüft. "+
+                "Mit 'Update installieren' auf dieser Uhr fortfahren.");
+            buttons();
+        }catch(Exception error){show("Handy-Update noch nicht bereit: "+error.getMessage());}
     }
     @Override protected void onSaveInstanceState(Bundle outState){
         outState.putBoolean("awaiting_permission",awaitingSourcePermission);
@@ -117,6 +131,7 @@ public final class WatchSelfUpdateActivity extends Activity {
         }catch(Exception e){
             show("Versionsprüfung fehlgeschlagen: "+e.getMessage());
         }
+        if(!awaitingSourcePermission&&verified==null)offerPhoneDelivered();
         // One-time continuation only after the user actively granted permission.
         if(awaitingSourcePermission){
             awaitingSourcePermission=false;
