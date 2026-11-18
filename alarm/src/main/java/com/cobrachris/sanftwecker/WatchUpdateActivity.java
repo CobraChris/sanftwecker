@@ -370,7 +370,11 @@ public final class WatchUpdateActivity extends Activity {
         PhoneWatchUpdateRelay.send(getApplicationContext(),verifiedUri,
             selected.code,selected.sha256,message->runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                busy=false;status.setText(message);updateButtons();
+                busy=false;
+                waitingForWatchAck=message.startsWith(
+                    "Update für Wear OS bereitgestellt.");
+                status.setText(message);
+                updateButtons();
             }));
     }
     private void shareWithInstaller(){
