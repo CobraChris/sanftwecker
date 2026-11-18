@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V48_WITH_EXISTING_V47_CERTIFICATE",
+  "expected_version_code": 48,
+  "intent": "signed-native-wear-v48",
+  "request_id": "2026-11-18-owner-approved-v48-one-step-watch",
+  "source_sha": "7ca578cf277dbddb4388d52ac03e8e92ad3f9e9a",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
