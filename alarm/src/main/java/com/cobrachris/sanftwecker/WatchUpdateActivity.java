@@ -103,6 +103,19 @@ public final class WatchUpdateActivity extends Activity {
         updateButtons();
     }
 
+    @Override protected void onResume(){
+        super.onResume();
+        if(status!=null){
+            long code=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
+                .getLong("verified_code",0);
+            long at=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
+                .getLong("verified_at",0);
+            if(code>0&&at>0&&System.currentTimeMillis()-at<60*60*1000L){
+                status.setText("Galaxy Watch hat APK v"+code+" empfangen und geprüft. "+
+                    "Installation muss auf der Uhr bestätigt werden.");
+            }
+        }
+    }
     private void updateButtons(){
         check.setEnabled(!busy);
         download.setEnabled(!busy&&selected!=null);
