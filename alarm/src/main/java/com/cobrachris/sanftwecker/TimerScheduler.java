@@ -104,6 +104,27 @@ public final class TimerScheduler {
         }
         TimerAlerts.dismiss(c,id);
     }
+    /**
+     * Extends one FINISHED occurrence only. The expected deadline prevents an
+     * old notification action from extending a newer timer occurrence.
+     */
+    public static synchronized boolean extendFinished(Context c,int id,long expectedDue,long extraMs){
+        TimerEntry before=TimerRepository.get(c,id);
+        if(before==null||before.state!=TimerEntry.FINISHED||
+                before.dueWallMs!=expectedDue||expectedDue<=0)return false;
+        TimerEntry after=before.extendFinished(extraMs,
+                System.currentTimeMillis(),SystemClock.elapsedRealtime());
+        try{
+            arm(c,after);
+            TimerRepository.put(c,after);
+        }catch(RuntimeException error){
+            cancelPending(c,id);
+            throw error;
+        }
+        TimerMilestoneScheduler.reschedule(c,id);
+        TimerAlerts.dismiss(c,id);
+        return true;
+    }
     public static synchronized void pause(Context c,int id){
         TimerMilestoneScheduler.cancel(c,id);
         TimerEntry before=TimerRepository.get(c,id);
