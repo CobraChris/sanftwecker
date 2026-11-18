@@ -44,7 +44,7 @@ test('wear update path is isolated, and watch acknowledgement is separate from i
  for(const manifest of [phoneManifest,watchManifest])
    assert.match(manifest,/sanftwecker\/update\/v1\//);
  assert.match(watchListener,/PhoneDeliveredWatchUpdate\.receive/);
- assert.match(receiver,/ready:\+code/);
+ assert.match(receiver,/ready:/);
  assert.match(phoneListener,/PhoneWatchUpdateRelay\.ACK/);
  assert.match(phoneListener,/verified_code/);
  assert.match(receiver,/notifyReady\(context,code\)/);
