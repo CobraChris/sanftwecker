@@ -9,7 +9,7 @@ import {
 const source='a'.repeat(40),after='b'.repeat(40);
 const valid={
   intent:'signed-native-wear-v46',
-  request_id:'2026-11-17-visible-watch-alarm-notices',
+  request_id:'2026-11-18-phone-watch-relay',
   expected_version_code:46,source_sha:source,
   watch_application_id:'com.cobrachris.sanftwecker',
   confirmation:'SIGN_PHONE_AND_WATCH_V46_WITH_EXISTING_V45_CERTIFICATE'
@@ -19,7 +19,7 @@ test('v46 approval must explicitly authorize both APKs with original signers',()
   assert.deepEqual(validateRequest(valid),
     {source_sha:source,expected_version_code:'46'});
   for(const update of [
-    {expected_version_code:44},{expected_version_code:46},{source_sha:'main'},
+    {expected_version_code:45},{expected_version_code:47},{source_sha:'main'},
     {source_sha:'C'.repeat(40)},{source_sha:'a'.repeat(41)},
     {watch_application_id:'com.cobrachris.watchvibrationpoc'},
     {confirmation:'GENERATE_NEW_KEY'},{confirmation:'SIGN_PHONE_ONLY'},
@@ -54,7 +54,7 @@ test('GitHub owner and original repo only',()=>{
   ])assert.throws(()=>validateActor({...good,...patch}));
 });
 
-test('dual-device signed v46 visible Watch alarm notifications requires exact owner approval',()=>{
+test('dual-device signed v46 Watch relay requires exact owner approval',()=>{
   const yml=readFileSync(new URL(
     '../.github/workflows/sanftwecker-v46-release.yml',import.meta.url),'utf8');
   const checks=[
@@ -75,11 +75,11 @@ test('dual-device signed v46 visible Watch alarm notifications requires exact ow
     'cmp -s signed/phone.cert.sha signed/watch.cert.sha',
     'cmp -s signed/phone.cert.sha legacy/phone/cert.sha',
     'cmp -s signed/watch.cert.sha legacy/watch/cert.sha',
-    "versionCode='46'",
-    "versionCode='46'",
+    "versionCode='45'",
+    "versionCode='45'",
     "versionCode='46'",
     'assert expected==46',
-    'assert e[\'versionCode\']==45',
+    'assert e[\'versionCode\']==46',
     'android.hardware.type.watch',
     'APP_SIGNING_KEYSTORE_BASE64',
     'APP_SIGNING_STORE_PASSWORD',
