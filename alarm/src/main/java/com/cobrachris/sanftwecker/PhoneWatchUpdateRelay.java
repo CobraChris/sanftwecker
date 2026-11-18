@@ -13,6 +13,7 @@ import java.util.Locale;
 /** User-initiated, signed APK handoff over Wear Data Layer; never installs. */
 public final class PhoneWatchUpdateRelay {
     public static final String PATH="/sanftwecker/update/v1/apk";
+    public static final String ACK="/sanftwecker/update/v1/ack";
     private PhoneWatchUpdateRelay(){}
     public interface Result { void done(String message); }
 
@@ -20,6 +21,16 @@ public final class PhoneWatchUpdateRelay {
         if(uri==null||expectedSha==null||!expectedSha.matches("[a-f0-9]{64}")){
             result.done("Keine geprüfte Watch-APK vorhanden.");return;
         }
+        Wearable.getNodeClient(context.getApplicationContext()).getConnectedNodes()
+            .addOnSuccessListener(nodes->{
+                if(nodes.isEmpty()){
+                    result.done("Keine verbundene Galaxy Watch gefunden. Bluetooth/Verbindung prüfen.");
+                    return;
+                }
+                sendVerified(context,uri,code,expectedSha,result);
+            }).addOnFailureListener(e->result.done("Uhr-Verbindung nicht prüfbar: "+e.getMessage()));
+    }
+    private static void sendVerified(Context context,Uri uri,long code,String expectedSha,Result result){
         new Thread(()->{
             try{
                 byte[] bytes;
