@@ -7,6 +7,8 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -23,8 +25,34 @@ public final class WatchUpdateActivity extends Activity {
     private static final String API=
             "https://api.github.com/repos/CobraChris/sanftwecker/releases?per_page=20";
     private static final int SAVE_FILE=752;
+    public static final String EXTRA_GUIDED="guided_watch_update";
+    private static final String RELAY_PREF="sanftwecker_watch_relay";
+    private final Handler handler=new Handler(Looper.getMainLooper());
+    private long relayStartedAt,relayVersion;
+    private boolean guided,awaitingAck;
+    private final Runnable ackMonitor=new Runnable(){
+        @Override public void run(){
+            if(!awaitingAck||isFinishing()||isDestroyed())return;
+            long at=getSharedPreferences(RELAY_PREF,MODE_PRIVATE).getLong("verified_at",0);
+            long code=getSharedPreferences(RELAY_PREF,MODE_PRIVATE).getLong("verified_code",0);
+            if(code==relayVersion&&at>=relayStartedAt&&at>0){
+                awaitingAck=false;
+                status.setText("Galaxy Watch hat v"+code+" vollständig empfangen und geprüft. "+
+                    "Auf der Uhr die Update-Benachrichtigung öffnen und "+
+                    "die Android-Installation bestätigen.");
+                updateButtons();
+            }else if(System.currentTimeMillis()-relayStartedAt<120_000L){
+                handler.postDelayed(this,1500L);
+            }else{
+                awaitingAck=false;
+                status.setText("Noch keine Empfangsbestätigung der Uhr. "+
+                    "Prüfe die Bluetooth-Verbindung und nutze 'Erneut an Uhr senden'.");
+                updateButtons();
+            }
+        }
+    };
     private TextView status;
-    private Button check,download,save,share,transfer;
+    private Button check,download,save,share,transfer,guidedButton;
     private Candidate selected;
     private Uri verifiedUri;
     private boolean busy=false;
@@ -68,15 +96,22 @@ public final class WatchUpdateActivity extends Activity {
         UiKit.window(this);
         LinearLayout root=UiKit.mainColumn(this);
         root.addView(UiKit.heading(this,"Galaxy Watch aktualisieren"));
+        guided=getIntent()!=null&&getIntent().getBooleanExtra(EXTRA_GUIDED,false);
+        root.addView(UiKit.label(this,
+                "Ein Schritt: passende Watch-Version suchen, laden, "+
+                "Originalsignatur prüfen und an die gekoppelte Uhr übertragen. "+
+                "Die Installation bestätigst du auf der Watch.",
+                15,UiKit.TEXT));
+        guidedButton=UiKit.button(this,"Watch-Update mit einem Tippen vorbereiten",true);
+        root.addView(guidedButton);
+        guidedButton.setOnClickListener(v->startGuided());
         root.addView(UiKit.label(this,
                 "Watch-APK ohne Browser direkt im Sanftwecker laden. "+
                 "Der Download wird mit SHA-256 und Originalsignatur geprüft.",
                 15,UiKit.TEXT));
         root.addView(UiKit.label(this,
-                "Wichtig: Diese Funktion installiert nichts auf der Uhr. "+
-                "Du speicherst die geprüfte APK oder gibst sie an eine "+
-                "Watch-Installations-App weiter. Die Installation erfolgt "+
-                "ausschließlich nach deiner Bestätigung auf der Uhr. "+
+                "Android verlangt weiterhin deine Installationsbestätigung "+
+                "auf der Uhr. Keine automatische oder stille Installation. "+
                 "Die vorhandene Watch-App niemals deinstallieren.",
                 14,UiKit.MUTED));
         status=UiKit.label(this,"Noch keine Watch-APK geprüft.",15,UiKit.TEXT);
@@ -101,11 +136,17 @@ public final class WatchUpdateActivity extends Activity {
         transfer.setOnClickListener(v->sendToWatch());
         setContentView(UiKit.scroll(this,root));
         updateButtons();
+        if(guided)handler.post(this::startGuided);
+    }
+
+    @Override protected void onDestroy(){
+        handler.removeCallbacks(ackMonitor);
+        super.onDestroy();
     }
 
     @Override protected void onResume(){
         super.onResume();
-        if(status!=null){
+        if(status!=null&&!awaitingAck){
             long code=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
                 .getLong("verified_code",0);
             long at=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
@@ -117,11 +158,13 @@ public final class WatchUpdateActivity extends Activity {
         }
     }
     private void updateButtons(){
+        if(guidedButton!=null)guidedButton.setEnabled(!busy&&!awaitingAck);
         check.setEnabled(!busy);
         download.setEnabled(!busy&&selected!=null);
         save.setEnabled(!busy&&verifiedUri!=null);
         share.setEnabled(!busy&&verifiedUri!=null);
-        transfer.setEnabled(!busy&&verifiedUri!=null);
+        transfer.setEnabled(!busy&&verifiedUri!=null&&!awaitingAck);
+        transfer.setText(awaitingAck?"Warte auf Watch-Empfang …":"Geprüfte APK direkt an Galaxy Watch senden");
     }
 
     private long phoneVersion(){
@@ -130,6 +173,12 @@ public final class WatchUpdateActivity extends Activity {
         catch(Exception e){return -1;}
     }
 
+    private void startGuided(){
+        if(busy||awaitingAck)return;
+        guided=true;
+        relayStartedAt=0;
+        checkForWatch();
+    }
     private void checkForWatch(){
         if(busy)return;
         busy=true;
@@ -162,6 +211,8 @@ public final class WatchUpdateActivity extends Activity {
         busy=false;
         status.setText(message);
         updateButtons();
+        if(guided&&result!=null)handler.post(this::downloadWatch);
+        else if(guided&&result==null)guided=false;
     }
 
     private void downloadWatch(){
@@ -188,9 +239,9 @@ public final class WatchUpdateActivity extends Activity {
                     verifiedUri=uri;
                     busy=false;
                     status.setText("Watch-APK vollständig heruntergeladen. "+
-                            "SHA-256 und Originalzertifikat geprüft. "+
-                            "Jetzt speichern oder an eine Watch-Installations-App weitergeben.");
+                            "SHA-256 und Originalzertifikat geprüft.");
                     updateButtons();
+                    if(guided)handler.post(this::sendToWatch);
                 });
             }catch(Exception e){
                 runOnUiThread(()->{
@@ -198,6 +249,7 @@ public final class WatchUpdateActivity extends Activity {
                     busy=false;
                     status.setText("Kein vollständiger Watch-Download: "+
                             e.getMessage()+". Du kannst erneut versuchen.");
+                    guided=false;
                     updateButtons();
                 });
             }
@@ -250,10 +302,21 @@ public final class WatchUpdateActivity extends Activity {
         if(busy||verifiedUri==null||selected==null)return;
         busy=true;updateButtons();
         status.setText("Bereits geprüfte APK über Wear OS übertragen …");
+        relayVersion=selected.code;
+        relayStartedAt=System.currentTimeMillis();
         PhoneWatchUpdateRelay.send(getApplicationContext(),verifiedUri,
             selected.code,selected.sha256,message->runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                busy=false;status.setText(message);updateButtons();
+                busy=false;
+                status.setText(message);
+                if(message.startsWith("Update für Wear OS bereitgestellt")){
+                    awaitingAck=true;
+                    status.setText("APK an Wear OS übergeben. "+
+                        "Warte auf die Signatur- und Hash-Bestätigung der Uhr …");
+                    handler.removeCallbacks(ackMonitor);
+                    handler.post(ackMonitor);
+                }else guided=false;
+                updateButtons();
             }));
     }
     private void shareWithInstaller(){
