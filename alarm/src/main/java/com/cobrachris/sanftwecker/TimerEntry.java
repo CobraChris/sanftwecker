@@ -7,11 +7,20 @@ public final class TimerEntry {
     public final int id, state;
     public final String name;
     public final long durationMs, remainingMs, dueWallMs, dueElapsedMs, bootOffsetMs;
+    public final long originalDurationMs;
     public final boolean favorite;
 
     public TimerEntry(int id, String name, long durationMs, long remainingMs,
             int state, long dueWallMs, long dueElapsedMs,
             long bootOffsetMs, boolean favorite) {
+        this(id,name,durationMs,remainingMs,state,dueWallMs,dueElapsedMs,
+                bootOffsetMs,favorite,durationMs);
+    }
+    public TimerEntry(int id, String name, long durationMs, long remainingMs,
+            int state, long dueWallMs, long dueElapsedMs,
+            long bootOffsetMs, boolean favorite,long originalDurationMs) {
+        if(originalDurationMs<MIN_MS || originalDurationMs>MAX_MS)
+            throw new IllegalArgumentException("Invalid original timer duration");
         if(id<1 || id>9999 || durationMs<MIN_MS || durationMs>MAX_MS ||
                 remainingMs<0 || remainingMs>durationMs ||
                 state<READY || state>WAITING)
@@ -19,6 +28,7 @@ public final class TimerEntry {
         this.id=id;
         this.name=name==null||name.trim().isEmpty() ? "Timer "+id : name.trim();
         this.durationMs=durationMs;
+        this.originalDurationMs=originalDurationMs;
         this.remainingMs=remainingMs;
         this.state=state;
         this.dueWallMs=dueWallMs;
@@ -50,7 +60,7 @@ public final class TimerEntry {
         return new TimerEntry(id,name,durationMs,remainingMs,
                 delayMs>0?WAITING:RUNNING,
                 wallNow+delayMs+remainingMs,elapsedNow+delayMs+remainingMs,
-                wallNow-elapsedNow,favorite);
+                wallNow-elapsedNow,favorite,originalDurationMs);
     }
     public long delayRemaining(long wallNow,long elapsedNow){
         if(state!=WAITING)return 0;
@@ -63,12 +73,12 @@ public final class TimerEntry {
     public TimerEntry pause(long wallNow,long elapsedNow){
         if(state!=RUNNING && state!=WAITING)return this;
         return new TimerEntry(id,name,durationMs,remaining(wallNow,elapsedNow),PAUSED,
-                0,0,0,favorite);
+                0,0,0,favorite,originalDurationMs);
     }
     /** Preserve the original deadline so completed timers can count upwards. */
     public TimerEntry finish(){
         return new TimerEntry(id,name,durationMs,0,FINISHED,
-                dueWallMs,dueElapsedMs,bootOffsetMs,favorite);
+                dueWallMs,dueElapsedMs,bootOffsetMs,favorite,originalDurationMs);
     }
 
     /** Positive elapsed time since the deadline; survives process death and reboot. */
@@ -92,7 +102,8 @@ public final class TimerEntry {
                 wallNow+extraMs,elapsedNow+extraMs,wallNow-elapsedNow,favorite);
     }
     public TimerEntry reset(){
-        return new TimerEntry(id,name,durationMs,durationMs,READY,0,0,0,favorite);
+        return new TimerEntry(id,name,originalDurationMs,originalDurationMs,READY,
+                0,0,0,favorite,originalDurationMs);
     }
     /** Manual one-tap restart, regardless of running/paused/waiting/finished.
      * Unlike startDelayed(), this deliberately skips any configured start delay.
@@ -102,10 +113,10 @@ public final class TimerEntry {
         return reset().start(wallNow,elapsedNow);
     }
     public TimerEntry edit(String title,long duration){
-        return new TimerEntry(id,title,duration,duration,READY,0,0,0,favorite);
+        return new TimerEntry(id,title,duration,duration,READY,0,0,0,favorite,duration);
     }
     public TimerEntry favorite(boolean value){
         return new TimerEntry(id,name,durationMs,remainingMs,state,
-                dueWallMs,dueElapsedMs,bootOffsetMs,value);
+                dueWallMs,dueElapsedMs,bootOffsetMs,value,originalDurationMs);
     }
 }
