@@ -54,7 +54,8 @@ test('wear update path is isolated, and watch acknowledgement is separate from i
 test('v46 does not amend historical release gates or remove the fallback update',()=>{
  for(const kind of ['alarm','watch']){
    const gradle=get(kind+'/build.gradle');
-   assert.match(gradle,/versionCode 46/);
+   const code=Number(gradle.match(/versionCode (\\d+)/)?.[1]);
+   assert.ok(code>=46,'v46 relay must remain available in later builds');
  }
  const watch=get('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchSelfUpdateActivity.java');
  const phone=get('alarm/src/main/java/com/cobrachris/sanftwecker/WatchUpdateActivity.java');
