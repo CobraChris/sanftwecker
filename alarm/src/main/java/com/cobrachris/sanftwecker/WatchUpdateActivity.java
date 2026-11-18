@@ -170,12 +170,38 @@ public final class WatchUpdateActivity extends Activity {
      */
     private void runGuidedUpdate(){
         if(busy)return;
+        // A failed connection attempt can retry the already-verified APK.
+        // Do not waste another GitHub download or alter its signing checks.
+        if(selected!=null&&verifiedUri!=null&&selected.code==phoneVersion()){
+            sendToWatch();
+            return;
+        }
         busy=true;selected=null;verifiedUri=null;
         waitingForWatchAck=false;
         getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE).edit()
             .remove("verified_code").remove("verified_at").apply();
-        status.setText("Schritt 1/3: Passende Original-Watch-Version suchen …");
+        status.setText("Prüfe Verbindung zur Galaxy Watch …");
         updateButtons();
+        com.google.android.gms.wearable.Wearable.getNodeClient(this)
+            .getConnectedNodes().addOnSuccessListener(nodes->{
+                if(isFinishing()||isDestroyed())return;
+                if(nodes.isEmpty()){
+                    busy=false;
+                    status.setText("Keine gekoppelte Watch erreichbar. "+
+                        "Bluetooth aktivieren und erneut versuchen.");
+                    updateButtons();
+                    return;
+                }
+                status.setText("Schritt 1/3: Passende Original-Watch-Version suchen …");
+                startGuidedDownload();
+            }).addOnFailureListener(error->{
+                if(isFinishing()||isDestroyed())return;
+                busy=false;
+                status.setText("Watch-Verbindung nicht prüfbar: "+error.getMessage());
+                updateButtons();
+            });
+    }
+    private void startGuidedDownload(){
         new Thread(()->{
             try{
                 long code=phoneVersion();
