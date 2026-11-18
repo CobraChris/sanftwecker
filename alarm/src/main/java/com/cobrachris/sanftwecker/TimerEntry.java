@@ -99,7 +99,7 @@ public final class TimerEntry {
         if(state!=FINISHED||extraMs<MIN_MS||extraMs>MAX_MS)
             throw new IllegalArgumentException("Nur beendete Timer lassen sich verlängern");
         return new TimerEntry(id,name,Math.max(durationMs,extraMs),extraMs,RUNNING,
-                wallNow+extraMs,elapsedNow+extraMs,wallNow-elapsedNow,favorite);
+                wallNow+extraMs,elapsedNow+extraMs,wallNow-elapsedNow,favorite,originalDurationMs);
     }
     public TimerEntry reset(){
         return new TimerEntry(id,name,originalDurationMs,originalDurationMs,READY,
