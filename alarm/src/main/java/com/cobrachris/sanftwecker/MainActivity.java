@@ -58,6 +58,38 @@ public final class MainActivity extends Activity {
         RingingService.ensureChannels(this);
         sortByNext = getPreferences(MODE_PRIVATE).getBoolean("next_sort", true);
         buildScreen();
+        if(state==null)getWindow().getDecorView().post(this::offerWatchUpdateAfterPhoneUpgrade);
+    }
+
+    /**
+     * Show a single opt-in after a NEW phone version is installed.
+     * No background download, network use or APK installation without a tap.
+     * Existing clocks and alarms run independently of this prompt.
+     */
+    private void offerWatchUpdateAfterPhoneUpgrade(){
+        if(isFinishing()||isDestroyed())return;
+        long code;
+        try{
+            code=getPackageManager().getPackageInfo(getPackageName(),0)
+                .getLongVersionCode();
+        }catch(Exception error){return;}
+        if(code<48)return;
+        android.content.SharedPreferences prefs=getSharedPreferences(
+            "sanftwecker_watch_update_guide_v48",MODE_PRIVATE);
+        if(prefs.getLong("offered_for_code",0)>=code)return;
+        if(!prefs.edit().putLong("offered_for_code",code).commit())return;
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Galaxy Watch mit aktualisieren?")
+            .setMessage("Die Handy-App ist auf Version "+code+" aktualisiert. "+
+                "Sanftwecker kann die passende Watch-APK jetzt automatisch "+
+                "suchen, herunterladen, prüfen und ohne Watch-WLAN übertragen. "+
+                "Die Installation musst du anschließend auf der Uhr bestätigen. "+
+                "Du kannst diesen Vorgang jederzeit erneut über das Menü starten.")
+            .setNegativeButton("Später",null)
+            .setPositiveButton("Watch-Update vorbereiten",(dialog,which)->
+                startActivity(new Intent(this,WatchUpdateActivity.class)
+                    .putExtra(WatchUpdateActivity.EXTRA_START_GUIDED,true)))
+            .show();
     }
 
     @Override public void onResume() {
@@ -188,6 +220,9 @@ public final class MainActivity extends Activity {
         menu.getMenu().add(!sortByNext?"✓ Sortierung: Uhrzeit":
                 "Sortieren: Uhrzeit").setOnMenuItemClickListener(item->{
             sortByNext=false;saveSort();renderList();return true;
+        });
+        menu.getMenu().add("Galaxy Watch aktualisieren").setOnMenuItemClickListener(item->{
+            startActivity(new Intent(this,WatchUpdateActivity.class));return true;
         });
         menu.getMenu().add("App aktualisieren").setOnMenuItemClickListener(item->{
             startActivity(new Intent(this,UpdateActivity.class));return true;
