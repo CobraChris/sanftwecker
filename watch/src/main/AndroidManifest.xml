@@ -56,6 +56,11 @@
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/sanftwecker/timer/v1"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED"/>
+                <data android:scheme="wear" android:host="*"
+                    android:path="/sanftwecker/update/v1/apk"/>
+            </intent-filter>
         </service>
         <service android:name=".WatchTimerAlertService" android:exported="false"
             android:foregroundServiceType="specialUse" android:stopWithTask="false">
