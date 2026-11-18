@@ -31,7 +31,7 @@ public final class WatchTimerRingActivity extends Activity {
     };
     private TextView title,clock,state;
     private Button stop,plus30,plus60,more;
-    private boolean hadActive;
+    private boolean hadActive,extensionPending;
     private int dp(int n){
         return Math.round(n*getResources().getDisplayMetrics().density);
     }
@@ -132,7 +132,12 @@ public final class WatchTimerRingActivity extends Activity {
         }
         String payload=id+":"+due+":"+millis;
         state.setText("Verlängerung am Handy angefordert …");
+        extensionPending=true;
         plus30.setEnabled(false);plus60.setEnabled(false);more.setEnabled(false);
+        handler.postDelayed(()->{
+            if(extensionPending&&!isFinishing())
+                restoreExtensionButtons("Keine Bestätigung; erneut versuchen oder am Handy verlängern.");
+        },9000L);
         com.google.android.gms.wearable.Wearable.getNodeClient(this)
             .getConnectedNodes().addOnSuccessListener(nodes->{
                 if(nodes.isEmpty()){
@@ -149,6 +154,7 @@ public final class WatchTimerRingActivity extends Activity {
                 restoreExtensionButtons("Handy nicht erreichbar")));
     }
     private void restoreExtensionButtons(String message){
+        extensionPending=false;
         state.setText(message);plus30.setEnabled(true);
         plus60.setEnabled(true);more.setEnabled(true);
     }
@@ -176,7 +182,8 @@ public final class WatchTimerRingActivity extends Activity {
         String name=active.getString("name","Timer");
         title.setText(count>1?count+" Timer abgelaufen":name);
         clock.setText(overrun(System.currentTimeMillis()-due));
-        state.setText("Seit Ablauf · Stoppen auf der Uhr oder am Handy");
+        if(!extensionPending)
+            state.setText("Seit Ablauf · Stoppen auf der Uhr oder am Handy");
     }
     @Override protected void onResume(){
         super.onResume();
