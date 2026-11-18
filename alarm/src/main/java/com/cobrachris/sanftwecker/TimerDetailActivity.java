@@ -181,6 +181,26 @@ public final class TimerDetailActivity extends Activity {
                 "zusätzlich. Manueller Start und Zurücksetzen heben den Zeitplan auf.");
 
         LinearLayout display=section(root,"Anzeige & Wiederholung");
+        TextView colorTitle=UiKit.label(this,"Timer-Farbe",16,UiKit.TEXT);
+        display.addView(colorTitle);
+        addHint(display,"Individuelle Akzentfarbe für Timer-Kachel und Zeitanzeige.");
+        LinearLayout palette=UiKit.row(this);
+        for(int i=0;i<TimerAlertSettings.COLOR_CHOICES.length;i++){
+            final int option=TimerAlertSettings.COLOR_CHOICES[i];
+            TextView swatch=UiKit.label(this,option==0?"●":"●",28,
+                    option==0?UiKit.BLUE:option);
+            swatch.setGravity(Gravity.CENTER);
+            swatch.setContentDescription(option==0?"Standardfarbe":
+                    "Timer-Farboption "+i);
+            palette.addView(swatch,new LinearLayout.LayoutParams(0,UiKit.dp(this,54),1));
+            swatch.setOnClickListener(v->{
+                try{
+                    TimerAlertSettings.setColor(this,timerId,option);
+                    updateState();
+                }catch(RuntimeException error){showError(error.getMessage());}
+            });
+        }
+        display.addView(palette);
         timeFormatChoice=choiceRow(display,"Zeitformat",TimerDisplay.formatLabel(
                 TimerAlertSettings.timeFormat(this,timerId)),()->{
             final String[] values={"Std.:Min.:Sek.","Min.:Sek."};
@@ -462,6 +482,10 @@ public final class TimerDetailActivity extends Activity {
             left=t.remaining(System.currentTimeMillis(),SystemClock.elapsedRealtime());
         }
         title.setText(t.name);
+        int accent=TimerAlertSettings.color(this,timerId);
+        time.setTextColor(accent==0?UiKit.BLUE:accent);
+        progress.setProgressTintList(android.content.res.ColorStateList.valueOf(
+                accent==0?UiKit.BLUE:accent));
         plannedStartLabel.setText(scheduleLabel(TimerStartSchedule.get(this,timerId)));
         time.setText(TimerDisplay.visible(t,System.currentTimeMillis(),
                 SystemClock.elapsedRealtime(),TimerAlertSettings.timeFormat(this,timerId)));
