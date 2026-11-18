@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V47_WITH_EXISTING_V46_CERTIFICATE",
+  "expected_version_code": 47,
+  "intent": "signed-native-wear-v47",
+  "request_id": "2026-11-18-owner-approved-v47-timer-extension-colors",
+  "source_sha": "16c800424cbf0c95afada331f8fdc61b2136d724",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
