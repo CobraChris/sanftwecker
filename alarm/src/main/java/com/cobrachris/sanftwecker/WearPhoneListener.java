@@ -24,6 +24,22 @@ public final class WearPhoneListener extends WearableListenerService {
                 .putLong("verified_at",System.currentTimeMillis()).apply();
             return;
         }
+        if(TimerWatchPacket.WATCH_EXTEND.equals(event.getPath())){
+            String text=new String(event.getData(),StandardCharsets.UTF_8);
+            if(!text.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(30000|60000|120000|300000|600000)"))
+                return;
+            String[] parts=text.split(":");
+            int id=Integer.parseInt(parts[0]);
+            long due=Long.parseLong(parts[1]);
+            long extra=Long.parseLong(parts[2]);
+            if(!TimerWearBridge.isCurrent(this,id,due))return;
+            try{
+                TimerScheduler.extendFinished(this,id,due,extra);
+            }catch(RuntimeException e){
+                AlarmRepository.diagnostic(this,"Uhr-Verlängerung nicht möglich: "+e.getMessage());
+            }
+            return;
+        }
         if(TimerWatchPacket.WATCH_STOP.equals(event.getPath())){
             String stop=new String(event.getData(),StandardCharsets.UTF_8);
             if(!stop.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}"))return;

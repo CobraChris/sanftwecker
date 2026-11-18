@@ -181,7 +181,9 @@ public final class TimerActivity extends Activity {
         top.addView(overflow);
         overflow.setOnClickListener(v->menu(overflow,t));
         card.addView(top);
-        TextView title=UiKit.label(this,t.name,16,UiKit.TEXT);
+        int chosenColor=TimerAlertSettings.color(this,t.id);
+        TextView title=UiKit.label(this,t.name,16,
+                chosenColor==0?UiKit.TEXT:chosenColor);
         title.setGravity(Gravity.CENTER);title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         title.setContentDescription(t.name);
@@ -191,7 +193,8 @@ public final class TimerActivity extends Activity {
         TextView value=UiKit.label(this,TimerDisplay.visible(t,
                         System.currentTimeMillis(),SystemClock.elapsedRealtime(),
                         TimerAlertSettings.timeFormat(this,t.id)),23,
-                t.state==TimerEntry.FINISHED?0xffffb199:UiKit.BLUE);
+                t.state==TimerEntry.FINISHED?0xffffb199:
+                    (chosenColor==0?UiKit.BLUE:chosenColor));
         value.setGravity(Gravity.CENTER);
         value.setSingleLine(true);
         // Custom timer formats can be longer than HH:mm:ss. Keep them readable

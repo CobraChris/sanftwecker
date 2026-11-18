@@ -30,8 +30,8 @@ public final class WatchTimerRingActivity extends Activity {
         }
     };
     private TextView title,clock,state;
-    private Button stop;
-    private boolean hadActive;
+    private Button stop,plus30,plus60,more;
+    private boolean hadActive,extensionPending;
     private int dp(int n){
         return Math.round(n*getResources().getDisplayMetrics().density);
     }
@@ -98,12 +98,65 @@ public final class WatchTimerRingActivity extends Activity {
             }
         });
 
+        plus30=new Button(this);plus30.setText("+30 Sek.");
+        WatchDashboardView.styleButton(plus30,false,false);
+        page.addView(plus30,new LinearLayout.LayoutParams(-1,dp(52)));
+        plus30.setOnClickListener(v->extend(30_000L));
+        plus60=new Button(this);plus60.setText("+1 Min.");
+        WatchDashboardView.styleButton(plus60,false,false);
+        page.addView(plus60,new LinearLayout.LayoutParams(-1,dp(52)));
+        plus60.setOnClickListener(v->extend(60_000L));
+        more=new Button(this);more.setText("Mehr");
+        WatchDashboardView.styleButton(more,false,false);
+        page.addView(more,new LinearLayout.LayoutParams(-1,dp(52)));
+        more.setOnClickListener(v->new android.app.AlertDialog.Builder(this)
+            .setTitle("Verlängern")
+            .setItems(new String[]{"+2 Minuten","+5 Minuten","+10 Minuten"},
+                (dialog,which)->extend(new long[]{120_000L,300_000L,600_000L}[which]))
+            .setNegativeButton("Abbrechen",null).show());
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(false);
         scroll.setBackgroundColor(bg);
         scroll.addView(page);
         setContentView(scroll);
         refresh();
+    }
+    private void extend(long millis){
+        SharedPreferences active=getSharedPreferences(
+                WatchTimerAlertService.ACTIVE_PREF,MODE_PRIVATE);
+        int id=active.getInt("id",-1);
+        long due=active.getLong("when",0L);
+        if(active.getInt("count",0)!=1||id<=0||due<=0){
+            state.setText("Verlängern nur bei einem einzelnen Timeralarm möglich.");
+            return;
+        }
+        String payload=id+":"+due+":"+millis;
+        state.setText("Verlängerung am Handy angefordert …");
+        extensionPending=true;
+        plus30.setEnabled(false);plus60.setEnabled(false);more.setEnabled(false);
+        handler.postDelayed(()->{
+            if(extensionPending&&!isFinishing())
+                restoreExtensionButtons("Keine Bestätigung; erneut versuchen oder am Handy verlängern.");
+        },9000L);
+        com.google.android.gms.wearable.Wearable.getNodeClient(this)
+            .getConnectedNodes().addOnSuccessListener(nodes->{
+                if(nodes.isEmpty()){
+                    runOnUiThread(()->restoreExtensionButtons("Handy nicht verbunden"));
+                    return;
+                }
+                for(com.google.android.gms.wearable.Node node:nodes)
+                    com.google.android.gms.wearable.Wearable.getMessageClient(this)
+                        .sendMessage(node.getId(),WatchTimerProtocol.WATCH_EXTEND,
+                            payload.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                        .addOnFailureListener(e->runOnUiThread(()->
+                                restoreExtensionButtons("Verlängerung nicht gesendet")));
+            }).addOnFailureListener(e->runOnUiThread(()->
+                restoreExtensionButtons("Handy nicht erreichbar")));
+    }
+    private void restoreExtensionButtons(String message){
+        extensionPending=false;
+        state.setText(message);plus30.setEnabled(true);
+        plus60.setEnabled(true);more.setEnabled(true);
     }
     private void refresh(){
         SharedPreferences active=getSharedPreferences(
@@ -118,14 +171,19 @@ public final class WatchTimerRingActivity extends Activity {
             title.setText("Kein Timeralarm");
             state.setText("Der Timer kann am Handy erneut gestartet werden.");
             stop.setVisibility(View.GONE);
+            plus30.setVisibility(View.GONE);plus60.setVisibility(View.GONE);
+            more.setVisibility(View.GONE);
             return;
         }
         hadActive=true;
         stop.setVisibility(View.VISIBLE);
+        int show=count==1?View.VISIBLE:View.GONE;
+        plus30.setVisibility(show);plus60.setVisibility(show);more.setVisibility(show);
         String name=active.getString("name","Timer");
         title.setText(count>1?count+" Timer abgelaufen":name);
         clock.setText(overrun(System.currentTimeMillis()-due));
-        state.setText("Seit Ablauf · Stoppen auf der Uhr oder am Handy");
+        if(!extensionPending)
+            state.setText("Seit Ablauf · Stoppen auf der Uhr oder am Handy");
     }
     @Override protected void onResume(){
         super.onResume();

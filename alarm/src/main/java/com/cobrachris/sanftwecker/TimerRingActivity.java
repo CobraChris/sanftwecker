@@ -106,8 +106,39 @@ public final class TimerRingActivity extends Activity {
                         .setPositiveButton("OK",null).show();
             }
         });
+        TextView plusTitle=UiKit.label(this,"TIMER VERLÄNGERN",14,UiKit.MUTED);
+        plusTitle.setGravity(Gravity.CENTER);
+        root.addView(plusTitle);
+        LinearLayout quick=UiKit.row(this);
+        Button plus30=UiKit.button(this,"+30 Sek.",false);
+        Button plus60=UiKit.button(this,"+1 Min.",false);
+        quick.addView(plus30,new LinearLayout.LayoutParams(0,UiKit.dp(this,58),1));
+        quick.addView(plus60,new LinearLayout.LayoutParams(0,UiKit.dp(this,58),1));
+        root.addView(quick);
+        plus30.setOnClickListener(v->extend(30_000L));
+        plus60.setOnClickListener(v->extend(60_000L));
+        Button more=UiKit.button(this,"Mehr: +2 / +5 / +10 Min.",false);
+        root.addView(more);
+        more.setOnClickListener(v->new android.app.AlertDialog.Builder(this)
+                .setTitle("Timer verlängern")
+                .setItems(new String[]{"+2 Minuten","+5 Minuten","+10 Minuten"},
+                        (dialog,which)->extend(new long[]{120_000L,300_000L,600_000L}[which]))
+                .setNegativeButton("Abbrechen",null).show());
         setContentView(UiKit.scroll(this,root));
         updateName(getIntent());
+    }
+    private void extend(long ms){
+        if(timerId<=0||dueWall<=0)return;
+        try{
+            if(TimerScheduler.extendFinished(this,timerId,dueWall,ms))finish();
+            else new android.app.AlertDialog.Builder(this)
+                .setMessage("Dieser Timer wurde bereits geändert oder neu gestartet.")
+                .setPositiveButton("OK",null).show();
+        }catch(RuntimeException ex){
+            new android.app.AlertDialog.Builder(this)
+                .setMessage("Verlängerung nicht möglich: "+ex.getMessage())
+                .setPositiveButton("OK",null).show();
+        }
     }
     private void updateName(Intent intent){
         String name=intent==null?null:intent.getStringExtra(EXTRA_LABEL);

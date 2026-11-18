@@ -177,6 +177,16 @@ public final class TimerRingingService extends Service {
                 new Intent(this,TimerRingingService.class).setAction(ACTION_STOP_ALL),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
+    private PendingIntent extendAction(long ms){
+        int id=active.firstId();
+        Intent extend=new Intent(this,TimerReceiver.class)
+            .setAction(TimerReceiver.ACTION_EXTEND)
+            .putExtra(TimerScheduler.EXTRA_ID,id)
+            .putExtra(TimerScheduler.EXTRA_DUE,active.firstDueWallMs())
+            .putExtra(TimerReceiver.EXTRA_EXTENSION_MS,ms);
+        return PendingIntent.getBroadcast(this,7300+id*3+(ms==30_000L?1:2),
+            extend,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
     private PendingIntent openAlarm(){
         Intent open=new Intent(this,TimerRingActivity.class)
                 .putExtra(TimerRingActivity.EXTRA_LABEL,active.label())
@@ -203,6 +213,12 @@ public final class TimerRingingService extends Service {
                 .setLocalOnly(true)
                 .addAction(new Notification.Action.Builder(
                         android.R.drawable.ic_media_pause,"Stoppen",stopAll()).build());
+        if(active.count()==1 && active.firstId()>0 && active.firstDueWallMs()>0){
+            builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,"+30 Sek.",extendAction(30_000L)).build());
+            builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,"+1 Min.",extendAction(60_000L)).build());
+        }
         // On Android 14+, missing full-screen permission must not prevent sound,
         // vibration or the persistent notification from working.
         if((active.wantsTone()||active.wantsVibration()) &&

@@ -68,7 +68,8 @@ public final class TimerAlerts {
         PendingIntent stop=PendingIntent.getBroadcast(c,BASE_ID+id,dismiss,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         String channelId=TimerAlertSettings.channelId(tone,vibration);
-        Notification notification=new Notification.Builder(c,channelId)
+        TimerEntry finished=TimerRepository.get(c,id);
+        Notification.Builder builder=new Notification.Builder(c,channelId)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle((name==null?"Timer":name)+" ist fertig")
                 .setContentText("Timer abgelaufen – öffnen oder quittieren")
@@ -76,9 +77,23 @@ public final class TimerAlerts {
                 .setContentIntent(launch)
                 .setAutoCancel(true)
                 .addAction(new Notification.Action.Builder(
-                        android.R.drawable.ic_menu_close_clear_cancel,"Quittieren",stop).build())
-                .build();
-        try{m.notify(BASE_ID+id,notification);}
+                        android.R.drawable.ic_menu_close_clear_cancel,"Quittieren",stop).build());
+        if(finished!=null && finished.state==TimerEntry.FINISHED){
+            for(long ms:new long[]{30_000L,60_000L}){
+                Intent extend=new Intent(c,TimerReceiver.class)
+                    .setAction(TimerReceiver.ACTION_EXTEND)
+                    .putExtra(TimerScheduler.EXTRA_ID,id)
+                    .putExtra(TimerScheduler.EXTRA_DUE,finished.dueWallMs)
+                    .putExtra(TimerReceiver.EXTRA_EXTENSION_MS,ms);
+                PendingIntent extra=PendingIntent.getBroadcast(c,
+                    52000+id*3+(ms==30_000L?1:2),extend,
+                    PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+                builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,
+                    ms==30_000L?"+30 Sek.":"+1 Min.",extra).build());
+            }
+        }
+        try{m.notify(BASE_ID+id,builder.build());}
         catch(RuntimeException ex){AlarmRepository.diagnostic(c,"Timer-Benachrichtigung fehlgeschlagen");}
     }
     /** Brief, non-fullscreen event; Android notification channel respects user controls. */

@@ -31,7 +31,8 @@ public final class TimerRepository {
                             j.getLong("duration"),j.getLong("remaining"),
                             j.getInt("state"),j.optLong("dueWall",0),
                             j.optLong("dueElapsed",0),j.optLong("bootOffset",0),
-                            j.optBoolean("favorite",false)));
+                            j.optBoolean("favorite",false),
+                            j.optLong("originalDuration",j.getLong("duration"))));
                 }catch(Exception invalid){
                     AlarmRepository.diagnostic(c,"Übersprungener beschädigter Timer-Eintrag");
                 }
@@ -59,6 +60,7 @@ public final class TimerRepository {
                 j.put("state",t.state);j.put("dueWall",t.dueWallMs);
                 j.put("dueElapsed",t.dueElapsedMs);j.put("bootOffset",t.bootOffsetMs);
                 j.put("favorite",t.favorite);
+                j.put("originalDuration",t.originalDurationMs);
                 arr.put(j);
             }catch(Exception error){throw new IllegalStateException("Timer serialisieren",error);}
         }

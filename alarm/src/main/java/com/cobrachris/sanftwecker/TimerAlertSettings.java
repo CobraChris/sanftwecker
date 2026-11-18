@@ -32,6 +32,24 @@ public final class TimerAlertSettings {
         if(!prefs(c).edit().putBoolean(key("vibration",id),enabled).commit())
             throw new IllegalStateException("Vibration-Einstellung konnte nicht gespeichert werden");
     }
+    /** Per-timer accent; 0 inherits the original Sanftwecker blue. */
+    public static final int[] COLOR_CHOICES={
+        0,0xffb84c79,0xffc97843,0xffc6a143,0xff77aa44,
+        0xff39ada1,0xff448fbe,0xff8273bf
+    };
+    public static boolean validColor(int color){
+        for(int option:COLOR_CHOICES)if(option==color)return true;
+        return false;
+    }
+    public static int color(Context c,int id){
+        int stored=prefs(c).getInt(key("color",id),0);
+        return validColor(stored)?stored:0;
+    }
+    public static void setColor(Context c,int id,int color){
+        if(!validColor(color))throw new IllegalArgumentException("Unbekannte Timer-Farbe");
+        if(!prefs(c).edit().putInt(key("color",id),color).commit())
+            throw new IllegalStateException("Timer-Farbe konnte nicht gespeichert werden");
+    }
     public static final int FORMAT_HMS=0, FORMAT_MS=1;
     // Value 0 existed in v42 and older. Retain it as a legacy storage marker,
     // but never expose its confusing live target-time display in the UI.
@@ -131,6 +149,7 @@ public final class TimerAlertSettings {
         SharedPreferences.Editor editor=prefs(c).edit();
         editor.putBoolean(key("tone",targetId),tone(c,sourceId))
               .putBoolean(key("vibration",targetId),vibration(c,sourceId))
+              .putInt(key("color",targetId),color(c,sourceId))
               .putInt(key("format",targetId),timeFormat(c,sourceId))
               .putInt(key("extra",targetId),extraInfo(c,sourceId))
               .putInt(key("start_delay",targetId),startDelaySeconds(c,sourceId))
@@ -146,6 +165,7 @@ public final class TimerAlertSettings {
         if(!prefs(c).edit().remove(key("tone",id))
                 .remove(key("vibration",id)).remove(key("format",id))
                 .remove(key("extra",id)).remove(key("repeat",id))
+                .remove(key("color",id))
                 .remove(key("start_delay",id)).remove(key("interval",id))
                 .remove(key("prepare_cue",id)).remove(key("one_shot",id)).commit())
             throw new IllegalStateException("Timer-Einstellungen konnten nicht gelöscht werden");
