@@ -24,7 +24,7 @@ public final class WatchUpdateActivity extends Activity {
             "https://api.github.com/repos/CobraChris/sanftwecker/releases?per_page=20";
     private static final int SAVE_FILE=752;
     private TextView status;
-    private Button check,download,save,share;
+    private Button check,download,save,share,transfer;
     private Candidate selected;
     private Uri verifiedUri;
     private boolean busy=false;
@@ -96,6 +96,9 @@ public final class WatchUpdateActivity extends Activity {
         share=UiKit.button(this,"APK an Watch-Installations-App weitergeben",false);
         root.addView(share);
         share.setOnClickListener(v->shareWithInstaller());
+        transfer=UiKit.button(this,"Geprüfte APK direkt an Galaxy Watch senden",false);
+        root.addView(transfer);
+        transfer.setOnClickListener(v->sendToWatch());
         setContentView(UiKit.scroll(this,root));
         updateButtons();
     }
@@ -105,6 +108,7 @@ public final class WatchUpdateActivity extends Activity {
         download.setEnabled(!busy&&selected!=null);
         save.setEnabled(!busy&&verifiedUri!=null);
         share.setEnabled(!busy&&verifiedUri!=null);
+        transfer.setEnabled(!busy&&verifiedUri!=null);
     }
 
     private long phoneVersion(){
@@ -229,6 +233,16 @@ public final class WatchUpdateActivity extends Activity {
         busy=false;status.setText(text);updateButtons();
     }
 
+    private void sendToWatch(){
+        if(busy||verifiedUri==null||selected==null)return;
+        busy=true;updateButtons();
+        status.setText("Bereits geprüfte APK über Wear OS übertragen …");
+        PhoneWatchUpdateRelay.send(getApplicationContext(),verifiedUri,
+            selected.code,selected.sha256,message->runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                busy=false;status.setText(message);updateButtons();
+            }));
+    }
     private void shareWithInstaller(){
         if(busy||verifiedUri==null)return;
         try{
