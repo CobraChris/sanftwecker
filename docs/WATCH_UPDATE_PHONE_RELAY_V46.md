@@ -1,0 +1,11 @@
+# Sanftwecker v46: Watch-Update vom Handy (Entwicklungsstand)
+
+**Ziel:** Die Handy-App prüft und lädt die zum eigenen Build passende Original-Watch-APK wie bisher über GitHub. Zusätzlich stellt sie die bereits SHA-256- und signaturgeprüfte APK über Googles Wear-OS-Datenebene der gekoppelten Uhr bereit. Die Uhr braucht weder eigene WLAN-Verbindung noch eigenen GitHub-Zugriff.
+
+**Bedienung:** Auf dem Handy „Galaxy Watch aktualisieren“ -> „Passende Watch-Version suchen“ -> „Watch-APK direkt herunterladen“ -> „Geprüfte APK direkt an Galaxy Watch senden“. Auf der Uhr in Sanftwecker „Uhr aktualisieren“ öffnen und die dort gezeigte, lokal erneut geprüfte Datei durch „Update installieren“ mit Android-Systembestätigung installieren. Die Bestätigung bleibt zwingend; keine stille oder automatische Installation.
+
+**Sicherheit:** Der bisherige Handy-Download prüft URL, SHA-256, Paketkennung, Version und Zertifikat. Die Uhr überprüft die transferierte Datei auf Größe, SHA-256, Originalsignatur, Paketkennung und höhere Version; ein aktiver Wecker blockiert das Staging. Die Wear-Datenebene verwendet signaturgebundene Kommunikation. Ein erfolgreicher DataClient-Aufruf signalisiert **nicht** die bestätigte Zustellung an die Uhr; die Uhr zeigt die Bereitschaft erst nach eigenständiger Prüfung. Ein fehlender Empfang/Benachrichtigungsrecht darf nicht als abgeschlossene Installation gelten. Bisherige Selbstupdate-Funktion und externe APK-Weitergabe bleiben vorhanden.
+
+**Wichtige einmalige Umstellung:** Watch v44/v45 haben keinen Receiver für den neuen Pfad. Sie benötigen einmalig ein Update auf eine Version mit diesem Receiver über den bisherigen Weg (WLAN/Hotspot auf der Uhr oder einen bereits verwendeten Watch-Installer). Danach kann eine *spätere* APK über das Handy übermittelt werden. Ein Update der Handy-App allein kann diese Voraussetzung nicht umgehen.
+
+**Vor Veröffentlichung testen:** Build/Unit-Tests/Lint beider Apps, lokaler Empfang/Hash/Zertifikat, Transfer über Bluetooth bei ausgeschaltetem Watch-WLAN, keine stille Installation, Abbruch bei laufendem Uhralarm, Unterbrechung/Offline, Anzeige auf Runddisplay, Originalsignatur sowie Datenerhalt nach bestätigtem Update. Signatur/Release ausschließlich nach neuer Eigentümerfreigabe. Version v46 ist nur Entwicklungsstand.
