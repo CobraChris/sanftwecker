@@ -66,6 +66,13 @@ public final class PhoneDeliveredWatchUpdate {
                 context.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
                     .putLong("code",code).apply();
                 notifyReady(context,code);
+                // Acknowledgement means the APK was validated on the watch, not installed.
+                Wearable.getNodeClient(context).getConnectedNodes().addOnSuccessListener(nodes->{
+                    byte[] payload=("ready:"+code).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    for(com.google.android.gms.wearable.Node node:nodes)
+                        Wearable.getMessageClient(context).sendMessage(
+                            node.getId(),"/sanftwecker/update/v1/ack",payload);
+                });
             }catch(Exception e){
                 android.util.Log.w("SanftweckerWatch","Phone APK refused",e);
                 if(partial!=null)partial.delete();
