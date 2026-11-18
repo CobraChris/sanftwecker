@@ -53,6 +53,12 @@ jobs:
           node --test tests/sanftwecker-v47-release-request.test.mjs
       - name: Verify v47 timer extensions and personalized colors
         run: node --test tests/timer-extend-color-v47-contract.test.mjs
+      - name: Verify v48 protected original signer gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v48-release-request.mjs
+          node --test tests/sanftwecker-v48-release-request.test.mjs
+      - name: Verify v48 one-tap Watch update and v46 direct bridge
+        run: node --test tests/watch-update-guided-v48-contract.test.mjs
       - name: Verify Watch alarm screen and fallback regression contracts
         run: node --test tests/watch-alarm-screen-contract.test.mjs
       - name: Verify visible Watch alarm and timer notification safeguards
