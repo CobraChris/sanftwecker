@@ -28,7 +28,26 @@ public final class WatchUpdateActivity extends Activity {
     private Button check,download,save,share,transfer,guided;
     private Candidate selected;
     private Uri verifiedUri;
-    private boolean busy=false;
+    private boolean busy=false,waitingForWatchAck=false;
+    private final android.os.Handler ackHandler=
+        new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable ackPoll=new Runnable(){
+        @Override public void run(){
+            if(selected!=null&&waitingForWatchAck){
+                long code=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
+                    .getLong("verified_code",0);
+                long at=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
+                    .getLong("verified_at",0);
+                if(code==selected.code&&at>0){
+                    waitingForWatchAck=false;
+                    status.setText("Galaxy Watch hat Version "+code+
+                        " empfangen und ihre Signatur geprüft. "+
+                        "Bitte auf der Uhr die Systeminstallation bestätigen.");
+                }
+            }
+            ackHandler.postDelayed(this,1200L);
+        }
+    };
 
     static final class Candidate {
         final String tag,url,sha256;
@@ -112,6 +131,8 @@ public final class WatchUpdateActivity extends Activity {
 
     @Override protected void onResume(){
         super.onResume();
+        ackHandler.removeCallbacks(ackPoll);
+        ackHandler.post(ackPoll);
         if(status!=null){
             long code=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
                 .getLong("verified_code",0);
@@ -122,6 +143,10 @@ public final class WatchUpdateActivity extends Activity {
                     "Installation muss auf der Uhr bestätigt werden.");
             }
         }
+    }
+    @Override protected void onPause(){
+        ackHandler.removeCallbacks(ackPoll);
+        super.onPause();
     }
     private void updateButtons(){
         guided.setEnabled(!busy);
@@ -146,6 +171,7 @@ public final class WatchUpdateActivity extends Activity {
     private void runGuidedUpdate(){
         if(busy)return;
         busy=true;selected=null;verifiedUri=null;
+        waitingForWatchAck=false;
         getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE).edit()
             .remove("verified_code").remove("verified_at").apply();
         status.setText("Schritt 1/3: Passende Original-Watch-Version suchen …");
@@ -177,6 +203,8 @@ public final class WatchUpdateActivity extends Activity {
                         match.code,match.sha256,message->runOnUiThread(()->{
                             if(isFinishing()||isDestroyed())return;
                             busy=false;
+                            waitingForWatchAck=message.startsWith(
+                                "Update für Wear OS bereitgestellt.");
                             status.setText(message+" Nach Bestätigung auf der Uhr "+
                                 "die angezeigte Version kontrollieren.");
                             updateButtons();
