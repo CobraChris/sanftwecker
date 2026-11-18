@@ -80,6 +80,17 @@ public final class TimerEntry {
         long now=sameBoot?elapsedNow:wallNow;
         return Math.max(0,now-due);
     }
+    /**
+     * After a completed timer, start a fresh short extension from NOW without
+     * changing its saved original duration. A new immutable deadline makes
+     * any stale old completion broadcast harmless.
+     */
+    public TimerEntry extendFinished(long extraMs,long wallNow,long elapsedNow){
+        if(state!=FINISHED||extraMs<MIN_MS||extraMs>MAX_MS)
+            throw new IllegalArgumentException("Nur beendete Timer lassen sich verlängern");
+        return new TimerEntry(id,name,Math.max(durationMs,extraMs),extraMs,RUNNING,
+                wallNow+extraMs,elapsedNow+extraMs,wallNow-elapsedNow,favorite);
+    }
     public TimerEntry reset(){
         return new TimerEntry(id,name,durationMs,durationMs,READY,0,0,0,favorite);
     }
