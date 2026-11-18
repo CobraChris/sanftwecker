@@ -24,7 +24,7 @@ public final class WatchUpdateActivity extends Activity {
             "https://api.github.com/repos/CobraChris/sanftwecker/releases?per_page=20";
     private static final int SAVE_FILE=752;
     private TextView status;
-    private Button check,download,save,share;
+    private Button check,download,save,share,transfer;
     private Candidate selected;
     private Uri verifiedUri;
     private boolean busy=false;
@@ -96,15 +96,32 @@ public final class WatchUpdateActivity extends Activity {
         share=UiKit.button(this,"APK an Watch-Installations-App weitergeben",false);
         root.addView(share);
         share.setOnClickListener(v->shareWithInstaller());
+        transfer=UiKit.button(this,"Geprüfte APK direkt an Galaxy Watch senden",false);
+        root.addView(transfer);
+        transfer.setOnClickListener(v->sendToWatch());
         setContentView(UiKit.scroll(this,root));
         updateButtons();
     }
 
+    @Override protected void onResume(){
+        super.onResume();
+        if(status!=null){
+            long code=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
+                .getLong("verified_code",0);
+            long at=getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE)
+                .getLong("verified_at",0);
+            if(code>0&&at>0&&System.currentTimeMillis()-at<60*60*1000L){
+                status.setText("Galaxy Watch hat APK v"+code+" empfangen und geprüft. "+
+                    "Installation muss auf der Uhr bestätigt werden.");
+            }
+        }
+    }
     private void updateButtons(){
         check.setEnabled(!busy);
         download.setEnabled(!busy&&selected!=null);
         save.setEnabled(!busy&&verifiedUri!=null);
         share.setEnabled(!busy&&verifiedUri!=null);
+        transfer.setEnabled(!busy&&verifiedUri!=null);
     }
 
     private long phoneVersion(){
@@ -229,6 +246,16 @@ public final class WatchUpdateActivity extends Activity {
         busy=false;status.setText(text);updateButtons();
     }
 
+    private void sendToWatch(){
+        if(busy||verifiedUri==null||selected==null)return;
+        busy=true;updateButtons();
+        status.setText("Bereits geprüfte APK über Wear OS übertragen …");
+        PhoneWatchUpdateRelay.send(getApplicationContext(),verifiedUri,
+            selected.code,selected.sha256,message->runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                busy=false;status.setText(message);updateButtons();
+            }));
+    }
     private void shareWithInstaller(){
         if(busy||verifiedUri==null)return;
         try{

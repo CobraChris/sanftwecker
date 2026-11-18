@@ -187,7 +187,7 @@ public final class WatchSelfUpdateClient {
                 throw new SecurityException("SHA-256 der Watch-APK ist ungültig");
         }finally{if(conn!=null)conn.disconnect();}
     }
-    private static void verifyIdentity(Context c,File file,long expectedCode)throws Exception{
+    public static void verifyIdentity(Context c,File file,long expectedCode)throws Exception{
         PackageManager pm=c.getPackageManager();
         int flags=PackageManager.GET_SIGNING_CERTIFICATES;
         PackageInfo incoming=pm.getPackageArchiveInfo(file.getAbsolutePath(),flags);

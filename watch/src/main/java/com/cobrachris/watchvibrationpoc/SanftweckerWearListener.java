@@ -14,8 +14,14 @@ import java.nio.charset.StandardCharsets;
 public final class SanftweckerWearListener extends WearableListenerService {
     @Override public void onDataChanged(DataEventBuffer events){
         for(DataEvent event:events)
-            if(event.getType()==DataEvent.TYPE_CHANGED)
-                WatchDataBootstrap.apply(this,event.getDataItem());
+            if(event.getType()==DataEvent.TYPE_CHANGED){
+                if(PhoneDeliveredWatchUpdate.PATH.equals(event.getDataItem().getUri().getPath())){
+                    DataMap update=DataMapItem.fromDataItem(event.getDataItem()).getDataMap();
+                    PhoneDeliveredWatchUpdate.receive(getApplicationContext(),
+                        update.getAsset("apk"),update.getLong("version_code"),
+                        update.getString("sha256"));
+                }else WatchDataBootstrap.apply(this,event.getDataItem());
+            }
     }
     @Override public void onMessageReceived(MessageEvent event){
         String path=event.getPath();

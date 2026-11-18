@@ -42,6 +42,11 @@ jobs:
           node --test tests/sanftwecker-v25-release-request.test.mjs
           node --check scripts/sanftwecker-v26-release-request.mjs
           node --test tests/sanftwecker-v26-release-request.test.mjs
+      - name: Verify v46 owner-gated release policy (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v46-release-request.mjs
+          node --test tests/sanftwecker-v46-release-request.test.mjs
+          node --test tests/watch-phone-relay-v46-contract.test.mjs
       - name: Verify Watch alarm screen and fallback regression contracts
         run: node --test tests/watch-alarm-screen-contract.test.mjs
       - name: Verify visible Watch alarm and timer notification safeguards
