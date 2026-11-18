@@ -25,6 +25,19 @@ public final class SanftweckerWearListener extends WearableListenerService {
     }
     @Override public void onMessageReceived(MessageEvent event){
         String path=event.getPath();
+        if("/sanftwecker/update/v1/version-request".equals(path)){
+            try{
+                long installed=getPackageManager().getPackageInfo(getPackageName(),0)
+                        .getLongVersionCode();
+                byte[] payload=("installed:"+installed).getBytes(StandardCharsets.UTF_8);
+                com.google.android.gms.wearable.Wearable.getMessageClient(this)
+                        .sendMessage(event.getSourceNodeId(),
+                            "/sanftwecker/update/v1/version-response",payload);
+            }catch(Exception error){
+                Log.w("SanftweckerWatch","Version reply failed",error);
+            }
+            return;
+        }
         if(WatchTimerProtocol.START.equals(path)){
             WatchTimerProtocol.Packet timer=WatchTimerProtocol.start(
                     new String(event.getData(),StandardCharsets.UTF_8));
