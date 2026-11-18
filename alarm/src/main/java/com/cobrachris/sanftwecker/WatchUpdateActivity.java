@@ -105,10 +105,7 @@ public final class WatchUpdateActivity extends Activity {
         guidedButton=UiKit.button(this,"Watch-Update mit einem Tippen vorbereiten",true);
         root.addView(guidedButton);
         guidedButton.setOnClickListener(v->startGuided());
-        root.addView(UiKit.label(this,
-                "Watch-APK ohne Browser direkt im Sanftwecker laden. "+
-                "Der Download wird mit SHA-256 und Originalsignatur geprüft.",
-                15,UiKit.TEXT));
+
         root.addView(UiKit.label(this,
                 "Android verlangt weiterhin deine Installationsbestätigung "+
                 "auf der Uhr. Keine automatische oder stille Installation. "+
@@ -119,20 +116,31 @@ public final class WatchUpdateActivity extends Activity {
         space.topMargin=UiKit.dp(this,20);
         space.bottomMargin=UiKit.dp(this,12);
         root.addView(status,space);
+        TextView advancedToggle=UiKit.action(this,"Einzelschritte / Ersatzweg anzeigen ▾");
+        root.addView(advancedToggle);
+        LinearLayout advanced=UiKit.column(this);
+        advanced.setVisibility(View.GONE);
+        root.addView(advanced);
+        advancedToggle.setOnClickListener(v->{
+            boolean show=advanced.getVisibility()!=View.VISIBLE;
+            advanced.setVisibility(show?View.VISIBLE:View.GONE);
+            advancedToggle.setText(show?"Einzelschritte / Ersatzweg ausblenden ▴":
+                "Einzelschritte / Ersatzweg anzeigen ▾");
+        });
         check=UiKit.button(this,"Passende Watch-Version suchen",false);
-        root.addView(check);
+        advanced.addView(check);
         check.setOnClickListener(v->checkForWatch());
         download=UiKit.button(this,"Watch-APK direkt herunterladen",true);
-        root.addView(download);
+        advanced.addView(download);
         download.setOnClickListener(v->downloadWatch());
         save=UiKit.button(this,"Geprüfte APK in Downloads speichern",false);
-        root.addView(save);
+        advanced.addView(save);
         save.setOnClickListener(v->saveToDownloads());
         share=UiKit.button(this,"APK an Watch-Installations-App weitergeben",false);
-        root.addView(share);
+        advanced.addView(share);
         share.setOnClickListener(v->shareWithInstaller());
         transfer=UiKit.button(this,"Geprüfte APK direkt an Galaxy Watch senden",false);
-        root.addView(transfer);
+        advanced.addView(transfer);
         transfer.setOnClickListener(v->sendToWatch());
         setContentView(UiKit.scroll(this,root));
         updateButtons();
