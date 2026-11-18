@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V46_WITH_EXISTING_V45_CERTIFICATE",
+  "expected_version_code": 46,
+  "intent": "signed-native-wear-v46",
+  "request_id": "2026-11-18-owner-approved-v46-phone-watch-relay",
+  "source_sha": "6d09d8f5087ee0419b10b1f2a272c3f8603d06b8",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
