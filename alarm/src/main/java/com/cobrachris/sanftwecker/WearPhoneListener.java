@@ -10,6 +10,15 @@ import java.nio.charset.StandardCharsets;
 /** Records actual acknowledgements from the native watch companion. */
 public final class WearPhoneListener extends WearableListenerService {
     @Override public void onMessageReceived(MessageEvent event){
+        if("/sanftwecker/update/v1/version-response".equals(event.getPath())){
+            String reply=new String(event.getData(),StandardCharsets.UTF_8);
+            if(!reply.matches("installed:[1-9][0-9]{0,8}"))return;
+            long watchCode=Long.parseLong(reply.substring("installed:".length()));
+            getSharedPreferences("sanftwecker_watch_relay",MODE_PRIVATE).edit()
+                .putLong("installed_watch_code",watchCode)
+                .putLong("installed_watch_checked",System.currentTimeMillis()).apply();
+            return;
+        }
         if(PhoneWatchUpdateRelay.ACK.equals(event.getPath())){
             String value=new String(event.getData(),StandardCharsets.UTF_8);
             if(!value.matches("ready:[1-9][0-9]{0,8}"))return;
