@@ -9,7 +9,7 @@ test('phone only relays a previously verified same-version Watch APK',()=>{
  const relay=get('alarm/src/main/java/com/cobrachris/sanftwecker/PhoneWatchUpdateRelay.java');
  assert.match(ui,/VerifiedWatchApkDownloader\.download/);
  assert.match(ui,/PhoneWatchUpdateRelay\.send\(getApplicationContext\(\),verifiedUri/);
- assert.match(ui,/transfer\.setEnabled\(!busy&&verifiedUri!=null\)/);
+ assert.match(ui,/transfer\.setEnabled\(!busy&&verifiedUri!=null/);
  assert.match(downloader,/verifyOriginalSigningIdentity/);
  assert.match(downloader,/expectedSha\.equals\(hex\.toString\(\)\)/);
  assert.match(relay,/getConnectedNodes\(\)/);

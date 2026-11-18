@@ -82,6 +82,56 @@ public final class MainActivity extends Activity {
         refreshActiveAlarmButton();
         countdownHandler.removeCallbacks(countdownTick);
         countdownHandler.post(countdownTick);
+        offerCompanionUpdateAfterUpgrade();
+    }
+
+    /** Show once after a newly installed phone build; never install on the user's behalf. */
+    private void offerCompanionUpdateAfterUpgrade(){
+        long version;
+        try{
+            version=getPackageManager().getPackageInfo(getPackageName(),0).getLongVersionCode();
+        }catch(Exception ignored){return;}
+        if(version<48)return;
+        android.content.SharedPreferences prefs=getSharedPreferences(
+                "sanftwecker_guided_companion_update",MODE_PRIVATE);
+        if(prefs.getLong("prompted_version",0)>=version)return;
+        // Do not disturb a ringing wake alarm or a running timer alarm.
+        if(ActiveAlarmState.activeId(this)>0)return;
+        com.google.android.gms.wearable.Wearable.getNodeClient(this)
+            .getConnectedNodes().addOnSuccessListener(nodes->{
+                if(nodes.isEmpty())return;
+                final long sentAt=System.currentTimeMillis();
+                for(com.google.android.gms.wearable.Node node:nodes)
+                    com.google.android.gms.wearable.Wearable.getMessageClient(this)
+                        .sendMessage(node.getId(),
+                            "/sanftwecker/update/v1/version-request",new byte[]{1});
+                // Watch v46 does not support the query; offer the one-tap handoff
+                // after a short bounded wait rather than requiring Watch WLAN.
+                countdownHandler.postDelayed(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    if(prefs.getLong("prompted_version",0)>=version)return;
+                    android.content.SharedPreferences relay=getSharedPreferences(
+                            "sanftwecker_watch_relay",MODE_PRIVATE);
+                    long checked=relay.getLong("installed_watch_checked",0);
+                    long watchCode=relay.getLong("installed_watch_code",0);
+                    if(checked>=sentAt&&watchCode>=version){
+                        prefs.edit().putLong("prompted_version",version).apply();
+                        return;
+                    }
+                    prefs.edit().putLong("prompted_version",version).apply();
+                    new AlertDialog.Builder(this)
+                        .setTitle("Galaxy Watch ebenfalls aktualisieren?")
+                        .setMessage("Sanftwecker auf dem Handy ist auf v"+version+
+                            " aktualisiert. Die passende Watch-APK kann nun automatisch "+
+                            "geladen, geprüft und über Wear OS übertragen werden. "+
+                            "Auf der Uhr bestätigst du lediglich die Android-Installation.")
+                        .setPositiveButton("Watch-Update starten",(dialog,which)->
+                            startActivity(new Intent(this,WatchUpdateActivity.class)
+                                .putExtra(WatchUpdateActivity.EXTRA_GUIDED,true)))
+                        .setNegativeButton("Später",null).show();
+                },1800L);
+            }).addOnFailureListener(error->
+                android.util.Log.w("Sanftwecker","Wear node availability unknown",error));
     }
 
     @Override public void onPause() {
@@ -189,6 +239,12 @@ public final class MainActivity extends Activity {
                 "Sortieren: Uhrzeit").setOnMenuItemClickListener(item->{
             sortByNext=false;saveSort();renderList();return true;
         });
+        menu.getMenu().add("Galaxy Watch mit einem Tippen aktualisieren")
+                .setOnMenuItemClickListener(item->{
+                    startActivity(new Intent(this,WatchUpdateActivity.class)
+                            .putExtra(WatchUpdateActivity.EXTRA_GUIDED,true));
+                    return true;
+                });
         menu.getMenu().add("App aktualisieren").setOnMenuItemClickListener(item->{
             startActivity(new Intent(this,UpdateActivity.class));return true;
         });
