@@ -62,30 +62,48 @@ public final class WatchTimerRingActivity extends Activity {
         page.setOrientation(LinearLayout.VERTICAL);
         page.setGravity(Gravity.CENTER_HORIZONTAL);
         page.setBackgroundColor(bg);
-        page.setPadding(dp(19),dp(33),dp(19),dp(74));
-        page.setMinimumHeight(getResources().getDisplayMetrics().heightPixels+
-                dp(56));
+        page.setPadding(dp(15),dp(9),dp(15),dp(24));
+        page.setMinimumHeight(getResources().getDisplayMetrics().heightPixels);
 
         TextView heading=text("TIMER ABGELAUFEN",12,0xff9dc0ff,true);
         page.addView(heading);
-        title=text("Timer",19,Color.WHITE,true);
+        title=text("Timer",16,Color.WHITE,true);
         title.setMaxLines(2);
         page.addView(title);
-        clock=text("+00:00",34,0xff9dc0ff,true);
+        clock=text("+00:00",29,0xff9dc0ff,true);
         clock.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);
         clock.setSingleLine(true);
         clock.setAutoSizeTextTypeUniformWithConfiguration(
-                21,35,1,android.util.TypedValue.COMPLEX_UNIT_SP);
-        clock.setMinHeight(dp(60));
+                20,30,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        clock.setMinHeight(dp(42));
         page.addView(clock);
-        state=text("Seit Ablauf",12,0xffb0b3c5,false);
-        page.addView(state);
+        // Keep the primary choices above the fold on a round Galaxy Watch:
+        // compact time, side-by-side extensions, and a dedicated STOP button.
+        LinearLayout quick=new LinearLayout(this);
+        quick.setOrientation(LinearLayout.HORIZONTAL);
+        quick.setGravity(Gravity.CENTER);
+        plus30=new Button(this);plus30.setText("+30 Sek.");
+        plus30.setTextSize(12);
+        WatchDashboardView.styleButton(plus30,false,false);
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(48),1f);
+        left.rightMargin=dp(3);
+        quick.addView(plus30,left);
+        plus30.setOnClickListener(v->extend(30_000L));
+        plus60=new Button(this);plus60.setText("+1 Min.");
+        plus60.setTextSize(12);
+        WatchDashboardView.styleButton(plus60,false,false);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(48),1f);
+        right.leftMargin=dp(3);
+        quick.addView(plus60,right);
+        plus60.setOnClickListener(v->extend(60_000L));
+        page.addView(quick);
         stop=new Button(this);
         stop.setText("TIMER STOPPEN");
+        stop.setTextSize(13);
         WatchDashboardView.styleButton(stop,false,true);
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(56));
-        p.topMargin=dp(12);
-        page.addView(stop,p);
+        LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(-1,dp(48));
+        stopParams.topMargin=dp(3);
+        page.addView(stop,stopParams);
         stop.setOnClickListener(v->{
             Intent i=new Intent(this,WatchTimerAlertService.class)
                     .setAction(WatchTimerAlertService.STOP_ALL);
@@ -97,25 +115,20 @@ public final class WatchTimerRingActivity extends Activity {
                 state.setText("Stoppen fehlgeschlagen. Über Benachrichtigung versuchen.");
             }
         });
-
-        plus30=new Button(this);plus30.setText("+30 Sek.");
-        WatchDashboardView.styleButton(plus30,false,false);
-        page.addView(plus30,new LinearLayout.LayoutParams(-1,dp(52)));
-        plus30.setOnClickListener(v->extend(30_000L));
-        plus60=new Button(this);plus60.setText("+1 Min.");
-        WatchDashboardView.styleButton(plus60,false,false);
-        page.addView(plus60,new LinearLayout.LayoutParams(-1,dp(52)));
-        plus60.setOnClickListener(v->extend(60_000L));
-        more=new Button(this);more.setText("Mehr");
+        more=new Button(this);more.setText("Mehr: +2 / +5 / +10 Min.");
+        more.setTextSize(11);
         WatchDashboardView.styleButton(more,false,false);
-        page.addView(more,new LinearLayout.LayoutParams(-1,dp(52)));
+        page.addView(more,new LinearLayout.LayoutParams(-1,dp(43)));
         more.setOnClickListener(v->new android.app.AlertDialog.Builder(this)
             .setTitle("Verlängern")
             .setItems(new String[]{"+2 Minuten","+5 Minuten","+10 Minuten"},
                 (dialog,which)->extend(new long[]{120_000L,300_000L,600_000L}[which]))
             .setNegativeButton("Abbrechen",null).show());
+        state=text("Seit Ablauf",11,0xffb0b3c5,false);
+        page.addView(state);
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(false);
+        scroll.setVerticalScrollBarEnabled(false);
         scroll.setBackgroundColor(bg);
         scroll.addView(page);
         setContentView(scroll);
