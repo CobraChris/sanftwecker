@@ -87,11 +87,33 @@ public final class WatchAlarmNotice {
                 open,stop,snooze,maxVisibleMs);
     }
     public static void timer(Context c,int id,String title,
-            PendingIntent open,PendingIntent stop){
+            PendingIntent open,PendingIntent stop,
+            PendingIntent plus30,PendingIntent plus60){
         if(id<1||id>9999)return;
-        post(c,TIMER_BASE+id,title==null?"Timer abgelaufen":title,
-                "Timer abgelaufen – zum Stoppen öffnen",
-                open,stop,null,190_000L);
+        NotificationManager nm=manager(c);
+        if(!ensureChannel(c,nm))return;
+        Notification.Builder notice=new Notification.Builder(c,CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setCategory(Notification.CATEGORY_ALARM)
+                .setContentTitle(title==null?"Timer abgelaufen":title)
+                .setContentText("Timer verlängern oder stoppen")
+                .setContentIntent(open)
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .setTimeoutAfter(190_000L)
+                .addAction(new Notification.Action.Builder(
+                        android.R.drawable.ic_media_pause,"Stoppen",stop).build());
+        if(plus30!=null&&plus60!=null){
+            notice.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,"+30 Sek.",plus30).build());
+            notice.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,"+1 Min.",plus60).build());
+        }
+        try{nm.notify(TIMER_BASE+id,notice.build());}
+        catch(RuntimeException error){
+            Log.w("SanftweckerWatch","Watch timer notification unavailable",error);
+        }
     }
     public static void clearClock(Context c,int id){
         if(id>0&&id<=1000)cancel(c,CLOCK_BASE+id);
