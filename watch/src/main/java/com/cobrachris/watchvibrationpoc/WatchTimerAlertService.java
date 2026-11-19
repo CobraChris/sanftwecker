@@ -35,6 +35,7 @@ public final class WatchTimerAlertService extends Service {
     public static final String START="com.cobrachris.sanftwecker.WATCH_TIMER_START";
     public static final String STOP="com.cobrachris.sanftwecker.WATCH_TIMER_STOP";
     public static final String STOP_ALL="com.cobrachris.sanftwecker.WATCH_TIMER_STOP_ALL";
+    public static final String EXTEND="com.cobrachris.sanftwecker.WATCH_TIMER_EXTEND";
     public static final String ACTIVE_PREF="sanftwecker_watch_timer_active_v1";
     private static final String CHANNEL="sanftwecker_watch_timer_alarm_v1";
     private static final String PREF="sanftwecker_watch_timer_ack_v1";
@@ -122,6 +123,18 @@ public final class WatchTimerAlertService extends Service {
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         String action=intent==null?null:intent.getAction();
+        if(EXTEND.equals(action)){
+            final int id=intent.getIntExtra("id",-1);
+            final long when=intent.getLongExtra("when",0L);
+            final long extension=intent.getLongExtra("extension",0L);
+            Entry current=active.get(id);
+            if(active.size()==1 && current!=null && current.when==when &&
+                    (extension==30_000L||extension==60_000L)){
+                // Do not stop haptics until the phone has applied the change.
+                sendExtensionToPhone(id,when,extension);
+            }
+            return START_NOT_STICKY;
+        }
         if(STOP_ALL.equals(action)){
             for(Entry entry:active.values()){
                 WatchAlarmNotice.clearTimer(this,entry.id);
@@ -190,6 +203,29 @@ public final class WatchTimerAlertService extends Service {
         handler.removeCallbacks(pulse);
         handler.post(pulse);
     }
+    private PendingIntent extendAction(Entry entry,long ms){
+        Intent request=new Intent(this,WatchTimerAlertService.class)
+            .setAction(EXTEND)
+            .putExtra("id",entry.id)
+            .putExtra("when",entry.when)
+            .putExtra("extension",ms);
+        // Stable PendingIntent identity per id and duration: payload stays current
+        // while old notifications cannot extend a newer occurrence.
+        return PendingIntent.getService(this,
+            65000+entry.id*3+(ms==30_000L?1:2),request,
+            PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    private void sendExtensionToPhone(int id,long when,long ms){
+        final byte[] payload=(id+":"+when+":"+ms).getBytes(StandardCharsets.UTF_8);
+        Wearable.getNodeClient(this).getConnectedNodes().addOnSuccessListener(nodes->{
+            for(com.google.android.gms.wearable.Node node:nodes)
+                Wearable.getMessageClient(this).sendMessage(node.getId(),
+                    WatchTimerProtocol.WATCH_EXTEND,payload)
+                    .addOnFailureListener(e->
+                        Log.w("SanftweckerWatch","Timer extension not delivered",e));
+        }).addOnFailureListener(e->
+            Log.w("SanftweckerWatch","Phone unavailable for timer extension",e));
+    }
     private void showVisibleTimerNotice(Entry entry){
         if(entry==null)return;
         Intent view=new Intent(this,WatchTimerRingActivity.class)
@@ -199,7 +235,9 @@ public final class WatchTimerAlertService extends Service {
         PendingIntent stop=PendingIntent.getService(this,4862,
                 new Intent(this,WatchTimerAlertService.class).setAction(STOP_ALL),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        WatchAlarmNotice.timer(this,entry.id,entry.name+" abgelaufen",open,stop);
+        WatchAlarmNotice.timer(this,entry.id,entry.name+" abgelaufen",open,stop,
+                active.size()==1?extendAction(entry,30_000L):null,
+                active.size()==1?extendAction(entry,60_000L):null);
     }
     private void foreground(){
         if(active.isEmpty())return;
@@ -217,7 +255,7 @@ public final class WatchTimerAlertService extends Service {
         PendingIntent stop=PendingIntent.getService(this,4862,
                 new Intent(this,WatchTimerAlertService.class).setAction(STOP_ALL),
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification notification=new Notification.Builder(this,CHANNEL)
+        Notification.Builder notificationBuilder=new Notification.Builder(this,CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
                 .setContentText("Timer fertig – auf der Uhr stoppen")
@@ -228,8 +266,16 @@ public final class WatchTimerAlertService extends Service {
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .addAction(new Notification.Action.Builder(
-                        android.R.drawable.ic_media_pause,"Alarm stoppen",stop).build())
-                .build();
+                        android.R.drawable.ic_media_pause,"Alarm stoppen",stop).build());
+        if(active.size()==1){
+            notificationBuilder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,"+30 Sek.",
+                    extendAction(first,30_000L)).build());
+            notificationBuilder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_play,"+1 Min.",
+                    extendAction(first,60_000L)).build());
+        }
+        Notification notification=notificationBuilder.build();
         startForeground(NOTIFICATION_ID,notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         inForeground=true;
