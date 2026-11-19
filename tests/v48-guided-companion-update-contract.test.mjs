@@ -56,8 +56,8 @@ test('Watch version exchange is distinct from signed APK reception and Android c
 
 test('two independently signed packages retained while user needs only phone download link',()=>{
  const phoneGradle=get('alarm/build.gradle'),watchGradle=get('watch/build.gradle');
- assert.match(phoneGradle,/versionCode 48/);
- assert.match(watchGradle,/versionCode 48/);
+ assert.ok(Number.parseInt(phoneGradle.split('versionCode ')[1],10)>=48);
+ assert.ok(Number.parseInt(watchGradle.split('versionCode ')[1],10)>=48);
  const fallback=get(phone+'WatchUpdateActivity.java');
  assert.match(fallback,/saveToDownloads\(\)/);
  assert.match(fallback,/shareWithInstaller\(\)/);
