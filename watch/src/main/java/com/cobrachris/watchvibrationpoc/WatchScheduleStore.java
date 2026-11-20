@@ -93,6 +93,7 @@ public final class WatchScheduleStore {
                 .commit())
             return;
         setAlarm(c,slot,when);
+        WatchAlarmPresentation.changed(c);
     }
     private static void forget(Context c,int slot){
         // Deliberately do not cancel already dispatched UI alarm intents:
@@ -111,6 +112,7 @@ public final class WatchScheduleStore {
             m.cancel(ringScreen(c,slot,0));
         }
         forget(c,slot);
+        WatchAlarmPresentation.changed(c);
     }
     public static synchronized void fired(Context c,int slot,long when){
         if(!WatchAlarmProtocol.validSlot(slot))return;
@@ -128,6 +130,7 @@ public final class WatchScheduleStore {
         int intervalSeconds=WatchCascade.safeInterval(
                 prefs.getInt(key(slot,"pulse_interval_seconds"),5));
         forget(c,slot);
+        WatchAlarmPresentation.changed(c);
         if(id>0&&id<=1000&&WatchAlarmProtocol.nearTrigger(when,System.currentTimeMillis()))
             WatchAlarmService.start(c,id,when,minutes,name,cascade,snooze,intensity,
                     pulseCount,intervalSeconds);
