@@ -49,6 +49,9 @@ test('Watch rejects stale ACK and only announces phone-confirmed result',()=>{
  assert.match(feedback,/applied\?"Timer verlängert":"Timer nicht verlängert"/);
  assert.match(receiver,/WatchTimerProtocol\.EXTEND_RESULT\.equals\(path\)/);
  assert.match(ui,/WatchTimerExtensionFeedback\.requested/);
+ assert.match(ui,/receipt\.getString\("result","pending"\)/);
+ assert.match(ui,/Timer am Handy erfolgreich verlängert/);
+ assert.match(ui,/Timer nicht verlängert\. Bitte am Handy prüfen/);
  assert.match(service,/WatchTimerExtensionFeedback\.requested/);
 });
 test('foreign project is used as a licensed architectural reference, never an app replacement',()=>{
