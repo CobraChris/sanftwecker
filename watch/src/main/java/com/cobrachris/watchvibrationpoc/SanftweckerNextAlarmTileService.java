@@ -2,7 +2,7 @@ package com.cobrachris.watchvibrationpoc;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import androidx.concurrent.futures.ResolvableFuture;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.wear.tiles.TileService;
 import androidx.wear.tiles.RequestBuilders;
 import androidx.wear.tiles.TileBuilders;
@@ -74,14 +74,16 @@ public final class SanftweckerNextAlarmTileService extends TileService {
                 .addTimelineEntry(new TimelineBuilders.TimelineEntry.Builder()
                     .setLayout(new LayoutElementBuilders.Layout.Builder()
                         .setRoot(column.build()).build()).build()).build()).build();
-        ResolvableFuture<TileBuilders.Tile> result=ResolvableFuture.create();
-        result.set(tile);
-        return result;
+        return CallbackToFutureAdapter.getFuture(completer->{
+            completer.set(tile);
+            return "Sanftwecker next alarm tile";
+        });
     }
     @Override protected ListenableFuture<ResourceBuilders.Resources> onTileResourcesRequest(
             RequestBuilders.ResourcesRequest request){
-        ResolvableFuture<ResourceBuilders.Resources> result=ResolvableFuture.create();
-        result.set(new ResourceBuilders.Resources.Builder().setVersion("1").build());
-        return result;
+        return CallbackToFutureAdapter.getFuture(completer->{
+            completer.set(new ResourceBuilders.Resources.Builder().setVersion("1").build());
+            return "Sanftwecker tile resources";
+        });
     }
 }
