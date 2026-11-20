@@ -38,6 +38,10 @@ public final class SanftweckerWearListener extends WearableListenerService {
             }
             return;
         }
+        if(WatchTimerProtocol.EXTEND_RESULT.equals(path)){
+            WatchTimerExtensionFeedback.receive(this,event.getData());
+            return;
+        }
         if(WatchTimerProtocol.START.equals(path)){
             WatchTimerProtocol.Packet timer=WatchTimerProtocol.start(
                     new String(event.getData(),StandardCharsets.UTF_8));
