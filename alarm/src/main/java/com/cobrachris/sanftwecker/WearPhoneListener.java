@@ -41,12 +41,24 @@ public final class WearPhoneListener extends WearableListenerService {
             int id=Integer.parseInt(parts[0]);
             long due=Long.parseLong(parts[1]);
             long extra=Long.parseLong(parts[2]);
-            if(!TimerWearBridge.isCurrent(this,id,due))return;
-            try{
-                TimerScheduler.extendFinished(this,id,due,extra);
-            }catch(RuntimeException e){
-                AlarmRepository.diagnostic(this,"Uhr-Verlängerung nicht möglich: "+e.getMessage());
+            boolean applied=false;
+            if(TimerWearBridge.isCurrent(this,id,due)){
+                try{
+                    applied=TimerScheduler.extendFinished(this,id,due,extra);
+                }catch(RuntimeException e){
+                    AlarmRepository.diagnostic(this,
+                        "Uhr-Verlängerung nicht möglich: "+e.getMessage());
+                }
             }
+            // ACK is sent only after the phone has actually applied the
+            // scheduled extension. A queued message is not an ACK.
+            String receipt=id+":"+due+":"+extra+":"+(applied?"ok":"rejected");
+            com.google.android.gms.wearable.Wearable.getMessageClient(this)
+                .sendMessage(event.getSourceNodeId(),
+                    TimerWatchPacket.EXTEND_RESULT,
+                    receipt.getBytes(StandardCharsets.UTF_8))
+                .addOnFailureListener(error->Log.w("Sanftwecker",
+                    "Timer extension receipt not delivered",error));
             return;
         }
         if(TimerWatchPacket.WATCH_STOP.equals(event.getPath())){
