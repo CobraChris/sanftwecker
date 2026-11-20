@@ -216,6 +216,7 @@ public final class WatchTimerAlertService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
     private void sendExtensionToPhone(int id,long when,long ms){
+        WatchTimerExtensionFeedback.requested(this,id,when,ms);
         final byte[] payload=(id+":"+when+":"+ms).getBytes(StandardCharsets.UTF_8);
         Wearable.getNodeClient(this).getConnectedNodes().addOnSuccessListener(nodes->{
             for(com.google.android.gms.wearable.Node node:nodes)
