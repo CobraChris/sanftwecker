@@ -32,6 +32,8 @@ public final class WatchTimerRingActivity extends Activity {
     private TextView title,clock,state;
     private Button stop,plus30,plus60,more;
     private boolean hadActive,extensionPending;
+    private int pendingTimerId;
+    private long pendingDue,pendingExtra;
     private int dp(int n){
         return Math.round(n*getResources().getDisplayMetrics().density);
     }
@@ -144,6 +146,7 @@ public final class WatchTimerRingActivity extends Activity {
             return;
         }
         WatchTimerExtensionFeedback.requested(this,id,due,millis);
+        pendingTimerId=id;pendingDue=due;pendingExtra=millis;
         String payload=id+":"+due+":"+millis;
         state.setText("Verlängerung am Handy angefordert …");
         extensionPending=true;
@@ -173,6 +176,22 @@ public final class WatchTimerRingActivity extends Activity {
         plus60.setEnabled(true);more.setEnabled(true);
     }
     private void refresh(){
+        if(extensionPending){
+            SharedPreferences receipt=getSharedPreferences(
+                    WatchTimerExtensionFeedback.PREF,MODE_PRIVATE);
+            if(receipt.getInt("id",0)==pendingTimerId&&
+                    receipt.getLong("due",0)==pendingDue&&
+                    receipt.getLong("amount",0)==pendingExtra){
+                String result=receipt.getString("result","pending");
+                if("ok".equals(result)){
+                    extensionPending=false;
+                    state.setText("Timer am Handy erfolgreich verlängert.");
+                    plus30.setEnabled(true);plus60.setEnabled(true);more.setEnabled(true);
+                }else if("rejected".equals(result)){
+                    restoreExtensionButtons("Timer nicht verlängert. Bitte am Handy prüfen.");
+                }
+            }
+        }
         SharedPreferences active=getSharedPreferences(
                 WatchTimerAlertService.ACTIVE_PREF,MODE_PRIVATE);
         int count=active.getInt("count",0);
@@ -183,7 +202,10 @@ public final class WatchTimerRingActivity extends Activity {
             if(hadActive){finish();return;}
             clock.setText("+00:00");
             title.setText("Kein Timeralarm");
-            state.setText("Der Timer kann am Handy erneut gestartet werden.");
+            if(!"ok".equals(getSharedPreferences(
+                    WatchTimerExtensionFeedback.PREF,MODE_PRIVATE)
+                    .getString("result","")))
+                state.setText("Der Timer kann am Handy erneut gestartet werden.");
             stop.setVisibility(View.GONE);
             plus30.setVisibility(View.GONE);plus60.setVisibility(View.GONE);
             more.setVisibility(View.GONE);
@@ -196,7 +218,9 @@ public final class WatchTimerRingActivity extends Activity {
         String name=active.getString("name","Timer");
         title.setText(count>1?count+" Timer abgelaufen":name);
         clock.setText(overrun(System.currentTimeMillis()-due));
-        if(!extensionPending)
+        if(!extensionPending&&!"ok".equals(getSharedPreferences(
+                WatchTimerExtensionFeedback.PREF,MODE_PRIVATE)
+                .getString("result","")))
             state.setText("Seit Ablauf · Stoppen auf der Uhr oder am Handy");
     }
     @Override protected void onResume(){
