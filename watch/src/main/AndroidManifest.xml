@@ -39,6 +39,27 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/watch_update_file_paths"/>
         </provider>
+        <!-- Optional AndroidX Wear Tile and watch-face complication. -->
+        <service android:name=".SanftweckerNextAlarmTileService"
+            android:exported="true"
+            android:label="Sanftwecker – nächster Wecker"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+        </service>
+        <service android:name=".SanftweckerNextAlarmComplicationService"
+            android:exported="true"
+            android:label="Sanftwecker – nächste Weckzeit"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT" />
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="300" />
+        </service>
         <activity android:name=".WatchMainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
