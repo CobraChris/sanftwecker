@@ -62,6 +62,8 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v49 licensed Wear tile, watch-face, and confirmed timer feedback
+        run: node --test tests/v49-open-source-wear-integration.test.mjs
       - name: Verify v49 immediately visible Watch timer extensions
         run: node --test tests/v49-watch-timer-visible-quick-actions.test.mjs
       - name: Verify Watch alarm screen and fallback regression contracts
