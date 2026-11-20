@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V49_WITH_EXISTING_V48_CERTIFICATE",
+  "expected_version_code": 49,
+  "intent": "signed-native-wear-v49",
+  "request_id": "2026-11-20-owner-approved-v49-watch-timer-open-source",
+  "source_sha": "6e6b0d60b35056c0eb2533d5ed0383370626c414",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
