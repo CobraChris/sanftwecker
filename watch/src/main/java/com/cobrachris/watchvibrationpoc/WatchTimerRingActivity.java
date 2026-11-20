@@ -143,6 +143,7 @@ public final class WatchTimerRingActivity extends Activity {
             state.setText("Verlängern nur bei einem einzelnen Timeralarm möglich.");
             return;
         }
+        WatchTimerExtensionFeedback.requested(this,id,due,millis);
         String payload=id+":"+due+":"+millis;
         state.setText("Verlängerung am Handy angefordert …");
         extensionPending=true;
