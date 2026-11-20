@@ -10,6 +10,7 @@ public final class TimerWatchPacket {
     public static final String STOP=PREFIX+"/stop";
     public static final String WATCH_STOP=PREFIX+"/watch-stop";
     public static final String WATCH_EXTEND=PREFIX+"/watch-extend";
+    public static final String EXTEND_RESULT=PREFIX+"/extend-result";
     public static final String STATE=PREFIX+"/state/";
     public static final long MAX_AGE_MS=180_000L;
     private TimerWatchPacket(){}

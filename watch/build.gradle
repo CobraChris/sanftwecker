@@ -8,8 +8,8 @@ android {
         applicationId 'com.cobrachris.sanftwecker'
         minSdk 30
         targetSdk 35
-        versionCode 48
-        versionName '0.9.29-watch'
+        versionCode 49
+        versionName '0.9.30-watch'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -19,6 +19,11 @@ android {
 dependencies {
     implementation 'androidx.core:core:1.13.1'
     implementation 'com.google.android.gms:play-services-wearable:20.0.1'
+    // Apache-2.0 AlarmClockXtreme-inspired tile / watch-face integration.
+    implementation 'androidx.wear.tiles:tiles:1.4.1'
+    implementation 'androidx.wear.protolayout:protolayout:1.2.1'
+    implementation 'androidx.concurrent:concurrent-futures:1.2.0'
+    implementation 'androidx.wear.watchface:watchface-complications-data-source:1.2.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'
 }

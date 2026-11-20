@@ -53,7 +53,7 @@ test('clock alarm notification appears only for a new valid alarm and is dismiss
 
 test('timer notification opens existing live overrun window and is cleared on stop and expiry',()=>{
   assert.match(timer,/showVisibleTimerNotice\(active\.get\(id\)\)/);
-  assert.match(timer,/WatchAlarmNotice\.timer\(this,entry\.id,entry\.name\+" abgelaufen",open,stop\)/);
+  assert.match(timer,/WatchAlarmNotice\.timer\(this,entry\.id,entry\.name\+" abgelaufen",open,stop,/);
   assert.match(timer,/WatchAlarmNotice\.clearTimer\(this,entry\.id\)/);
   assert.match(timer,/WatchAlarmNotice\.clearTimer\(this,id\)/);
   assert.match(timer,/if\(current!=null && current\.when==when\)return START_NOT_STICKY/);

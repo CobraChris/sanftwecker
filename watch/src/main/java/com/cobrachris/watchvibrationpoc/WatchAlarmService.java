@@ -286,6 +286,7 @@ public final class WatchAlarmService extends Service {
                 .putString("title",activeTitle)
                 .putBoolean("cascade",activeCascade)
                 .putInt("watch_intensity",activeIntensity).commit();
+        WatchAlarmPresentation.changed(this);
         int minutes=Math.max(activeCascade?2:1,
                 Math.min(15,i.getIntExtra("minutes",5)));
         try{
@@ -360,6 +361,7 @@ public final class WatchAlarmService extends Service {
         getSharedPreferences(ACTIVE_PREF,MODE_PRIVATE).edit()
                 .remove("id").remove("when").remove("snooze_minutes")
                 .remove("title").remove("cascade").remove("watch_intensity").commit();
+        WatchAlarmPresentation.changed(this);
         if(vibrator!=null)vibrator.cancel();
         vibrator=null;
         if(wake!=null&&wake.isHeld())wake.release();

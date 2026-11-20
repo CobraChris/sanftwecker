@@ -29,6 +29,8 @@ public final class WatchMainActivity extends Activity {
     private WatchDashboardView dashboard;
     private static final int NOTIFICATION_REQUEST=431;
     private Button snooze,local,openAlarmScreen,stop,stopTimer,updateWatch,notificationAccess;
+    private Button timerPlus30,timerPlus60,openTimerScreen;
+    private LinearLayout quickTimer;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable update=new Runnable(){
         @Override public void run(){
@@ -46,6 +48,26 @@ public final class WatchMainActivity extends Activity {
         NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         return manager!=null && manager.areNotificationsEnabled() &&
                 !WatchAlarmNotice.channelBlocked(this);
+    }
+    private void extendCurrentTimer(long extraMs){
+        android.content.SharedPreferences active=getSharedPreferences(
+                WatchTimerAlertService.ACTIVE_PREF,MODE_PRIVATE);
+        int id=active.getInt("id",-1);
+        long when=active.getLong("when",0);
+        if(active.getInt("count",0)!=1||id<1||when<=0){
+            status.setText("Verlängern nur bei einem einzelnen Timeralarm.");
+            return;
+        }
+        Intent command=new Intent(this,WatchTimerAlertService.class)
+                .setAction(WatchTimerAlertService.EXTEND)
+                .putExtra("id",id).putExtra("when",when)
+                .putExtra("extension",extraMs);
+        try{
+            startService(command);
+            status.setText("Timerverlängerung an Handy gesendet …");
+        }catch(RuntimeException e){
+            status.setText("Timerverlängerung nicht möglich.");
+        }
     }
     private void openNotificationAccess(){
         if(Build.VERSION.SDK_INT>=33 &&
@@ -85,6 +107,10 @@ public final class WatchMainActivity extends Activity {
         // Clock alarm takes priority; a timer cannot replace its Stop/Snooze UI.
         dashboard.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
         stopTimer.setVisibility(!ringing&&timerRinging?View.VISIBLE:View.GONE);
+        int timerActionVisibility=!ringing&&timerRinging&&
+                timerState.getInt("count",0)==1?View.VISIBLE:View.GONE;
+        quickTimer.setVisibility(timerActionVisibility);
+        openTimerScreen.setVisibility(!ringing&&timerRinging?View.VISIBLE:View.GONE);
         updateWatch.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
         local.setVisibility(ringing||timerRinging?View.GONE:View.VISIBLE);
         notificationAccess.setVisibility(!ringing&&!notificationsAllowed()
@@ -146,6 +172,32 @@ public final class WatchMainActivity extends Activity {
         layout.addView(status);
         dashboard=new WatchDashboardView(this);
         layout.addView(dashboard);
+        // Quick timer controls on the main Watch display (not only hidden
+        // behind a notification). Clock alarm still takes priority.
+        quickTimer=new LinearLayout(this);
+        quickTimer.setOrientation(LinearLayout.HORIZONTAL);
+        quickTimer.setGravity(Gravity.CENTER);
+        timerPlus30=new Button(this);
+        timerPlus30.setText("+30 Sek.");
+        timerPlus30.setTextSize(12);
+        WatchDashboardView.styleButton(timerPlus30,false,false);
+        quickTimer.addView(timerPlus30,new LinearLayout.LayoutParams(0,
+                Math.round(49*density),1f));
+        timerPlus60=new Button(this);
+        timerPlus60.setText("+1 Min.");
+        timerPlus60.setTextSize(12);
+        WatchDashboardView.styleButton(timerPlus60,false,false);
+        quickTimer.addView(timerPlus60,new LinearLayout.LayoutParams(0,
+                Math.round(49*density),1f));
+        layout.addView(quickTimer);
+        timerPlus30.setOnClickListener(v->extendCurrentTimer(30_000L));
+        timerPlus60.setOnClickListener(v->extendCurrentTimer(60_000L));
+        openTimerScreen=new Button(this);
+        openTimerScreen.setText("Timer-Details / Mehr");
+        WatchDashboardView.styleButton(openTimerScreen,false,false);
+        layout.addView(openTimerScreen);
+        openTimerScreen.setOnClickListener(v->
+                startActivity(new Intent(this,WatchTimerRingActivity.class)));
         stopTimer=new Button(this);
         stopTimer.setText("Alarm stoppen");
         WatchDashboardView.styleButton(stopTimer,false,true);
