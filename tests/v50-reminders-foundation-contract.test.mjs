@@ -101,3 +101,23 @@ test('deleting an open or finished reminder cancels only its own scheduled and W
  assert.match(ui,/ReminderStore\.delete\(this,item\.id\)/);
  assert.match(ui,/setTitle\("Erinnerung löschen\?"\)/);
 });
+
+test('the nine original tones play in a separate bounded reminder service',()=>{
+ const model=phone('ReminderStore'),ui=phone('ReminderActivity');
+ const receiver=phone('ReminderReceiver'),sound=phone('ReminderToneService');
+ const notice=phone('ReminderNotice');
+ const manifest=read('alarm/src/main/AndroidManifest.xml');
+ assert.match(model,/!ToneCatalog\.valid\(tone\)/);
+ assert.match(model,/putInt\(id\+"_tone",tone\)/);
+ assert.match(ui,/ToneCatalog\.LABELS/);
+ assert.match(ui,/tone\.getSelectedItemPosition\(\)/);
+ assert.match(receiver,/ReminderToneService\.start\(c,item\)/);
+ assert.match(receiver,/ReminderToneService\.stop\(c,item\)/);
+ assert.match(sound,/ToneCatalog\.sample\(tone,t\)/);
+ assert.match(sound,/handler\.postDelayed\(finish,90_000L\)/);
+ assert.match(sound,/ActiveAlarmState\.activeId\(this\)>0/);
+ assert.match(sound,/ReminderScheduler\.DUE/);
+ assert.match(sound,/reminder\.dueAt!=due/);
+ assert.match(manifest,/\.ReminderToneService/);
+ assert.match(notice,/loud\.setSound\(null,null\)/);
+});
