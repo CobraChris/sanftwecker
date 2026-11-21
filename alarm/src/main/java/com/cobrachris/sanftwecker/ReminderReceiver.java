@@ -41,6 +41,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderScheduler.cancel(c,id);
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
+            ReminderToneService.stop(c,item);
             ReminderStore.postpone(c,id,System.currentTimeMillis()+item.postponeMinutes*60_000L);
             try{ReminderScheduler.schedule(c,id);}
             catch(RuntimeException e){Log.w("Sanftwecker","Reminder postpone needs exact-alarm access",e);}
@@ -49,6 +50,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderScheduler.cancel(c,id);
             ReminderNotice.show(c,item,false);
             ReminderWatchBridge.stop(c,item);
+            ReminderToneService.stop(c,item);
         }
     }
 }
