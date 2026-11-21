@@ -121,3 +121,33 @@ test('the nine original tones play in a separate bounded reminder service',()=>{
  assert.match(manifest,/\.ReminderToneService/);
  assert.match(notice,/loud\.setSound\(null,null\)/);
 });
+
+test('two-stage Watch vibration respects selected postpone time and protects wake alarms',()=>{
+ const bridge=phone('ReminderWatchBridge');
+ const listener=watch('SanftweckerWearListener');
+ const service=watch('WatchReminderService');
+ const manifest=read('alarm/src/main/AndroidManifest.xml');
+ assert.match(bridge,/item\.postponeMinutes/);
+ assert.match(listener,/putExtra\("postpone",Integer\.parseInt\(a\[6\]\)\)/);
+ assert.match(service,/postponeMinutes!=5&&postponeMinutes!=10&&postponeMinutes!=30/);
+ assert.match(service,/strongPlayed>=12/);
+ assert.match(service,/handler\.postDelayed\(this,8_000L\)/);
+ assert.match(service,/clockActive\(\)/);
+ assert.match(service,/handler\.removeCallbacks\(strongPulse\)/);
+ assert.match(manifest,/android:pathPrefix="\/sanftwecker\/reminder\/v1"/);
+});
+test('deferred repeated reminders retain their original local-time cadence',()=>{
+ const model=phone('ReminderStore');
+ assert.match(model,/public final long dueAt,anchorAt/);
+ assert.match(model,/putLong\(id\+"_anchor",dueAt\)/);
+ assert.match(model,/cal\.setTimeInMillis\(item\.anchorAt\)/);
+ assert.match(model,/putLong\(id\+"_anchor",cal\.getTimeInMillis\(\)\)/);
+});
+test('reminder tone stops when user stops or defers and when a wake alarm starts later',()=>{
+ const receiver=phone('ReminderReceiver');
+ const tone=phone('ReminderToneService');
+ assert.match(receiver,/ReminderScheduler\.STOP\.equals\(action\)[\s\S]*ReminderToneService\.stop\(c,item\)/);
+ assert.match(receiver,/ReminderScheduler\.LATER\.equals\(action\)[\s\S]*ReminderToneService\.stop\(c,item\)/);
+ assert.match(tone,/private final Runnable wakePriorityCheck/);
+ assert.match(tone,/ActiveAlarmState\.activeId\(ReminderToneService\.this\)>0/);
+});
