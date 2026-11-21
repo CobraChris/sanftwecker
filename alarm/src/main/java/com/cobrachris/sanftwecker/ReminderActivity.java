@@ -93,6 +93,19 @@ public final class ReminderActivity extends Activity {
                 });
                 card.addView(later);
             }
+            Button delete=UiKit.button(this,"Erinnerung löschen",false);
+            delete.setOnClickListener(v->new android.app.AlertDialog.Builder(this)
+                .setTitle("Erinnerung löschen?")
+                .setMessage(item.title)
+                .setPositiveButton("Löschen",(d,w)->{
+                    ReminderScheduler.cancel(this,item.id);
+                    ReminderNotice.clear(this,item.id);
+                    ReminderWatchBridge.stop(this,item);
+                    ReminderStore.delete(this,item.id);
+                    render();
+                })
+                .setNegativeButton("Abbrechen",null).show());
+            card.addView(delete);
             UiKit.placeCard(this,list,card);
         }
     }
