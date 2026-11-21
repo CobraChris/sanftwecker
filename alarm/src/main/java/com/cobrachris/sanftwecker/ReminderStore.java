@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Calendar;
 
 /** Reminders are independent of wake-alarm IDs and snooze state. */
 public final class ReminderStore {
@@ -15,12 +16,14 @@ public final class ReminderStore {
         public final String title;
         public final long dueAt;
         public final boolean cascade,done;
-        public final int watchIntensity,watchPulses,watchIntervalSeconds;
+        public final int watchIntensity,watchPulses,watchIntervalSeconds,repeat,postponeMinutes;
+        public final boolean phoneSound;
         Item(int id,String title,long dueAt,boolean cascade,boolean done,
-                int intensity,int pulses,int interval){
+                int intensity,int pulses,int interval,int repeat,int postponeMinutes,boolean phoneSound){
             this.id=id;this.title=title;this.dueAt=dueAt;this.cascade=cascade;
             this.done=done;this.watchIntensity=intensity;
             this.watchPulses=pulses;this.watchIntervalSeconds=interval;
+            this.repeat=repeat;this.postponeMinutes=postponeMinutes;this.phoneSound=phoneSound;
         }
     }
     private static SharedPreferences prefs(Context c){
@@ -42,13 +45,22 @@ public final class ReminderStore {
         return new Item(id,p.getString(id+"_title","Erinnerung"),
             p.getLong(id+"_due",0),p.getBoolean(id+"_cascade",true),
             p.getBoolean(id+"_done",false),p.getInt(id+"_intensity",1),
-            p.getInt(id+"_pulses",6),p.getInt(id+"_interval",5));
+            p.getInt(id+"_pulses",6),p.getInt(id+"_interval",5),
+            p.getInt(id+"_repeat",0),p.getInt(id+"_postpone",10),
+            p.getBoolean(id+"_sound",true));
     }
     public static synchronized int create(Context c,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval){
+        return create(c,title,dueAt,cascade,intensity,pulses,interval,0,10,true);
+    }
+    public static synchronized int create(Context c,String title,long dueAt,
+            boolean cascade,int intensity,int pulses,int interval,
+            int repeat,int postponeMinutes,boolean phoneSound){
         if(title==null||title.trim().isEmpty()||title.length()>200||
                 dueAt<=System.currentTimeMillis()||intensity<0||intensity>2||
-                pulses<1||pulses>30||interval<1||interval>60)
+                pulses<1||pulses>30||interval<1||interval>60||
+                repeat<0||repeat>2||
+                !(postponeMinutes==5||postponeMinutes==10||postponeMinutes==30))
             throw new IllegalArgumentException("Erinnerung oder Termin ungültig");
         SharedPreferences p=prefs(c);
         int id=p.getInt("last_id",0)+1;
@@ -56,14 +68,37 @@ public final class ReminderStore {
         if(!p.edit().putInt("last_id",id).putString(id+"_title",title.trim())
                 .putLong(id+"_due",dueAt).putBoolean(id+"_cascade",cascade)
                 .putInt(id+"_intensity",intensity).putInt(id+"_pulses",pulses)
-                .putInt(id+"_interval",interval).putBoolean(id+"_done",false).commit())
+                .putInt(id+"_interval",interval).putBoolean(id+"_done",false)
+                .putInt(id+"_repeat",repeat).putInt(id+"_postpone",postponeMinutes)
+                .putBoolean(id+"_sound",phoneSound).commit())
             throw new IllegalStateException("Erinnerung nicht gespeichert");
         return id;
     }
-    /** Stopping a notification never marks a reminder done. */
+    /** A recurring reminder schedules the next local wall-clock occurrence.
+     * One-time reminders are completed; the current occurrence is always closed.
+     */
     public static synchronized void complete(Context c,int id){
-        if(get(c,id)==null)return;
-        prefs(c).edit().putBoolean(id+"_done",true).commit();
+        Item item=get(c,id);
+        if(item==null||item.done)return;
+        if(item.repeat==0){
+            prefs(c).edit().putBoolean(id+"_done",true).commit();
+            return;
+        }
+        Calendar cal=Calendar.getInstance();
+        cal.setTimeInMillis(item.dueAt);
+        int field=item.repeat==1?Calendar.DAY_OF_YEAR:Calendar.WEEK_OF_YEAR;
+        do{cal.add(field,1);}while(cal.getTimeInMillis()<=System.currentTimeMillis());
+        prefs(c).edit().putLong(id+"_due",cal.getTimeInMillis())
+                .putBoolean(id+"_done",false).commit();
+    }
+    /** Roll back an unschedulable newly created reminder. */
+    public static synchronized void abandon(Context c,int id){
+        SharedPreferences p=prefs(c);
+        if(!p.contains(id+"_due"))return;
+        p.edit().remove(id+"_due").remove(id+"_title").remove(id+"_cascade")
+          .remove(id+"_intensity").remove(id+"_pulses").remove(id+"_interval")
+          .remove(id+"_done").remove(id+"_repeat").remove(id+"_postpone")
+          .remove(id+"_sound").commit();
     }
     public static synchronized void postpone(Context c,int id,long nextDue){
         if(get(c,id)==null||nextDue<=System.currentTimeMillis())return;
