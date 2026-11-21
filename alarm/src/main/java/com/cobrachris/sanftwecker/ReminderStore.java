@@ -14,13 +14,14 @@ public final class ReminderStore {
     public static final class Item {
         public final int id;
         public final String title;
-        public final long dueAt;
+        public final long dueAt,anchorAt;
         public final boolean cascade,done;
         public final int watchIntensity,watchPulses,watchIntervalSeconds,repeat,postponeMinutes,tone;
         public final boolean phoneSound;
-        Item(int id,String title,long dueAt,boolean cascade,boolean done,
+        Item(int id,String title,long dueAt,long anchorAt,boolean cascade,boolean done,
                 int intensity,int pulses,int interval,int repeat,int postponeMinutes,boolean phoneSound,int tone){
-            this.id=id;this.title=title;this.dueAt=dueAt;this.cascade=cascade;
+            this.id=id;this.title=title;this.dueAt=dueAt;this.anchorAt=anchorAt;
+            this.cascade=cascade;
             this.done=done;this.watchIntensity=intensity;
             this.watchPulses=pulses;this.watchIntervalSeconds=interval;
             this.repeat=repeat;this.postponeMinutes=postponeMinutes;this.phoneSound=phoneSound;
@@ -44,7 +45,8 @@ public final class ReminderStore {
         SharedPreferences p=prefs(c);
         if(id<1||!p.contains(id+"_due"))return null;
         return new Item(id,p.getString(id+"_title","Erinnerung"),
-            p.getLong(id+"_due",0),p.getBoolean(id+"_cascade",true),
+            p.getLong(id+"_due",0),p.getLong(id+"_anchor",p.getLong(id+"_due",0)),
+            p.getBoolean(id+"_cascade",true),
             p.getBoolean(id+"_done",false),p.getInt(id+"_intensity",1),
             p.getInt(id+"_pulses",6),p.getInt(id+"_interval",5),
             p.getInt(id+"_repeat",0),p.getInt(id+"_postpone",10),
@@ -67,7 +69,7 @@ public final class ReminderStore {
         int id=p.getInt("last_id",0)+1;
         if(id>9999)throw new IllegalStateException("Erinnerungslimit erreicht");
         if(!p.edit().putInt("last_id",id).putString(id+"_title",title.trim())
-                .putLong(id+"_due",dueAt).putBoolean(id+"_cascade",cascade)
+                .putLong(id+"_due",dueAt).putLong(id+"_anchor",dueAt).putBoolean(id+"_cascade",cascade)
                 .putInt(id+"_intensity",intensity).putInt(id+"_pulses",pulses)
                 .putInt(id+"_interval",interval).putBoolean(id+"_done",false)
                 .putInt(id+"_repeat",repeat).putInt(id+"_postpone",postponeMinutes)
@@ -86,10 +88,11 @@ public final class ReminderStore {
             return;
         }
         Calendar cal=Calendar.getInstance();
-        cal.setTimeInMillis(item.dueAt);
+        cal.setTimeInMillis(item.anchorAt);
         int field=item.repeat==1?Calendar.DAY_OF_YEAR:Calendar.WEEK_OF_YEAR;
         do{cal.add(field,1);}while(cal.getTimeInMillis()<=System.currentTimeMillis());
         prefs(c).edit().putLong(id+"_due",cal.getTimeInMillis())
+                .putLong(id+"_anchor",cal.getTimeInMillis())
                 .putBoolean(id+"_done",false).commit();
     }
     /** Deleted reminders must not remain in the future schedule. */
@@ -101,7 +104,7 @@ public final class ReminderStore {
         p.edit().remove(id+"_due").remove(id+"_title").remove(id+"_cascade")
           .remove(id+"_intensity").remove(id+"_pulses").remove(id+"_interval")
           .remove(id+"_done").remove(id+"_repeat").remove(id+"_postpone")
-          .remove(id+"_sound").remove(id+"_tone").commit();
+          .remove(id+"_sound").remove(id+"_tone").remove(id+"_anchor").commit();
     }
     public static synchronized void postpone(Context c,int id,long nextDue){
         if(get(c,id)==null||nextDue<=System.currentTimeMillis())return;
