@@ -16,14 +16,15 @@ public final class ReminderStore {
         public final String title;
         public final long dueAt;
         public final boolean cascade,done;
-        public final int watchIntensity,watchPulses,watchIntervalSeconds,repeat,postponeMinutes;
+        public final int watchIntensity,watchPulses,watchIntervalSeconds,repeat,postponeMinutes,tone;
         public final boolean phoneSound;
         Item(int id,String title,long dueAt,boolean cascade,boolean done,
-                int intensity,int pulses,int interval,int repeat,int postponeMinutes,boolean phoneSound){
+                int intensity,int pulses,int interval,int repeat,int postponeMinutes,boolean phoneSound,int tone){
             this.id=id;this.title=title;this.dueAt=dueAt;this.cascade=cascade;
             this.done=done;this.watchIntensity=intensity;
             this.watchPulses=pulses;this.watchIntervalSeconds=interval;
             this.repeat=repeat;this.postponeMinutes=postponeMinutes;this.phoneSound=phoneSound;
+            this.tone=tone;
         }
     }
     private static SharedPreferences prefs(Context c){
@@ -47,19 +48,19 @@ public final class ReminderStore {
             p.getBoolean(id+"_done",false),p.getInt(id+"_intensity",1),
             p.getInt(id+"_pulses",6),p.getInt(id+"_interval",5),
             p.getInt(id+"_repeat",0),p.getInt(id+"_postpone",10),
-            p.getBoolean(id+"_sound",true));
+            p.getBoolean(id+"_sound",true),p.getInt(id+"_tone",0));
     }
     public static synchronized int create(Context c,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval){
-        return create(c,title,dueAt,cascade,intensity,pulses,interval,0,10,true);
+        return create(c,title,dueAt,cascade,intensity,pulses,interval,0,10,true,0);
     }
     public static synchronized int create(Context c,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval,
-            int repeat,int postponeMinutes,boolean phoneSound){
+            int repeat,int postponeMinutes,boolean phoneSound,int tone){
         if(title==null||title.trim().isEmpty()||title.length()>200||
                 dueAt<=System.currentTimeMillis()||intensity<0||intensity>2||
                 pulses<1||pulses>30||interval<1||interval>60||
-                repeat<0||repeat>2||
+                repeat<0||repeat>2||!ToneCatalog.valid(tone)||
                 !(postponeMinutes==5||postponeMinutes==10||postponeMinutes==30))
             throw new IllegalArgumentException("Erinnerung oder Termin ungültig");
         SharedPreferences p=prefs(c);
@@ -70,7 +71,7 @@ public final class ReminderStore {
                 .putInt(id+"_intensity",intensity).putInt(id+"_pulses",pulses)
                 .putInt(id+"_interval",interval).putBoolean(id+"_done",false)
                 .putInt(id+"_repeat",repeat).putInt(id+"_postpone",postponeMinutes)
-                .putBoolean(id+"_sound",phoneSound).commit())
+                .putBoolean(id+"_sound",phoneSound).putInt(id+"_tone",tone).commit())
             throw new IllegalStateException("Erinnerung nicht gespeichert");
         return id;
     }
@@ -100,7 +101,7 @@ public final class ReminderStore {
         p.edit().remove(id+"_due").remove(id+"_title").remove(id+"_cascade")
           .remove(id+"_intensity").remove(id+"_pulses").remove(id+"_interval")
           .remove(id+"_done").remove(id+"_repeat").remove(id+"_postpone")
-          .remove(id+"_sound").commit();
+          .remove(id+"_sound").remove(id+"_tone").commit();
     }
     public static synchronized void postpone(Context c,int id,long nextDue){
         if(get(c,id)==null||nextDue<=System.currentTimeMillis())return;
