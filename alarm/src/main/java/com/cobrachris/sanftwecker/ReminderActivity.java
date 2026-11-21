@@ -14,6 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Switch;
 import android.widget.SeekBar;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,6 +30,8 @@ public final class ReminderActivity extends Activity {
     private TextView whenLabel;
     private Switch cascade;
     private SeekBar intensity,pulses,interval;
+    private Spinner recurrence,postpone;
+    private Switch phoneSound;
     private long chosenAt;
     private final SimpleDateFormat format=
         new SimpleDateFormat("dd.MM.yyyy · HH:mm",Locale.GERMANY);
@@ -59,7 +63,8 @@ public final class ReminderActivity extends Activity {
             card.addView(UiKit.label(this,format.format(new Date(item.dueAt))+
                 (item.done?" · Erledigt":item.dueAt<System.currentTimeMillis()?
                 " · Überfällig":" · Offen")+
-                (item.cascade?" · Kaskade":" · Sanft"),14,UiKit.MUTED));
+                (item.cascade?" · Kaskade":" · Sanft")+
+                (item.repeat==1?" · Täglich":item.repeat==2?" · Wöchentlich":""),14,UiKit.MUTED));
             if(!item.done){
                 Button done=UiKit.button(this,"Erledigt",false);
                 done.setOnClickListener(v->{
@@ -67,15 +72,20 @@ public final class ReminderActivity extends Activity {
                     ReminderScheduler.cancel(this,item.id);
                     ReminderNotice.clear(this,item.id);
                     ReminderWatchBridge.stop(this,item);
+                    ReminderStore.Item next=ReminderStore.get(this,item.id);
+                    if(next!=null&&!next.done){
+                        try{ReminderScheduler.schedule(this,next.id);}
+                        catch(RuntimeException failure){toast("Nächste Erinnerung nicht planbar");}
+                    }
                     render();
                 });
                 card.addView(done);
-                Button later=UiKit.button(this,"In 10 Minuten erinnern",false);
+                Button later=UiKit.button(this,"In "+item.postponeMinutes+" Minuten erinnern",false);
                 later.setOnClickListener(v->{
                     ReminderScheduler.cancel(this,item.id);
                     ReminderNotice.clear(this,item.id);
                     ReminderWatchBridge.stop(this,item);
-                    ReminderStore.postpone(this,item.id,System.currentTimeMillis()+600_000L);
+                    ReminderStore.postpone(this,item.id,System.currentTimeMillis()+item.postponeMinutes*60_000L);
                     try{ReminderScheduler.schedule(this,item.id);}
                     catch(RuntimeException e){toast("Genaue Alarme fehlen: "+e.getMessage());}
                     render();
@@ -123,6 +133,24 @@ public final class ReminderActivity extends Activity {
         pulses=UiKit.seek(this,29);pulses.setProgress(5);form.addView(pulses);
         form.addView(UiKit.label(this,"Impulsabstand in Sekunden (1–60)",13,UiKit.MUTED));
         interval=UiKit.seek(this,59);interval.setProgress(4);form.addView(interval);
+        form.addView(UiKit.label(this,"Wiederholung",15,UiKit.TEXT));
+        recurrence=new Spinner(this);
+        recurrence.setAdapter(new ArrayAdapter<String>(this,
+            android.R.layout.simple_spinner_dropdown_item,
+            new String[]{"Einmalig","Täglich","Wöchentlich"}));
+        form.addView(recurrence);
+        form.addView(UiKit.label(this,"Später erinnern um",15,UiKit.TEXT));
+        postpone=new Spinner(this);
+        postpone.setAdapter(new ArrayAdapter<String>(this,
+            android.R.layout.simple_spinner_dropdown_item,
+            new String[]{"5 Minuten","10 Minuten","30 Minuten"}));
+        postpone.setSelection(1);
+        form.addView(postpone);
+        phoneSound=UiKit.toggle(this);
+        phoneSound.setText("Handy-Alarmton bei starker Phase");
+        phoneSound.setTextColor(UiKit.TEXT);
+        phoneSound.setChecked(true);
+        form.addView(phoneSound);
         new android.app.AlertDialog.Builder(this).setTitle("Neue Erinnerung")
             .setView(UiKit.scroll(this,form))
             .setPositiveButton("Speichern",(d,w)->save())
@@ -155,11 +183,21 @@ public final class ReminderActivity extends Activity {
     }
     private void save(){
         try{
+            if(!AlarmScheduler.canSchedule(this)){
+                toast("Genaue Alarme fehlen – im Einrichtungsassistenten erlauben.");
+                return;
+            }
+            int minutes=new int[]{5,10,30}[postpone.getSelectedItemPosition()];
             int id=ReminderStore.create(this,title.getText().toString(),chosenAt,
                     cascade.isChecked(),intensity.getProgress(),
-                    pulses.getProgress()+1,interval.getProgress()+1);
-            ReminderScheduler.schedule(this,id);
-            toast("Erinnerung gespeichert");render();
+                    pulses.getProgress()+1,interval.getProgress()+1,
+                    recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked());
+            try{ReminderScheduler.schedule(this,id);}
+            catch(RuntimeException failure){
+                ReminderStore.abandon(this,id);
+                throw failure;
+            }
+            toast("Erinnerung gespeichert und eingeplant");render();
         }catch(RuntimeException e){
             toast("Erinnerung nicht planbar: "+e.getMessage());
         }
