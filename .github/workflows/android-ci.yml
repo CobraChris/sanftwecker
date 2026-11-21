@@ -62,6 +62,12 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v50 owner-controlled original signer release gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v50-release-request.mjs
+          node --test tests/sanftwecker-v50-release-request.test.mjs
+      - name: Verify v50 independent voice-enabled reminders and cascade contracts
+        run: node --test tests/v50-reminders-foundation-contract.test.mjs
       - name: Verify v49 licensed Wear tile, watch-face, and confirmed timer feedback
         run: node --test tests/v49-open-source-wear-integration.test.mjs
       - name: Verify v49 immediately visible Watch timer extensions

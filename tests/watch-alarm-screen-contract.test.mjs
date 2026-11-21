@@ -188,9 +188,9 @@ test('alarm home focuses on alarms while preserving all critical maintenance pat
     assert.match(assistant,/Wecker werden direkt auf der Uhr geplant/);
 });
 
-test('four clock navigation tabs remain pinned while each content page scrolls',()=>{
+test('five clock navigation tabs remain pinned while each content page scrolls',()=>{
     const tabs=read('alarm/src/main/java/com/cobrachris/sanftwecker/ClockTabs.java');
-    assert.match(tabs,/String\[\] names=\{"Wecker","Timer","Stoppuhr","Weltuhr"\}/);
+    assert.match(tabs,/String\[\] names=\{"Wecker","Timer","Stoppuhr","Weltuhr","Erinnerungen"\}/);
     assert.match(tabs,/bar.setTag\(BAR_MARKER\)/);
     assert.match(tabs,/scrollColumn.removeView\(bar\)/);
     assert.match(tabs,/frame.addView\(bar,new LinearLayout.LayoutParams\(/);
@@ -203,7 +203,8 @@ test('four clock navigation tabs remain pinned while each content page scrolls',
         ['MainActivity.java','base','page','ALARMS'],
         ['TimerActivity.java','root','UiKit.scroll(this,root)','TIMERS'],
         ['StopwatchActivity.java','root','UiKit.scroll(this,root)','STOPWATCH'],
-        ['WorldClockActivity.java','base','UiKit.scroll(this,base)','WORLD_CLOCK']
+        ['WorldClockActivity.java','base','UiKit.scroll(this,base)','WORLD_CLOCK'],
+        ['ReminderActivity.java','root','UiKit.scroll(this,root)','REMINDERS']
     ];
     for(const [filename,column,view,selected] of pages){
         const src=read('alarm/src/main/java/com/cobrachris/sanftwecker/'+filename);

@@ -42,6 +42,37 @@ public final class SanftweckerWearListener extends WearableListenerService {
             WatchTimerExtensionFeedback.receive(this,event.getData());
             return;
         }
+        if(path.startsWith("/sanftwecker/reminder/v1/")){
+            String value=new String(event.getData(),StandardCharsets.UTF_8);
+            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[01]:[012]:[1-9][0-9]?:[1-9][0-9]?:([5]|10|30)"))
+                return;
+            String[] a=value.split(":");
+            int id=Integer.parseInt(a[0]);
+            long due=Long.parseLong(a[1]);
+            Intent command=new Intent(this,WatchReminderService.class)
+                    .putExtra("id",id).putExtra("due",due)
+                    .putExtra("cascade","1".equals(a[2]))
+                    .putExtra("intensity",Integer.parseInt(a[3]))
+                    .putExtra("pulses",Integer.parseInt(a[4]))
+                    .putExtra("interval",Integer.parseInt(a[5]))
+                    .putExtra("postpone",Integer.parseInt(a[6]));
+            if("/sanftwecker/reminder/v1/start".equals(path))
+                command.setAction(WatchReminderService.START);
+            else if("/sanftwecker/reminder/v1/escalate".equals(path))
+                command.setAction(WatchReminderService.STRONG);
+            else if("/sanftwecker/reminder/v1/stop".equals(path))
+                command.setAction(WatchReminderService.STOP);
+            else return;
+            try{
+                if(android.os.Build.VERSION.SDK_INT>=26 &&
+                        WatchReminderService.START.equals(command.getAction()))
+                    startForegroundService(command);
+                else startService(command);
+            }catch(RuntimeException error){
+                Log.w("SanftweckerWatch","Reminder service unavailable",error);
+            }
+            return;
+        }
         if(WatchTimerProtocol.START.equals(path)){
             WatchTimerProtocol.Packet timer=WatchTimerProtocol.start(
                     new String(event.getData(),StandardCharsets.UTF_8));
