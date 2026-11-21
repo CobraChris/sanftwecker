@@ -6,13 +6,12 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.media.RingtoneManager;
 import android.os.Build;
 
 /** Reminder notifications never reuse the clock-alarm notification/channel. */
 public final class ReminderNotice {
     private static final String SOFT="sanftwecker_reminder_soft_v1";
-    private static final String STRONG="sanftwecker_reminder_strong_v1";
+    private static final String STRONG="sanftwecker_reminder_strong_custom_v2";
     private static final String VIBRATE_ONLY="sanftwecker_reminder_vibrate_only_v1";
     private static final int BASE=99000;
     private ReminderNotice(){}
@@ -28,7 +27,8 @@ public final class ReminderNotice {
         soft.setSound(null,null);soft.enableVibration(false);
         NotificationChannel loud=new NotificationChannel(STRONG,"Erinnerungen – deutlich",
                 NotificationManager.IMPORTANCE_HIGH);
-        loud.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),null);
+        // Chosen procedural tone is played only by ReminderToneService.
+        loud.setSound(null,null);
         loud.enableVibration(true);
         manager.createNotificationChannel(soft);
         manager.createNotificationChannel(loud);
