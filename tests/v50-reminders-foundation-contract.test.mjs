@@ -91,3 +91,13 @@ test('strong reminder chooses system tone or silent vibration without other alar
  assert.match(notice,/item\.postponeMinutes/);
  assert.match(model,/putBoolean\(id\+"_sound",phoneSound\)/);
 });
+
+test('deleting an open or finished reminder cancels only its own scheduled and Watch instance',()=>{
+ const model=phone('ReminderStore'),ui=phone('ReminderActivity');
+ assert.match(model,/public static synchronized void delete\(Context c,int id\)/);
+ assert.match(ui,/ReminderScheduler\.cancel\(this,item\.id\)/);
+ assert.match(ui,/ReminderNotice\.clear\(this,item\.id\)/);
+ assert.match(ui,/ReminderWatchBridge\.stop\(this,item\)/);
+ assert.match(ui,/ReminderStore\.delete\(this,item\.id\)/);
+ assert.match(ui,/setTitle\("Erinnerung löschen\?"\)/);
+});
