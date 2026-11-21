@@ -54,7 +54,7 @@ test('GitHub owner and original repo only',()=>{
   ])assert.throws(()=>validateActor({...good,...patch}));
 });
 
-test('dual-device signed v50 visible Watch timer requires exact owner approval',()=>{
+test('dual-device signed v50 reminder and cascade requires exact owner approval',()=>{
   const yml=readFileSync(new URL(
     '../.github/workflows/sanftwecker-v50-release.yml',import.meta.url),'utf8');
   const checks=[
@@ -79,7 +79,7 @@ test('dual-device signed v50 visible Watch timer requires exact owner approval',
     "versionCode='49'",
     "versionCode='50'",
     'assert expected==50',
-    'assert e[\'versionCode\']==49',
+    'assert e[\'versionCode\']==50',
     'android.hardware.type.watch',
     'APP_SIGNING_KEYSTORE_BASE64',
     'APP_SIGNING_STORE_PASSWORD',
@@ -96,7 +96,7 @@ test('dual-device signed v50 visible Watch timer requires exact owner approval',
   assert.equal(WATCH_V49_SHA256.length,64);
   assert.doesNotMatch(yml,/workflow_dispatch:|pull_request_target:|genkeypair/);
   assert.doesNotMatch(yml,/uses:\s*[^\s]+@v[0-9]+\s*$/m);
-  assert.ok(yml.indexOf('Verify signed phone v48 and signed watch v49 before secrets')<
+  assert.ok(yml.indexOf('Verify signed phone v49 and signed watch v49 before secrets')<
        yml.indexOf('Sign both original-certificate APKs'));
   assert.ok(yml.indexOf('Sign both original-certificate APKs')<
        yml.indexOf('gh release create sanftwecker-v50'));
