@@ -23,11 +23,13 @@ public final class ReminderReceiver extends BroadcastReceiver {
         }else if(ReminderScheduler.ESCALATE.equals(action)){
             ReminderNotice.show(c,item,true);
             ReminderWatchBridge.escalate(c,item);
+            ReminderToneService.start(c,item);
         }else if(ReminderScheduler.DONE.equals(action)){
             ReminderStore.complete(c,id);
             ReminderScheduler.cancel(c,id);
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
+            ReminderToneService.stop(c,item);
             // Completing a recurring occurrence arms the next independent one.
             ReminderStore.Item next=ReminderStore.get(c,id);
             if(next!=null&&!next.done){
