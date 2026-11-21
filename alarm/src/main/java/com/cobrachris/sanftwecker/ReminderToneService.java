@@ -75,7 +75,7 @@ public final class ReminderToneService extends Service {
         // Genuine wake alarms take precedence. Do not mix the reminder's
         // waveform with a user-scheduled alarm's critical audio.
         if(ActiveAlarmState.activeId(this)>0){stopSelf();return START_NOT_STICKY;}
-        stopAudio();
+        resetAudio(false);
         activeId=id;activeDue=due;
         Notification notice=new Notification.Builder(this,CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -127,7 +127,8 @@ public final class ReminderToneService extends Service {
         },"SanftweckerReminderTone");
         writer.start();
     }
-    private void stopAudio(){
+    private void stopAudio(){resetAudio(true);}
+    private void resetAudio(boolean endService){
         playing=false;
         handler.removeCallbacks(finish);
         AudioTrack old=sink;sink=null;
@@ -143,8 +144,10 @@ public final class ReminderToneService extends Service {
         }
         if(old!=null)try{old.release();}catch(RuntimeException ignored){}
         activeId=0;activeDue=0;
-        stopForeground(STOP_FOREGROUND_REMOVE);
-        stopSelf();
+        if(endService){
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+        }
     }
     @Override public void onDestroy(){
         playing=false;handler.removeCallbacks(finish);
