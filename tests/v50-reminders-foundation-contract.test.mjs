@@ -32,7 +32,7 @@ test('notification offers done, postpone and stop with separate gentle / strong 
  for(const name of ['REMINDER_DONE','REMINDER_LATER','REMINDER_STOP'])
    assert.match(notice,new RegExp(name.replace('REMINDER_','')));
  assert.match(notice,/sanftwecker_reminder_soft_v1/);
- assert.match(notice,/sanftwecker_reminder_strong_v1/);
+ assert.match(notice,/sanftwecker_reminder_strong_custom_v2/);
  assert.match(notice,/ReminderScheduler\.DONE/);
  assert.match(notice,/ReminderScheduler\.LATER/);
  assert.match(notice,/ReminderScheduler\.STOP/);
