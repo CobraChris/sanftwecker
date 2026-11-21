@@ -8,8 +8,8 @@ android {
         applicationId 'com.cobrachris.sanftwecker'
         minSdk 30
         targetSdk 35
-        versionCode 49
-        versionName '0.9.30-watch'
+        versionCode 50
+        versionName '0.9.31-watch'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
