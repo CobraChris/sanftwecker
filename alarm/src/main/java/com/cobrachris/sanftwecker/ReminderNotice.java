@@ -13,6 +13,7 @@ import android.os.Build;
 public final class ReminderNotice {
     private static final String SOFT="sanftwecker_reminder_soft_v1";
     private static final String STRONG="sanftwecker_reminder_strong_v1";
+    private static final String VIBRATE_ONLY="sanftwecker_reminder_vibrate_only_v1";
     private static final int BASE=99000;
     private ReminderNotice(){}
     public static void clear(Context c,int id){
@@ -31,11 +32,16 @@ public final class ReminderNotice {
         loud.enableVibration(true);
         manager.createNotificationChannel(soft);
         manager.createNotificationChannel(loud);
+        NotificationChannel vibration=new NotificationChannel(VIBRATE_ONLY,
+                "Erinnerungen – Handyvibration ohne Ton",NotificationManager.IMPORTANCE_HIGH);
+        vibration.setSound(null,null);
+        vibration.enableVibration(true);
+        manager.createNotificationChannel(vibration);
         Intent open=new Intent(c,ReminderActivity.class);
         PendingIntent view=PendingIntent.getActivity(c,BASE+item.id,open,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder=new Notification.Builder(c,
-                strong?STRONG:SOFT)
+                strong?(item.phoneSound?STRONG:VIBRATE_ONLY):SOFT)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle("Erinnerung: "+item.title)
                 .setContentText(strong?"Wichtige Erinnerung – bitte bearbeiten":
@@ -50,7 +56,7 @@ public final class ReminderNotice {
                     android.R.drawable.ic_input_add,"Erledigt",
                     ReminderScheduler.pending(c,item.id,item.dueAt,ReminderScheduler.DONE)).build())
                 .addAction(new Notification.Action.Builder(
-                    android.R.drawable.ic_menu_recent_history,"+10 Min.",
+                    android.R.drawable.ic_menu_recent_history,"+"+item.postponeMinutes+" Min.",
                     ReminderScheduler.pending(c,item.id,item.dueAt,ReminderScheduler.LATER)).build())
                 .addAction(new Notification.Action.Builder(
                     android.R.drawable.ic_media_pause,"Alarm stoppen",
