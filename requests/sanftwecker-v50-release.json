@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V50_WITH_EXISTING_V49_CERTIFICATE",
+  "expected_version_code": 50,
+  "intent": "signed-native-wear-v50",
+  "request_id": "2026-11-22-v50-reminders-owner-approved",
+  "source_sha": "58b4110599004997b8c06f6dca57031e57f5f194",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
