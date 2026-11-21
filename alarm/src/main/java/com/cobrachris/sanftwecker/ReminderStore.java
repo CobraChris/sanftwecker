@@ -91,6 +91,8 @@ public final class ReminderStore {
         prefs(c).edit().putLong(id+"_due",cal.getTimeInMillis())
                 .putBoolean(id+"_done",false).commit();
     }
+    /** Deleted reminders must not remain in the future schedule. */
+    public static synchronized void delete(Context c,int id){abandon(c,id);}
     /** Roll back an unschedulable newly created reminder. */
     public static synchronized void abandon(Context c,int id){
         SharedPreferences p=prefs(c);
