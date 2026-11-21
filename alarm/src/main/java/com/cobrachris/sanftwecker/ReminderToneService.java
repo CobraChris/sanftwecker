@@ -29,6 +29,15 @@ public final class ReminderToneService extends Service {
     private AudioTrack sink;
     private Thread writer;
     private final Runnable finish=this::stopAudio;
+    private final Runnable wakePriorityCheck=new Runnable(){
+        @Override public void run(){
+            if(!playing)return;
+            if(ActiveAlarmState.activeId(ReminderToneService.this)>0){
+                stopAudio();return;
+            }
+            handler.postDelayed(this,800L);
+        }
+    };
 
     public static void start(Context c,ReminderStore.Item item){
         if(item==null||item.done||!item.phoneSound)return;
@@ -88,6 +97,7 @@ public final class ReminderToneService extends Service {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
             beginAudio(reminder.tone);
             handler.postDelayed(finish,90_000L);
+            handler.post(wakePriorityCheck);
         }catch(RuntimeException problem){
             Log.w("Sanftwecker","Reminder audio startup failed",problem);
             stopAudio();
@@ -131,6 +141,7 @@ public final class ReminderToneService extends Service {
     private void resetAudio(boolean endService){
         playing=false;
         handler.removeCallbacks(finish);
+        handler.removeCallbacks(wakePriorityCheck);
         AudioTrack old=sink;sink=null;
         if(old!=null){
             try{old.pause();old.flush();}catch(RuntimeException ignored){}
@@ -151,6 +162,7 @@ public final class ReminderToneService extends Service {
     }
     @Override public void onDestroy(){
         playing=false;handler.removeCallbacks(finish);
+        handler.removeCallbacks(wakePriorityCheck);
         AudioTrack old=sink;sink=null;
         if(old!=null){
             try{old.pause();old.flush();old.release();}catch(RuntimeException ignored){}
