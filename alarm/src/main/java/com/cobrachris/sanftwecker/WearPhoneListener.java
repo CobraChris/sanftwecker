@@ -33,6 +33,21 @@ public final class WearPhoneListener extends WearableListenerService {
                 .putLong("verified_at",System.currentTimeMillis()).apply();
             return;
         }
+        if(ReminderWatchBridge.ACTION.equals(event.getPath())){
+            String value=new String(event.getData(),StandardCharsets.UTF_8);
+            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(done|later|stop)"))
+                return;
+            String[] parts=value.split(":");
+            int id=Integer.parseInt(parts[0]);
+            long due=Long.parseLong(parts[1]);
+            ReminderStore.Item reminder=ReminderStore.get(this,id);
+            if(reminder==null||reminder.done||reminder.dueAt!=due)return;
+            String action="done".equals(parts[2])?ReminderScheduler.DONE:
+                "later".equals(parts[2])?ReminderScheduler.LATER:ReminderScheduler.STOP;
+            sendBroadcast(new Intent(this,ReminderReceiver.class).setAction(action)
+                .putExtra(ReminderScheduler.ID,id).putExtra(ReminderScheduler.DUE,due));
+            return;
+        }
         if(TimerWatchPacket.WATCH_EXTEND.equals(event.getPath())){
             String text=new String(event.getData(),StandardCharsets.UTF_8);
             if(!text.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(30000|60000|120000|300000|600000)"))
