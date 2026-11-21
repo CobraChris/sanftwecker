@@ -28,11 +28,17 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderScheduler.cancel(c,id);
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
+            // Completing a recurring occurrence arms the next independent one.
+            ReminderStore.Item next=ReminderStore.get(c,id);
+            if(next!=null&&!next.done){
+                try{ReminderScheduler.schedule(c,id);}
+                catch(RuntimeException e){Log.e("Sanftwecker","Recurring reminder not scheduled",e);}
+            }
         }else if(ReminderScheduler.LATER.equals(action)){
             ReminderScheduler.cancel(c,id);
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
-            ReminderStore.postpone(c,id,System.currentTimeMillis()+600_000L);
+            ReminderStore.postpone(c,id,System.currentTimeMillis()+item.postponeMinutes*60_000L);
             try{ReminderScheduler.schedule(c,id);}
             catch(RuntimeException e){Log.w("Sanftwecker","Reminder postpone needs exact-alarm access",e);}
         }else if(ReminderScheduler.STOP.equals(action)){
