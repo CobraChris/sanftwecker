@@ -30,7 +30,7 @@ public final class ReminderActivity extends Activity {
     private TextView whenLabel;
     private Switch cascade;
     private SeekBar intensity,pulses,interval;
-    private Spinner recurrence,postpone;
+    private Spinner recurrence,postpone,tone;
     private Switch phoneSound;
     private long chosenAt;
     private boolean timeConfirmed;
@@ -161,6 +161,11 @@ public final class ReminderActivity extends Activity {
             new String[]{"5 Minuten","10 Minuten","30 Minuten"}));
         postpone.setSelection(1);
         form.addView(postpone);
+        form.addView(UiKit.label(this,"Erinnerungston (Sanftwecker-Klänge)",15,UiKit.TEXT));
+        tone=new Spinner(this);
+        tone.setAdapter(new ArrayAdapter<String>(this,
+            android.R.layout.simple_spinner_dropdown_item,ToneCatalog.LABELS));
+        form.addView(tone);
         phoneSound=UiKit.toggle(this);
         phoneSound.setText("Handy-Alarmton bei starker Phase");
         phoneSound.setTextColor(UiKit.TEXT);
@@ -222,7 +227,8 @@ public final class ReminderActivity extends Activity {
             int id=ReminderStore.create(this,title.getText().toString(),chosenAt,
                     cascade.isChecked(),intensity.getProgress(),
                     pulses.getProgress()+1,interval.getProgress()+1,
-                    recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked());
+                    recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
+                    tone.getSelectedItemPosition());
             try{ReminderScheduler.schedule(this,id);}
             catch(RuntimeException failure){
                 ReminderStore.abandon(this,id);
