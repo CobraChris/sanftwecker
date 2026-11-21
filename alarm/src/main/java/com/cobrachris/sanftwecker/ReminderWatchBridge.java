@@ -14,7 +14,7 @@ public final class ReminderWatchBridge {
     private ReminderWatchBridge(){}
     private static void send(Context c,String path,ReminderStore.Item item){
         String payload=item.id+":"+item.dueAt+":"+(item.cascade?"1":"0")+":"+
-            item.watchIntensity+":"+item.watchPulses+":"+item.watchIntervalSeconds;
+            item.watchIntensity+":"+item.watchPulses+":"+item.watchIntervalSeconds+":"+item.postponeMinutes;
         try{
             Wearable.getNodeClient(c).getConnectedNodes().addOnSuccessListener(nodes->{
                 for(com.google.android.gms.wearable.Node node:nodes){
