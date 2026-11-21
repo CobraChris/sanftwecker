@@ -61,3 +61,33 @@ test('reminders restore after reboot and app update, remain private',()=>{
  assert.match(watchManifest,/\.WatchReminderService/);
  assert.match(watchManifest,/pathPrefix="\/sanftwecker\/reminder\/v1"/);
 });
+
+test('recurring reminder completes a single occurrence and schedules next',()=>{
+ const model=phone('ReminderStore'),receiver=phone('ReminderReceiver');
+ assert.match(model,/Calendar\.DAY_OF_YEAR/);
+ assert.match(model,/Calendar\.WEEK_OF_YEAR/);
+ assert.match(model,/item\.repeat==0/);
+ assert.match(model,/cal\.add\(field,1\)/);
+ assert.match(receiver,/ReminderStore\.Item next=ReminderStore\.get\(c,id\)/);
+ assert.match(receiver,/ReminderScheduler\.schedule\(c,id\)/);
+ assert.match(receiver,/item\.postponeMinutes\*60_000L/);
+});
+test('editor never silently accepts unrecognized voice time or unscheduled save',()=>{
+ const ui=phone('ReminderActivity'),model=phone('ReminderStore');
+ assert.match(ui,/timeConfirmed=false/);
+ assert.match(ui,/if\(!timeConfirmed\)/);
+ assert.match(ui,/dialog\.setOnShowListener/);
+ assert.match(ui,/if\(save\(\)\)dialog\.dismiss\(\)/);
+ assert.match(ui,/ReminderStore\.abandon\(this,id\)/);
+ assert.match(model,/public static synchronized void abandon/);
+ assert.match(ui,/Wöchentlich/);
+ assert.match(ui,/new int\[\]\{5,10,30\}/);
+ assert.match(ui,/phoneSound\.isChecked\(\)/);
+});
+test('strong reminder chooses system tone or silent vibration without other alarm channels',()=>{
+ const notice=phone('ReminderNotice'),model=phone('ReminderStore');
+ assert.match(notice,/VIBRATE_ONLY/);
+ assert.match(notice,/item\.phoneSound\?STRONG:VIBRATE_ONLY/);
+ assert.match(notice,/item\.postponeMinutes/);
+ assert.match(model,/putBoolean\(id\+"_sound",phoneSound\)/);
+});
