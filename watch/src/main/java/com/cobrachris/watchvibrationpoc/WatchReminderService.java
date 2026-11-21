@@ -149,7 +149,12 @@ public final class WatchReminderService extends Service {
         }
         if(!START.equals(action)||requestedId<1||requestedId>9999||
                 when<=0||when<System.currentTimeMillis()-180_000L)return START_NOT_STICKY;
-        if(id>0&&due!=when)stopLocal();
+        if(id==requestedId&&due==when)return START_NOT_STICKY;
+        // Replacing the current reminder must not stopSelf() and kill the new one.
+        if(id>0){
+            handler.removeCallbacks(pulse);handler.removeCallbacks(autoEnd);
+            if(motor!=null&&!clockActive())try{motor.cancel();}catch(RuntimeException ignored){}
+        }
         id=requestedId;due=when;
         cascade=intent.getBooleanExtra("cascade",true);
         intensity=Math.max(0,Math.min(2,intent.getIntExtra("intensity",1)));
