@@ -33,7 +33,7 @@ public final class WatchReminderService extends Service {
     private static final int NOTIFY_ID=49010;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private Vibrator motor;
-    private int id,intensity,pulses,interval,played;
+    private int id,intensity,pulses,interval,played,postponeMinutes=10,strongPlayed;
     private long due;
     private boolean cascade,strong;
     private final Runnable pulse=new Runnable(){
@@ -44,6 +44,16 @@ public final class WatchReminderService extends Service {
                 played++;
             }
             handler.postDelayed(this,interval*1000L);
+        }
+    };
+    private final Runnable strongPulse=new Runnable(){
+        @Override public void run(){
+            if(due<=0||!strong||strongPlayed>=12)return;
+            if(!clockActive()){
+                vibrate(true);
+                strongPlayed++;
+            }
+            handler.postDelayed(this,8_000L);
         }
     };
     private final Runnable autoEnd=()->stopLocal();
@@ -100,7 +110,7 @@ public final class WatchReminderService extends Service {
             .addAction(new Notification.Action.Builder(
                 android.R.drawable.ic_input_add,"Erledigt",action(DONE,49501)).build())
             .addAction(new Notification.Action.Builder(
-                android.R.drawable.ic_menu_recent_history,"+10 Min.",action(LATER,49502)).build())
+                android.R.drawable.ic_menu_recent_history,"+"+postponeMinutes+" Min.",action(LATER,49502)).build())
             .addAction(new Notification.Action.Builder(
                 android.R.drawable.ic_media_pause,"Stoppen",action(USER_STOP,49503)).build())
             .build();
@@ -121,7 +131,8 @@ public final class WatchReminderService extends Service {
         }
     }
     private void stopLocal(){
-        handler.removeCallbacks(pulse);handler.removeCallbacks(autoEnd);
+        handler.removeCallbacks(pulse);handler.removeCallbacks(strongPulse);
+        handler.removeCallbacks(autoEnd);
         if(motor!=null&&!clockActive())try{motor.cancel();}catch(RuntimeException ignored){}
         id=0;due=0;
         stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();
@@ -143,7 +154,8 @@ public final class WatchReminderService extends Service {
         }
         if(STRONG.equals(action)){
             if(requestedId==id&&when==due&&cascade){
-                strong=true;handler.removeCallbacks(pulse);vibrate(true);
+                strong=true;strongPlayed=0;
+                handler.removeCallbacks(pulse);handler.post(strongPulse);
             }
             return START_NOT_STICKY;
         }
@@ -160,15 +172,22 @@ public final class WatchReminderService extends Service {
         intensity=Math.max(0,Math.min(2,intent.getIntExtra("intensity",1)));
         pulses=Math.max(1,Math.min(30,intent.getIntExtra("pulses",6)));
         interval=Math.max(1,Math.min(60,intent.getIntExtra("interval",5)));
-        played=0;strong=!cascade;
-        show();
-        if(strong)vibrate(true);else handler.post(pulse);
+        postponeMinutes=intent.getIntExtra("postpone",10);
+        if(postponeMinutes!=5&&postponeMinutes!=10&&postponeMinutes!=30)postponeMinutes=10;
+        played=0;strongPlayed=0;strong=!cascade;
+        try{show();}catch(RuntimeException ex){
+            Log.w("SanftweckerWatch","Reminder notification unavailable",ex);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        if(strong)handler.post(strongPulse);else handler.post(pulse);
         handler.removeCallbacks(autoEnd);
         handler.postDelayed(autoEnd,180_000L);
         return START_NOT_STICKY;
     }
     @Override public void onDestroy(){
-        handler.removeCallbacks(pulse);handler.removeCallbacks(autoEnd);
+        handler.removeCallbacks(pulse);handler.removeCallbacks(strongPulse);
+        handler.removeCallbacks(autoEnd);
         super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent){return null;}
