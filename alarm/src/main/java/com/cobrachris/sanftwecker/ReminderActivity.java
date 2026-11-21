@@ -33,6 +33,7 @@ public final class ReminderActivity extends Activity {
     private Spinner recurrence,postpone;
     private Switch phoneSound;
     private long chosenAt;
+    private boolean timeConfirmed;
     private final SimpleDateFormat format=
         new SimpleDateFormat("dd.MM.yyyy · HH:mm",Locale.GERMANY);
 
@@ -99,6 +100,7 @@ public final class ReminderActivity extends Activity {
         Calendar when=Calendar.getInstance();
         when.add(Calendar.HOUR_OF_DAY,1);
         chosenAt=when.getTimeInMillis();
+        timeConfirmed=false;
         LinearLayout form=UiKit.mainColumn(this);
         title=new EditText(this);
         title.setSingleLine(false);title.setMaxLines(3);
@@ -151,10 +153,16 @@ public final class ReminderActivity extends Activity {
         phoneSound.setTextColor(UiKit.TEXT);
         phoneSound.setChecked(true);
         form.addView(phoneSound);
-        new android.app.AlertDialog.Builder(this).setTitle("Neue Erinnerung")
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
+            .setTitle("Neue Erinnerung")
             .setView(UiKit.scroll(this,form))
-            .setPositiveButton("Speichern",(d,w)->save())
-            .setNegativeButton("Abbrechen",null).show();
+            .setPositiveButton("Speichern",null)
+            .setNegativeButton("Abbrechen",null).create();
+        dialog.setOnShowListener(d->dialog.getButton(
+            android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+                if(save())dialog.dismiss();
+            }));
+        dialog.show();
     }
     private void chooseDate(){
         Calendar c=Calendar.getInstance();c.setTimeInMillis(chosenAt);
@@ -163,12 +171,13 @@ public final class ReminderActivity extends Activity {
             new TimePickerDialog(this,(time,h,min)->{
                 c.set(Calendar.HOUR_OF_DAY,h);c.set(Calendar.MINUTE,min);
                 c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);
-                chosenAt=c.getTimeInMillis();refreshWhen();
+                chosenAt=c.getTimeInMillis();timeConfirmed=true;refreshWhen();
             },c.get(Calendar.HOUR_OF_DAY),c.get(Calendar.MINUTE),true).show();
         },c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();
     }
     private void refreshWhen(){if(whenLabel!=null)
-        whenLabel.setText("Fällig: "+format.format(new Date(chosenAt)));}
+        whenLabel.setText((timeConfirmed?"Fällig: ":"Bitte Termin bestätigen: ")+
+                format.format(new Date(chosenAt)));}
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
         if(request!=VOICE||result!=RESULT_OK||data==null||title==null)return;
@@ -178,14 +187,23 @@ public final class ReminderActivity extends Activity {
         ReminderVoiceParser.Parsed parsed=ReminderVoiceParser.parse(
                 results.get(0),System.currentTimeMillis());
         title.setText(parsed.title);
-        if(parsed.due>0){chosenAt=parsed.due;refreshWhen();}
-        else toast("Datum/Uhrzeit nicht sicher erkannt – bitte auswählen");
+        if(parsed.due>0){
+            chosenAt=parsed.due;timeConfirmed=true;refreshWhen();
+        }else{
+            timeConfirmed=false;
+            refreshWhen();
+            toast("Datum/Uhrzeit nicht sicher erkannt – bitte auswählen");
+        }
     }
-    private void save(){
+    private boolean save(){
         try{
+            if(!timeConfirmed){
+                toast("Bitte Datum und Uhrzeit bestätigen.");
+                return false;
+            }
             if(!AlarmScheduler.canSchedule(this)){
                 toast("Genaue Alarme fehlen – im Einrichtungsassistenten erlauben.");
-                return;
+                return false;
             }
             int minutes=new int[]{5,10,30}[postpone.getSelectedItemPosition()];
             int id=ReminderStore.create(this,title.getText().toString(),chosenAt,
@@ -198,8 +216,10 @@ public final class ReminderActivity extends Activity {
                 throw failure;
             }
             toast("Erinnerung gespeichert und eingeplant");render();
+            return true;
         }catch(RuntimeException e){
             toast("Erinnerung nicht planbar: "+e.getMessage());
+            return false;
         }
     }
     private void toast(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
