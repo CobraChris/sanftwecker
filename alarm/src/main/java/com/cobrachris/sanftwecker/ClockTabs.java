@@ -12,18 +12,18 @@ import android.widget.TextView;
 
 /** Shared native navigation: independent pages, consistent dark appearance. */
 public final class ClockTabs {
-    public static final int ALARMS=0, TIMERS=1, STOPWATCH=2, WORLD_CLOCK=3;
+    public static final int ALARMS=0, TIMERS=1, STOPWATCH=2, WORLD_CLOCK=3, REMINDERS=4;
     private static final String BAR_MARKER="sanftwecker-clock-navigation";
     private ClockTabs(){}
     public static void add(Activity c,LinearLayout parent,int selected){
         LinearLayout bar=UiKit.row(c);
         bar.setTag(BAR_MARKER);
-        String[] names={"Wecker","Timer","Stoppuhr","Weltuhr"};
+        String[] names={"Wecker","Timer","Stoppuhr","Weltuhr","Erinnerungen"};
         Class<?>[] targets={MainActivity.class,TimerActivity.class,
-                StopwatchActivity.class,WorldClockActivity.class};
+                StopwatchActivity.class,WorldClockActivity.class,ReminderActivity.class};
         for(int i=0;i<names.length;i++){
             final int index=i;
-            TextView tab=UiKit.label(c,names[i],14,
+            TextView tab=UiKit.label(c,names[i],i==REMINDERS?11:12,
                     i==selected?UiKit.BLUE:Color.rgb(194,200,219));
             tab.setTypeface(Typeface.DEFAULT,i==selected?Typeface.BOLD:Typeface.NORMAL);
             tab.setGravity(Gravity.CENTER);
