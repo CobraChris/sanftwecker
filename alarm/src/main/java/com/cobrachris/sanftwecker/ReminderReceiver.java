@@ -16,6 +16,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
         if(ReminderScheduler.FIRE.equals(action)){
             ReminderNotice.show(c,item,!item.cascade);
             ReminderWatchBridge.start(c,item);
+            if(!item.cascade)ReminderToneService.start(c,item);
             if(item.cascade){
                 try{ReminderScheduler.scheduleEscalation(c,item);}
                 catch(RuntimeException e){Log.w("Sanftwecker","Reminder escalation unavailable",e);}
