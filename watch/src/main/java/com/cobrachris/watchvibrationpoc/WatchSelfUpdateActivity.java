@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -25,6 +27,8 @@ public final class WatchSelfUpdateActivity extends Activity {
     private WatchSelfUpdateClient.Candidate candidate;
     private Uri verified;
     private boolean busy,awaitingSourcePermission;
+    private ColorStateList normalInstallTint;
+    private int normalStatusColor;
 
     private int dp(float size){
         return Math.round(size*getResources().getDisplayMetrics().density);
@@ -38,6 +42,14 @@ public final class WatchSelfUpdateActivity extends Activity {
         download.setEnabled(!busy&&candidate!=null);
         install.setVisibility(ready?View.VISIBLE:View.GONE);
         install.setEnabled(ready);
+        // Use a distinct success color only when a locally verified newer APK
+        // is truly present. Never advertise a mere queued transfer as ready.
+        install.setBackgroundTintList(ready?
+                ColorStateList.valueOf(Color.rgb(30,150,78)):normalInstallTint);
+        install.setTextColor(ready?Color.WHITE:Color.BLACK);
+        status.setTextColor(ready?Color.rgb(112,235,160):normalStatusColor);
+        if(ready)install.setText("✓ UPDATE v"+candidate.code+" INSTALLIEREN");
+        else install.setText("Update installieren");
     }
     private boolean idle(){
         try{WatchSelfUpdateClient.requireIdleAlarm(this);return true;}
@@ -80,6 +92,8 @@ public final class WatchSelfUpdateActivity extends Activity {
         // A verified, phone-delivered APK needs only the install consent.
         install=new Button(this);
         install.setText("JETZT UPDATE INSTALLIEREN");
+        normalInstallTint=install.getBackgroundTintList();
+        normalStatusColor=status.getCurrentTextColor();
         install.setTextSize(14);
         content.addView(install,new LinearLayout.LayoutParams(usableWidth,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -113,8 +127,8 @@ public final class WatchSelfUpdateActivity extends Activity {
             candidate=new WatchSelfUpdateClient.Candidate(
                 "sanftwecker-v"+code,"phone-relay","",code);
             verified=fromPhone;
-            show("Watch v"+code+" bereits vom Handy empfangen und geprüft. "+
-                "Nur noch Android-Installation bestätigen.");
+            show("✓ UPDATE BEREIT: Watch v"+code+" wurde geprüft. "+
+                "Grüne Taste antippen und Android-Installation bestätigen.");
             buttons();
         }catch(Exception error){show("Handy-Update noch nicht bereit: "+error.getMessage());}
     }
