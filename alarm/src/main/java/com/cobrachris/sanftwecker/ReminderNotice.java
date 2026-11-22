@@ -37,7 +37,9 @@ public final class ReminderNotice {
         vibration.setSound(null,null);
         vibration.enableVibration(true);
         manager.createNotificationChannel(vibration);
-        Intent open=new Intent(c,ReminderActivity.class);
+        Intent open=new Intent(c,ReminderOptionsActivity.class)
+            .putExtra(ReminderScheduler.ID,item.id)
+            .putExtra(ReminderScheduler.DUE,item.dueAt);
         PendingIntent view=PendingIntent.getActivity(c,BASE+item.id,open,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder=new Notification.Builder(c,
@@ -56,8 +58,7 @@ public final class ReminderNotice {
                     android.R.drawable.ic_input_add,"Erledigt",
                     ReminderScheduler.pending(c,item.id,item.dueAt,ReminderScheduler.DONE)).build())
                 .addAction(new Notification.Action.Builder(
-                    android.R.drawable.ic_menu_recent_history,"+"+item.postponeMinutes+" Min.",
-                    ReminderScheduler.pending(c,item.id,item.dueAt,ReminderScheduler.LATER)).build())
+                    android.R.drawable.ic_menu_recent_history,"Alle Optionen",view).build())
                 .addAction(new Notification.Action.Builder(
                     android.R.drawable.ic_media_pause,"Alarm stoppen",
                     ReminderScheduler.pending(c,item.id,item.dueAt,ReminderScheduler.STOP)).build());
