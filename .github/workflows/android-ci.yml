@@ -62,6 +62,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v51 original-signer release gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v51-release-request.mjs
+          node --test tests/sanftwecker-v51-release-request.test.mjs
       - name: Verify v50 owner-controlled original signer release gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v50-release-request.mjs
