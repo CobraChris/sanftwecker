@@ -29,3 +29,15 @@ test('visible notification points to already verified installation without auto 
  assert.match(incoming,/new Intent\(context,WatchSelfUpdateActivity.class\)/);
  assert.doesNotMatch(incoming,/silentInstall|setRequireUserAction\(.*NOT_REQUIRED/);
 });
+
+test('only a verified newer watch APK gets green install highlight and success message',()=>{
+ const ui=read('watch/src/main/java/com/cobrachris/watchvibrationpoc/WatchSelfUpdateActivity.java');
+ assert.match(ui,/boolean ready=!busy&&verified!=null&&candidate!=null/);
+ assert.match(ui,/ColorStateList\.valueOf\(Color\.rgb\(30,150,78\)\):normalInstallTint/);
+ assert.match(ui,/status\.setTextColor\(ready\?Color\.rgb\(112,235,160\):normalStatusColor\)/);
+ assert.match(ui,/if\(ready\)install\.setText\("✓ UPDATE v"\+candidate\.code\+" INSTALLIEREN"\)/);
+ assert.match(ui,/✓ UPDATE BEREIT: Watch v/);
+ assert.match(ui,/normalInstallTint=install\.getBackgroundTintList\(\)/);
+ assert.match(ui,/PhoneDeliveredWatchUpdate\.verifiedPending\(this\)/);
+ assert.doesNotMatch(ui,/setRequireUserAction\(.*NOT_REQUIRED/);
+});
