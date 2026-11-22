@@ -29,12 +29,12 @@ test('reminders never share clock or timer identity and stay open until done',()
 });
 test('notification offers done, postpone and stop with separate gentle / strong channel',()=>{
  const notice=phone('ReminderNotice');
- for(const name of ['REMINDER_DONE','REMINDER_LATER','REMINDER_STOP'])
+ for(const name of ['REMINDER_DONE','REMINDER_STOP'])
    assert.match(notice,new RegExp(name.replace('REMINDER_','')));
  assert.match(notice,/sanftwecker_reminder_soft_v1/);
  assert.match(notice,/sanftwecker_reminder_strong_custom_v2/);
  assert.match(notice,/ReminderScheduler\.DONE/);
- assert.match(notice,/ReminderScheduler\.LATER/);
+ assert.match(notice,/ReminderOptionsActivity\.class/);
  assert.match(notice,/ReminderScheduler\.STOP/);
 });
 test('Watch cascade is not routed through existing wake alarm or timer IDs',()=>{
@@ -88,7 +88,7 @@ test('strong reminder chooses system tone or silent vibration without other alar
  const notice=phone('ReminderNotice'),model=phone('ReminderStore');
  assert.match(notice,/VIBRATE_ONLY/);
  assert.match(notice,/item\.phoneSound\?STRONG:VIBRATE_ONLY/);
- assert.match(notice,/item\.postponeMinutes/);
+ assert.match(notice,/"Alle Optionen"/);
  assert.match(model,/putBoolean\(id\+"_sound",phoneSound\)/);
 });
 
