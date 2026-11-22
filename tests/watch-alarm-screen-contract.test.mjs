@@ -190,7 +190,7 @@ test('alarm home focuses on alarms while preserving all critical maintenance pat
 
 test('five clock navigation tabs remain pinned while each content page scrolls',()=>{
     const tabs=read('alarm/src/main/java/com/cobrachris/sanftwecker/ClockTabs.java');
-    assert.match(tabs,/String\[\] names=\{"Wecker","Timer","Stoppuhr","Weltuhr","Erinnerungen"\}/);
+    assert.match(tabs,/String\[\] names=\{"Wecker","Erinnerungen","Timer","Stoppuhr","Weltuhr"\}/);
     assert.match(tabs,/bar.setTag\(BAR_MARKER\)/);
     assert.match(tabs,/scrollColumn.removeView\(bar\)/);
     assert.match(tabs,/frame.addView\(bar,new LinearLayout.LayoutParams\(/);
