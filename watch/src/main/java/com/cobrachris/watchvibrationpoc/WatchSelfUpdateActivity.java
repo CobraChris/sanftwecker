@@ -31,9 +31,13 @@ public final class WatchSelfUpdateActivity extends Activity {
     }
     private void show(String text){status.setText(text);}
     private void buttons(){
+        boolean ready=!busy&&verified!=null&&candidate!=null;
+        check.setVisibility(ready?View.GONE:View.VISIBLE);
+        download.setVisibility(ready?View.GONE:View.VISIBLE);
         check.setEnabled(!busy);
         download.setEnabled(!busy&&candidate!=null);
-        install.setEnabled(!busy&&verified!=null);
+        install.setVisibility(ready?View.VISIBLE:View.GONE);
+        install.setEnabled(ready);
     }
     private boolean idle(){
         try{WatchSelfUpdateClient.requireIdleAlarm(this);return true;}
@@ -73,21 +77,23 @@ public final class WatchSelfUpdateActivity extends Activity {
         hint.setGravity(Gravity.CENTER);hint.setTextSize(11);
 
         check=new Button(this);check.setText("Update suchen");check.setTextSize(13);
+        // A verified, phone-delivered APK needs only the install consent.
+        install=new Button(this);
+        install.setText("JETZT UPDATE INSTALLIEREN");
+        install.setTextSize(14);
+        content.addView(install,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        install.setOnClickListener(v->confirmInstall());
+        content.addView(status,new LinearLayout.LayoutParams(usableWidth,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         content.addView(check,new LinearLayout.LayoutParams(usableWidth,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         check.setOnClickListener(v->checkUpdate());
-        content.addView(status,new LinearLayout.LayoutParams(usableWidth,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
         download=new Button(this);download.setText("APK laden und prüfen");
         download.setTextSize(13);
         content.addView(download,new LinearLayout.LayoutParams(usableWidth,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         download.setOnClickListener(v->downloadUpdate());
-        install=new Button(this);install.setText("Update installieren");
-        install.setTextSize(13);
-        content.addView(install,new LinearLayout.LayoutParams(usableWidth,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        install.setOnClickListener(v->confirmInstall());
         content.addView(hint,new LinearLayout.LayoutParams(usableWidth,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
@@ -107,8 +113,8 @@ public final class WatchSelfUpdateActivity extends Activity {
             candidate=new WatchSelfUpdateClient.Candidate(
                 "sanftwecker-v"+code,"phone-relay","",code);
             verified=fromPhone;
-            show("Vom Handy empfangen: Watch v"+code+" geprüft. "+
-                "Mit 'Update installieren' auf dieser Uhr fortfahren.");
+            show("Watch v"+code+" bereits vom Handy empfangen und geprüft. "+
+                "Nur noch Android-Installation bestätigen.");
             buttons();
         }catch(Exception error){show("Handy-Update noch nicht bereit: "+error.getMessage());}
     }
