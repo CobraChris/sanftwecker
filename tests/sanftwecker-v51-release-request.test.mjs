@@ -19,7 +19,7 @@ test('v51 approval must explicitly authorize both APKs with original signers',()
   assert.deepEqual(validateRequest(valid),
     {source_sha:source,expected_version_code:'51'});
   for(const update of [
-    {expected_version_code:50},{expected_version_code:51},{source_sha:'main'},
+    {expected_version_code:50},{expected_version_code:52},{source_sha:'main'},
     {source_sha:'C'.repeat(40)},{source_sha:'a'.repeat(41)},
     {watch_application_id:'com.cobrachris.watchvibrationpoc'},
     {confirmation:'GENERATE_NEW_KEY'},{confirmation:'SIGN_PHONE_ONLY'},
@@ -79,7 +79,7 @@ test('dual-device signed v51 reminder and cascade requires exact owner approval'
     "versionCode='50'",
     "versionCode='51'",
     'assert expected==51',
-    'assert e[\'versionCode\']==50',
+    'assert e[\'versionCode\']==51',
     'android.hardware.type.watch',
     'APP_SIGNING_KEYSTORE_BASE64',
     'APP_SIGNING_STORE_PASSWORD',
