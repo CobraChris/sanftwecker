@@ -18,9 +18,9 @@ public final class ClockTabs {
     public static void add(Activity c,LinearLayout parent,int selected){
         LinearLayout bar=UiKit.row(c);
         bar.setTag(BAR_MARKER);
-        String[] names={"Wecker","Timer","Stoppuhr","Weltuhr","Erinnerungen"};
-        Class<?>[] targets={MainActivity.class,TimerActivity.class,
-                StopwatchActivity.class,WorldClockActivity.class,ReminderActivity.class};
+        String[] names={"Wecker","Erinnerungen","Timer","Stoppuhr","Weltuhr"};
+        Class<?>[] targets={MainActivity.class,ReminderActivity.class,
+                TimerActivity.class,StopwatchActivity.class,WorldClockActivity.class};
         for(int i=0;i<names.length;i++){
             final int index=i;
             TextView tab=UiKit.label(c,names[i],i==REMINDERS?11:12,
@@ -45,7 +45,7 @@ public final class ClockTabs {
     }
 
     /**
-     * Keep all four navigation tabs visible while the page scrolls.
+     * Keep all five navigation tabs visible while the page scrolls.
      * Existing screens still call add() in the usual position; pin()
      * relocates that bar once and leaves the rest of the page untouched.
      */
