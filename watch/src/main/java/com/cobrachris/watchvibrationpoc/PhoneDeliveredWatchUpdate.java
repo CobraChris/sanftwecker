@@ -23,7 +23,7 @@ import java.util.Locale;
 public final class PhoneDeliveredWatchUpdate {
     public static final String PATH="/sanftwecker/update/v1/apk";
     private static final String PREF="phone_delivered_watch_update";
-    private static final String CHANNEL="sanftwecker_watch_update_ready";
+    private static final String CHANNEL="sanftwecker_watch_update_ready_v2";
     private PhoneDeliveredWatchUpdate(){}
 
     public static void receive(Context context,Asset asset,long code,String sha){
@@ -96,14 +96,16 @@ public final class PhoneDeliveredWatchUpdate {
             context.getSystemService(Context.NOTIFICATION_SERVICE);
         if(nm==null)return;
         nm.createNotificationChannel(new NotificationChannel(
-            CHANNEL,"Sanftwecker Update",NotificationManager.IMPORTANCE_DEFAULT));
+            CHANNEL,"Sanftwecker-Update installieren",NotificationManager.IMPORTANCE_HIGH));
         PendingIntent click=PendingIntent.getActivity(context,46,
             new Intent(context,WatchSelfUpdateActivity.class),
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification notice=new Notification.Builder(context,CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("Watch-Update v"+code+" bereit")
-            .setContentText("Geprüft. Installation auf der Uhr bestätigen")
+            .setContentText("Jetzt antippen: geprüfte APK installieren")
+            .setCategory(Notification.CATEGORY_STATUS)
+            .setPriority(Notification.PRIORITY_HIGH)
             .setContentIntent(click).setAutoCancel(true).build();
         try{nm.notify(4600,notice);}catch(SecurityException ignored){}
     }
