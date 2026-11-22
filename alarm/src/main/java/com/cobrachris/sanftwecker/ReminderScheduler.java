@@ -15,6 +15,8 @@ public final class ReminderScheduler {
     public static final String DONE="com.cobrachris.sanftwecker.REMINDER_DONE";
     public static final String LATER="com.cobrachris.sanftwecker.REMINDER_LATER";
     public static final String STOP="com.cobrachris.sanftwecker.REMINDER_STOP";
+    public static final String CHOICE="com.cobrachris.sanftwecker.REMINDER_CHOICE";
+    public static final String DELAY="reminder_delay";
     public static final String ID="reminder_id",DUE="reminder_due";
     private static final int BASE=150000;
     private ReminderScheduler(){}
@@ -24,6 +26,16 @@ public final class ReminderScheduler {
         int offset=ESCALATE.equals(action)?10000:DONE.equals(action)?20000:
                 LATER.equals(action)?30000:STOP.equals(action)?40000:0;
         return PendingIntent.getBroadcast(c,BASE+offset+id,i,
+            PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    /** Distinct immutable choices are checked again against the live occurrence. */
+    public static PendingIntent choice(Context c,int id,long due,int minutes){
+        if(minutes!=10&&minutes!=30&&minutes!=60&&minutes!=-1)
+            throw new IllegalArgumentException("Ungültige Erinnerungsauswahl");
+        Intent intent=new Intent(c,ReminderReceiver.class).setAction(CHOICE)
+            .putExtra(ID,id).putExtra(DUE,due).putExtra(DELAY,minutes);
+        int slot=minutes==-1?4:minutes==10?1:minutes==30?2:3;
+        return PendingIntent.getBroadcast(c,200000+slot*10000+id,intent,
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
     public static void cancel(Context c,int id){
