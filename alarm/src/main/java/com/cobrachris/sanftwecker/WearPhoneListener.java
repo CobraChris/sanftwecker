@@ -35,17 +35,25 @@ public final class WearPhoneListener extends WearableListenerService {
         }
         if(ReminderWatchBridge.ACTION.equals(event.getPath())){
             String value=new String(event.getData(),StandardCharsets.UTF_8);
-            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(done|later|stop)"))
+            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(done|later|stop|later10|later30|later60|tomorrow)"))
                 return;
             String[] parts=value.split(":");
             int id=Integer.parseInt(parts[0]);
             long due=Long.parseLong(parts[1]);
             ReminderStore.Item reminder=ReminderStore.get(this,id);
             if(reminder==null||reminder.done||reminder.dueAt!=due)return;
-            String action="done".equals(parts[2])?ReminderScheduler.DONE:
-                "later".equals(parts[2])?ReminderScheduler.LATER:ReminderScheduler.STOP;
-            sendBroadcast(new Intent(this,ReminderReceiver.class).setAction(action)
-                .putExtra(ReminderScheduler.ID,id).putExtra(ReminderScheduler.DUE,due));
+            String choice=parts[2];
+            String action="done".equals(choice)?ReminderScheduler.DONE:
+                "later".equals(choice)?ReminderScheduler.LATER:
+                "stop".equals(choice)?ReminderScheduler.STOP:ReminderScheduler.CHOICE;
+            Intent request=new Intent(this,ReminderReceiver.class).setAction(action)
+                .putExtra(ReminderScheduler.ID,id).putExtra(ReminderScheduler.DUE,due);
+            if(ReminderScheduler.CHOICE.equals(action)){
+                int delay="tomorrow".equals(choice)?-1:
+                    Integer.parseInt(choice.substring("later".length()));
+                request.putExtra(ReminderScheduler.DELAY,delay);
+            }
+            sendBroadcast(request);
             return;
         }
         if(TimerWatchPacket.WATCH_EXTEND.equals(event.getPath())){

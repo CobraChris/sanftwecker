@@ -35,6 +35,7 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_file_paths"/>
         </provider>
+        <activity android:name=".ReminderOptionsActivity" android:exported="false"/>
         <activity android:name=".ReminderActivity" android:exported="false"/>
         <receiver android:name=".ReminderReceiver" android:exported="false"/>
         <activity android:name=".TimerActivity" android:exported="false"/>

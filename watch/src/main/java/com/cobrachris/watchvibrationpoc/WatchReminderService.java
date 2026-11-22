@@ -29,6 +29,7 @@ public final class WatchReminderService extends Service {
     public static final String DONE="com.cobrachris.sanftwecker.REMINDER_WATCH_DONE";
     public static final String LATER="com.cobrachris.sanftwecker.REMINDER_WATCH_LATER";
     public static final String USER_STOP="com.cobrachris.sanftwecker.REMINDER_WATCH_USER_STOP";
+    public static final String CHOICE="com.cobrachris.sanftwecker.REMINDER_WATCH_CHOICE";
     private static final String CHANNEL="sanftwecker_watch_reminder_v1";
     private static final int NOTIFY_ID=49010;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -100,17 +101,24 @@ public final class WatchReminderService extends Service {
         return PendingIntent.getService(this,request,intent,
             PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
+    private PendingIntent options(){
+        Intent open=new Intent(this,WatchReminderOptionsActivity.class)
+            .putExtra("id",id).putExtra("due",due);
+        return PendingIntent.getActivity(this,49511,open,
+            PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
     private void show(){
         Notification notification=new Notification.Builder(this,CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("Erinnerung")
-            .setContentText("Erledigt, später oder nur Alarm stoppen")
+            .setContentText("10 / 30 / 60 Minuten / morgen / stoppen")
+            .setContentIntent(options())
             .setCategory(Notification.CATEGORY_REMINDER)
             .setOngoing(true)
             .addAction(new Notification.Action.Builder(
                 android.R.drawable.ic_input_add,"Erledigt",action(DONE,49501)).build())
             .addAction(new Notification.Action.Builder(
-                android.R.drawable.ic_menu_recent_history,"+"+postponeMinutes+" Min.",action(LATER,49502)).build())
+                android.R.drawable.ic_menu_recent_history,"Optionen",options()).build())
             .addAction(new Notification.Action.Builder(
                 android.R.drawable.ic_media_pause,"Stoppen",action(USER_STOP,49503)).build())
             .build();
@@ -142,6 +150,15 @@ public final class WatchReminderService extends Service {
         String action=intent.getAction();
         int requestedId=intent.getIntExtra("id",0);
         long when=intent.getLongExtra("due",0);
+        if(CHOICE.equals(action)){
+            int minutes=intent.getIntExtra("choice",0);
+            if(minutes!=10&&minutes!=30&&minutes!=60&&minutes!=-1)
+                return START_NOT_STICKY;
+            if(requestedId!=id||when!=due||due<=0)return START_NOT_STICKY;
+            reply(minutes==-1?"tomorrow":"later"+minutes);
+            stopLocal();
+            return START_NOT_STICKY;
+        }
         if(DONE.equals(action)||LATER.equals(action)||USER_STOP.equals(action)){
             if(requestedId!=id||when!=due||due<=0)return START_NOT_STICKY;
             reply(DONE.equals(action)?"done":LATER.equals(action)?"later":"stop");

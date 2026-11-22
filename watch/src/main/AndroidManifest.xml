@@ -27,6 +27,7 @@
             android:turnScreenOn="true"
             android:launchMode="singleTop"
             android:excludeFromRecents="true" />
+        <activity android:name=".WatchReminderOptionsActivity" android:exported="false" />
         <activity android:name=".WatchSelfUpdateActivity" android:exported="false" />
         <receiver android:name=".WatchUpdateInstalledReceiver" android:exported="false">
             <intent-filter>

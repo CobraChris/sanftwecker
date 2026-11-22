@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
+import java.util.Calendar;
 
 public final class ReminderReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c,Intent intent){
@@ -36,6 +37,33 @@ public final class ReminderReceiver extends BroadcastReceiver {
             if(next!=null&&!next.done){
                 try{ReminderScheduler.schedule(c,id);}
                 catch(RuntimeException e){Log.e("Sanftwecker","Recurring reminder not scheduled",e);}
+            }
+        }else if(ReminderScheduler.CHOICE.equals(action)){
+            int delay=intent.getIntExtra(ReminderScheduler.DELAY,0);
+            if(delay!=10&&delay!=30&&delay!=60&&delay!=-1)return;
+            long next;
+            if(delay==-1){
+                // Tomorrow, at the original local reminder clock time.
+                Calendar tomorrow=Calendar.getInstance();
+                Calendar original=Calendar.getInstance();
+                original.setTimeInMillis(item.anchorAt);
+                tomorrow.add(Calendar.DAY_OF_YEAR,1);
+                tomorrow.set(Calendar.HOUR_OF_DAY,original.get(Calendar.HOUR_OF_DAY));
+                tomorrow.set(Calendar.MINUTE,original.get(Calendar.MINUTE));
+                tomorrow.set(Calendar.SECOND,0);
+                tomorrow.set(Calendar.MILLISECOND,0);
+                next=tomorrow.getTimeInMillis();
+            }else next=System.currentTimeMillis()+delay*60_000L;
+            if(!AlarmScheduler.canSchedule(c))return;
+            ReminderScheduler.cancel(c,id);
+            ReminderNotice.clear(c,id);
+            ReminderWatchBridge.stop(c,item);
+            ReminderToneService.stop(c,item);
+            ReminderStore.postpone(c,id,next);
+            try{ReminderScheduler.schedule(c,id);}
+            catch(RuntimeException error){
+                Log.e("Sanftwecker","Snoozed reminder could not be scheduled",error);
+                ReminderNotice.show(c,ReminderStore.get(c,id),false);
             }
         }else if(ReminderScheduler.LATER.equals(action)){
             ReminderScheduler.cancel(c,id);
