@@ -90,7 +90,7 @@ test('dual-device signed v51 reminder and cascade requires exact owner approval'
     '--prerelease'
   ];
   for(const token of checks)assert.ok(yml.includes(token),token);
-  assert.equal(EXPECTED_CODE,50);
+  assert.equal(EXPECTED_CODE,51);
   assert.equal(EXPECTED_PACKAGE,'com.cobrachris.sanftwecker');
   assert.equal(PHONE_V50_SHA256.length,64);
   assert.equal(WATCH_V50_SHA256.length,64);
