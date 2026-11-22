@@ -66,6 +66,8 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v50-release-request.mjs
           node --test tests/sanftwecker-v50-release-request.test.mjs
+      - name: Verify v51 reminder tab and one-step Watch installation UX
+        run: node --test tests/v51-watch-update-one-step-ux.test.mjs
       - name: Verify v50 independent voice-enabled reminders and cascade contracts
         run: node --test tests/v50-reminders-foundation-contract.test.mjs
       - name: Verify v49 licensed Wear tile, watch-face, and confirmed timer feedback
