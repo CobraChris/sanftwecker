@@ -35,7 +35,7 @@ public final class WearPhoneListener extends WearableListenerService {
         }
         if(ReminderWatchBridge.ACTION.equals(event.getPath())){
             String value=new String(event.getData(),StandardCharsets.UTF_8);
-            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(done|later|stop)"))
+            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(done|later|stop|later10|later30|later60|tomorrow)"))
                 return;
             String[] parts=value.split(":");
             int id=Integer.parseInt(parts[0]);
