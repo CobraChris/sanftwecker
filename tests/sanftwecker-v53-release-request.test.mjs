@@ -27,7 +27,7 @@ test('one added release request, no source modifications in approval commit',()=
         'A\t'+REQUEST+'\nM\twatch/build.gradle',
         'A\t'+REQUEST+'\nA\tother.json'])
         assert.throws(()=>validateDiff(before,after,diff,before));
-    assert.throws(()=>validateDiff(after,before,'A\t'+REQUEST,after));
+    assert.throws(()=>validateDiff(after,before,'A\t'+REQUEST,before));
 });
 test('only original owner may release by main push',()=>{
     const good={GITHUB_REPOSITORY:REPO,GITHUB_ACTOR:'CobraChris',
