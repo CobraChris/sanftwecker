@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V52_WITH_EXISTING_V51_CERTIFICATE",
+  "expected_version_code": 52,
+  "intent": "signed-native-wear-v52",
+  "request_id": "2026-11-23-v52-reminder-edit-snooze-import-owner-approved",
+  "source_sha": "dace0baf1d7f3cde3daff3773962ff86071812d0",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
