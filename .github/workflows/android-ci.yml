@@ -78,6 +78,8 @@ jobs:
         run: node --test tests/v51-reminder-quick-choices.test.mjs
       - name: Verify v51 reminder tab and one-step Watch installation UX
         run: node --test tests/v51-watch-update-one-step-ux.test.mjs
+      - name: Verify time-sensitive reminder full-screen display and options
+        run: node --test tests/v53-reminder-fullscreen-contract.test.mjs
       - name: Verify v52 reminder edits, lockscreen snooze and safe screenshot import
         run: node --test tests/v52-reminder-import-snooze-permission-contract.test.mjs
       - name: Verify v50 independent voice-enabled reminders and cascade contracts
