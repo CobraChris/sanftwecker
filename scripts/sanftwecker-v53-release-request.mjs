@@ -10,7 +10,7 @@ export const REPO='CobraChris/sanftwecker';
 export const REQUEST='requests/sanftwecker-v53-release.json';
 export const EXPECTED_CODE=53;
 export const PHONE_V52_SHA256='d4a7e6b87e6615be551ea7eaed6ddf603d1a8604d37611f887edf6f19e7ce534';
-export const WATCH_V52_SHA256='26aa6e2af0dc7e58962419f953704eb1bae428cf84c6e2ef7c996aeb11fdaadb';
+export const WATCH_V52_SHA256='1dfb414265f33e6a2acb1491ad1dc36803db450d9549122395ca7fb3d6b8fe8d';
 export const EXPECTED_PACKAGE='com.cobrachris.sanftwecker';
 export function validateActor(e){
   if(e.GITHUB_REPOSITORY!==REPO||e.GITHUB_ACTOR!=='CobraChris'||
