@@ -52,7 +52,6 @@ public final class SanftweckerWearListener extends WearableListenerService {
             Intent command=new Intent(this,WatchReminderService.class)
                     .putExtra("id",id).putExtra("due",due)
                     .putExtra("cascade","1".equals(a[2]))
-                    .putExtra("unified_cascade",a.length==8 && "1".equals(a[7]))
                     .putExtra("intensity",Integer.parseInt(a[3]))
                     .putExtra("pulses",Integer.parseInt(a[4]))
                     .putExtra("interval",Integer.parseInt(a[5]))
