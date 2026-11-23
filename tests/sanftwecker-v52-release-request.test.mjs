@@ -75,7 +75,7 @@ test('protected v52 release checks original v51 both devices before sign and pub
         "cmp -s legacy/phone/cert.sha legacy/watch/cert.sha",
         "cmp -s signed/phone.cert.sha signed/watch.cert.sha",
         "cmp -s signed/phone.cert.sha legacy/phone/cert.sha",
-        "cmp -s signed/watch.cert.sha legacy/watch.cert.sha",
+        "cmp -s signed/watch.cert.sha legacy/watch/cert.sha",
         "versionCode='51'","versionCode='52'",
         "assert expected==52","assert e['versionCode']==52",
         "sanftwecker-watch-v52.apk","android.hardware.type.watch",
@@ -91,7 +91,7 @@ test('protected v52 release checks original v51 both devices before sign and pub
     assert.ok(yml.indexOf('if gh release view sanftwecker-v52')<
         yml.indexOf('Sign both original-certificate APKs'));
     assert.doesNotMatch(yml,/workflow_dispatch:|pull_request_target:|genkeypair/);
-    assert.doesNotMatch(yml,/uses:\\s*[^\\s]+@v[0-9]+\\s*$/m);
+    assert.doesNotMatch(yml,/uses:\s*[^\s]+@v[0-9]+\s*$/m);
     assert.equal(PHONE_V51_SHA256.length,64);
     assert.equal(WATCH_V51_SHA256.length,64);
 });
