@@ -21,6 +21,8 @@ public final class PhoneVibration {
     private static Vibrator activeVibrator;
     private static boolean alarmRunning;
     private static int generation;
+    private static int reminderId;
+    private static long reminderWhen;
 
     private PhoneVibration() {}
 
@@ -90,6 +92,22 @@ public final class PhoneVibration {
                 "Handyvibration gestartet – automatische Abschaltung nach 90 s");
     }
 
+    /** Share the same vibration patterns, but never preempt a genuine wake alarm. */
+    public static synchronized boolean startReminder(Context c,int mode,int id,long due){
+        if(id<1||due<=0||ActiveAlarmState.activeId(c)>0)return false;
+        start(c,mode);
+        if(!alarmRunning)return false;
+        reminderId=id;
+        reminderWhen=due;
+        return true;
+    }
+
+    /** Do not let a reminder stop a newer reminder or a genuine alarm. */
+    public static synchronized void stopReminder(Context c,int id,long due){
+        if(id==reminderId&&due==reminderWhen &&
+                ActiveAlarmState.activeId(c)<=0)stop();
+    }
+
     /** One preview only; the activity shows the stop dialog BEFORE invoking this. */
     public static synchronized boolean preview(Context context,int mode) {
         if(alarmRunning)return false;
@@ -116,6 +134,8 @@ public final class PhoneVibration {
     public static synchronized void stop() {
         generation++;
         alarmRunning=false;
+        reminderId=0;
+        reminderWhen=0;
         HANDLER.removeCallbacksAndMessages(null);
         if(activeVibrator!=null){
             try{activeVibrator.cancel();}catch(RuntimeException ignored){}

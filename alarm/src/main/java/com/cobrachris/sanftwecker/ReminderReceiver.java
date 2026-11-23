@@ -15,9 +15,9 @@ public final class ReminderReceiver extends BroadcastReceiver {
         ReminderStore.Item item=ReminderStore.get(c,id);
         if(item==null||item.done||due!=item.dueAt)return;
         if(ReminderScheduler.FIRE.equals(action)){
-            ReminderNotice.show(c,item,!item.cascade);
+            ReminderNotice.show(c,item,!item.cascade,true);
             ReminderWatchBridge.start(c,item);
-            if(!item.cascade)ReminderToneService.start(c,item);
+            if(!item.cascade||item.unifiedCascade)ReminderToneService.start(c,item);
             if(item.cascade){
                 try{ReminderScheduler.scheduleEscalation(c,item);}
                 catch(RuntimeException e){Log.w("Sanftwecker","Reminder escalation unavailable",e);}
@@ -26,12 +26,15 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderNotice.show(c,item,true);
             ReminderWatchBridge.escalate(c,item);
             ReminderToneService.start(c,item);
+            if(item.unifiedCascade)PhoneVibration.startReminder(c,
+                    WakeCascade.phoneMode(0),item.id,item.dueAt);
         }else if(ReminderScheduler.DONE.equals(action)){
             ReminderStore.complete(c,id);
             ReminderScheduler.cancel(c,id);
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
             ReminderToneService.stop(c,item);
+            PhoneVibration.stopReminder(c,item.id,item.dueAt);
             // Completing a recurring occurrence arms the next independent one.
             ReminderStore.Item next=ReminderStore.get(c,id);
             if(next!=null&&!next.done){
@@ -59,6 +62,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
             ReminderToneService.stop(c,item);
+            PhoneVibration.stopReminder(c,item.id,item.dueAt);
             ReminderStore.postpone(c,id,next);
             try{ReminderScheduler.schedule(c,id);}
             catch(RuntimeException error){
@@ -70,6 +74,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderNotice.clear(c,id);
             ReminderWatchBridge.stop(c,item);
             ReminderToneService.stop(c,item);
+            PhoneVibration.stopReminder(c,item.id,item.dueAt);
             ReminderStore.postpone(c,id,System.currentTimeMillis()+item.postponeMinutes*60_000L);
             try{ReminderScheduler.schedule(c,id);}
             catch(RuntimeException e){Log.w("Sanftwecker","Reminder postpone needs exact-alarm access",e);}
@@ -79,6 +84,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderNotice.show(c,item,false);
             ReminderWatchBridge.stop(c,item);
             ReminderToneService.stop(c,item);
+            PhoneVibration.stopReminder(c,item.id,item.dueAt);
         }
     }
 }

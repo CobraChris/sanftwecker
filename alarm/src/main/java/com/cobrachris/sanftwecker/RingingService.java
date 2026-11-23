@@ -169,7 +169,12 @@ public final class RingingService extends Service {
         try {
             // Store the active occurrence before Android can open the
             // foreground notification. This is only a UI fallback, not alarm scheduling.
-            if(!toneOnlyPreview)ActiveAlarmState.start(this,ringId,ringWhen);
+            if(!toneOnlyPreview){
+                ActiveAlarmState.start(this,ringId,ringWhen);
+                // A wake alarm always preempts any reminder that is
+                // currently using the handset vibrator.
+                PhoneVibration.stop();
+            }
             startForegroundNotification();
             active = true;
             startedAt = SystemClock.elapsedRealtime();

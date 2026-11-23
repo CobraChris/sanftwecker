@@ -99,7 +99,9 @@ test('protected v52 release checks original v51 both devices before sign and pub
 test('both build modules are upgraded in lockstep without changing the application ID',()=>{
     for(const module of ['alarm','watch']){
         const gradle=readFileSync(new URL('../'+module+'/build.gradle',import.meta.url),'utf8');
-        assert.match(gradle,/versionCode 52/);
+        // This checks compatibility with the v52 release, not a frozen current build.
+        const version=gradle.match(/versionCode ([0-9]+)/);
+        assert.ok(version && Number(version[1])>=52);
         assert.match(gradle,/applicationId 'com.cobrachris.sanftwecker'/);
     }
 });

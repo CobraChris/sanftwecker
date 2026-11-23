@@ -13,6 +13,8 @@ import android.widget.TextView;
 public final class WatchReminderOptionsActivity extends Activity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        setShowWhenLocked(true);
+        setTurnScreenOn(true);
         int id=getIntent().getIntExtra("id",0);
         long due=getIntent().getLongExtra("due",0);
         if(id<=0||due<=0){finish();return;}

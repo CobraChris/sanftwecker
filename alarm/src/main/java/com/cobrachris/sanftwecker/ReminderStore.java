@@ -15,11 +15,13 @@ public final class ReminderStore {
         public final int id;
         public final String title;
         public final long dueAt,anchorAt;
-        public final boolean cascade,done;
+        public final boolean cascade,done,unifiedCascade;
         public final int watchIntensity,watchPulses,watchIntervalSeconds,repeat,postponeMinutes,tone;
         public final boolean phoneSound;
         Item(int id,String title,long dueAt,long anchorAt,boolean cascade,boolean done,
-                int intensity,int pulses,int interval,int repeat,int postponeMinutes,boolean phoneSound,int tone){
+                int intensity,int pulses,int interval,int repeat,int postponeMinutes,boolean phoneSound,int tone,
+                boolean unifiedCascade){
+            this.unifiedCascade=unifiedCascade;
             this.id=id;this.title=title;this.dueAt=dueAt;this.anchorAt=anchorAt;
             this.cascade=cascade;
             this.done=done;this.watchIntensity=intensity;
@@ -50,7 +52,8 @@ public final class ReminderStore {
             p.getBoolean(id+"_done",false),p.getInt(id+"_intensity",1),
             p.getInt(id+"_pulses",6),p.getInt(id+"_interval",5),
             p.getInt(id+"_repeat",0),p.getInt(id+"_postpone",10),
-            p.getBoolean(id+"_sound",true),p.getInt(id+"_tone",0));
+            p.getBoolean(id+"_sound",true),p.getInt(id+"_tone",0),
+            p.getBoolean(id+"_unified_cascade",false));
     }
     public static synchronized int create(Context c,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval){
@@ -59,6 +62,12 @@ public final class ReminderStore {
     public static synchronized int create(Context c,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval,
             int repeat,int postponeMinutes,boolean phoneSound,int tone){
+        return create(c,title,dueAt,cascade,intensity,pulses,interval,repeat,
+                postponeMinutes,phoneSound,tone,false);
+    }
+    public static synchronized int create(Context c,String title,long dueAt,
+            boolean cascade,int intensity,int pulses,int interval,
+            int repeat,int postponeMinutes,boolean phoneSound,int tone,boolean unifiedCascade){
         if(title==null||title.trim().isEmpty()||title.length()>200||
                 dueAt<=System.currentTimeMillis()||intensity<0||intensity>2||
                 pulses<1||pulses>30||interval<1||interval>60||
@@ -73,7 +82,8 @@ public final class ReminderStore {
                 .putInt(id+"_intensity",intensity).putInt(id+"_pulses",pulses)
                 .putInt(id+"_interval",interval).putBoolean(id+"_done",false)
                 .putInt(id+"_repeat",repeat).putInt(id+"_postpone",postponeMinutes)
-                .putBoolean(id+"_sound",phoneSound).putInt(id+"_tone",tone).commit())
+                .putBoolean(id+"_sound",phoneSound).putInt(id+"_tone",tone)
+                .putBoolean(id+"_unified_cascade",cascade&&unifiedCascade).commit())
             throw new IllegalStateException("Erinnerung nicht gespeichert");
         return id;
     }
@@ -81,6 +91,13 @@ public final class ReminderStore {
     public static synchronized void update(Context c,int id,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval,
             int repeat,int postponeMinutes,boolean phoneSound,int tone){
+        Item item=get(c,id);
+        update(c,id,title,dueAt,cascade,intensity,pulses,interval,repeat,
+                postponeMinutes,phoneSound,tone,item!=null&&item.unifiedCascade);
+    }
+    public static synchronized void update(Context c,int id,String title,long dueAt,
+            boolean cascade,int intensity,int pulses,int interval,
+            int repeat,int postponeMinutes,boolean phoneSound,int tone,boolean unifiedCascade){
         Item original=get(c,id);
         if(original==null)throw new IllegalArgumentException("Erinnerung nicht gefunden");
         if(title==null||title.trim().isEmpty()||title.length()>200||
@@ -96,7 +113,8 @@ public final class ReminderStore {
                 .putInt(id+"_intensity",intensity).putInt(id+"_pulses",pulses)
                 .putInt(id+"_interval",interval).putInt(id+"_repeat",repeat)
                 .putInt(id+"_postpone",postponeMinutes).putBoolean(id+"_sound",phoneSound)
-                .putInt(id+"_tone",tone).commit())
+                .putInt(id+"_tone",tone)
+                .putBoolean(id+"_unified_cascade",cascade&&unifiedCascade).commit())
             throw new IllegalStateException("Bearbeitung nicht gespeichert");
     }
 
@@ -112,7 +130,8 @@ public final class ReminderStore {
                 .putInt(item.id+"_repeat",item.repeat)
                 .putInt(item.id+"_postpone",item.postponeMinutes)
                 .putBoolean(item.id+"_sound",item.phoneSound)
-                .putInt(item.id+"_tone",item.tone).commit())
+                .putInt(item.id+"_tone",item.tone)
+                .putBoolean(item.id+"_unified_cascade",item.unifiedCascade).commit())
             throw new IllegalStateException("Vorherigen Zustand nicht wiederhergestellt");
     }
 
@@ -143,7 +162,8 @@ public final class ReminderStore {
         p.edit().remove(id+"_due").remove(id+"_title").remove(id+"_cascade")
           .remove(id+"_intensity").remove(id+"_pulses").remove(id+"_interval")
           .remove(id+"_done").remove(id+"_repeat").remove(id+"_postpone")
-          .remove(id+"_sound").remove(id+"_tone").remove(id+"_anchor").commit();
+          .remove(id+"_sound").remove(id+"_tone").remove(id+"_anchor")
+          .remove(id+"_unified_cascade").commit();
     }
     public static synchronized void postpone(Context c,int id,long nextDue){
         if(get(c,id)==null||nextDue<=System.currentTimeMillis())return;
