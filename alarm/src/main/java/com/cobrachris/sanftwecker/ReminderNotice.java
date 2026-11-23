@@ -54,15 +54,21 @@ public final class ReminderNotice {
             .putExtra(ReminderOptionsActivity.EXTRA_FULLSCREEN,true);
         PendingIntent fullView=PendingIntent.getActivity(c,BASE+10_000+item.id,
                 fullScreen,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification.Builder builder=new Notification.Builder(c,
-                strong?(item.phoneSound?STRONG:VIBRATE_ONLY):SOFT)
+        // Cascade reminders use the SAME high-priority notification channel as
+        // real wake alarms. Distinct notification IDs keep both occurrences safe.
+        if(item.cascade)RingingService.ensureChannels(c);
+        String channel=item.cascade&&(strong||justFired)
+                ?RingingService.ACTIVE_CHANNEL
+                :strong?(item.phoneSound?STRONG:VIBRATE_ONLY):SOFT;
+        Notification.Builder builder=new Notification.Builder(c,channel)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle("Erinnerung: "+item.title)
                 .setContentText(strong?"Wichtige Erinnerung – bitte bearbeiten":
                         "Noch offen – erledigen oder später erinnern")
                 .setContentIntent(view)
-                .setCategory(justFired?Notification.CATEGORY_ALARM:Notification.CATEGORY_REMINDER)
-                .setPriority(Notification.PRIORITY_HIGH)
+                .setCategory(item.cascade?Notification.CATEGORY_ALARM:Notification.CATEGORY_REMINDER)
+                .setPriority(Notification.PRIORITY_MAX)
+                .setOnlyAlertOnce(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setAutoCancel(false)
                 .setOngoing(false)
