@@ -19,7 +19,13 @@ public final class ReminderNotice {
         NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
         if(manager!=null)manager.cancel(BASE+id);
     }
+    /** Passive updates (restore/escalation) must never unexpectedly wake the display. */
     public static void show(Context c,ReminderStore.Item item,boolean strong){
+        show(c,item,strong,false);
+    }
+    /** Only an actual newly fired, user-scheduled reminder requests full-screen UI. */
+    public static void show(Context c,ReminderStore.Item item,boolean strong,
+            boolean justFired){
         NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
         if(manager==null||!manager.areNotificationsEnabled())return;
         NotificationChannel soft=new NotificationChannel(SOFT,"Erinnerungen – sanft",
@@ -42,6 +48,12 @@ public final class ReminderNotice {
             .putExtra(ReminderScheduler.DUE,item.dueAt);
         PendingIntent view=PendingIntent.getActivity(c,BASE+item.id,open,
                 PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        Intent fullScreen=new Intent(c,ReminderOptionsActivity.class)
+            .putExtra(ReminderScheduler.ID,item.id)
+            .putExtra(ReminderScheduler.DUE,item.dueAt)
+            .putExtra(ReminderOptionsActivity.EXTRA_FULLSCREEN,true);
+        PendingIntent fullView=PendingIntent.getActivity(c,BASE+10_000+item.id,
+                fullScreen,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder=new Notification.Builder(c,
                 strong?(item.phoneSound?STRONG:VIBRATE_ONLY):SOFT)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -49,7 +61,7 @@ public final class ReminderNotice {
                 .setContentText(strong?"Wichtige Erinnerung – bitte bearbeiten":
                         "Noch offen – erledigen oder später erinnern")
                 .setContentIntent(view)
-                .setCategory(Notification.CATEGORY_REMINDER)
+                .setCategory(justFired?Notification.CATEGORY_ALARM:Notification.CATEGORY_REMINDER)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setAutoCancel(false)
@@ -62,6 +74,10 @@ public final class ReminderNotice {
                 .addAction(new Notification.Action.Builder(
                     android.R.drawable.ic_media_pause,"Alarm stoppen",
                     ReminderScheduler.pending(c,item.id,item.dueAt,ReminderScheduler.STOP)).build());
+        // Android decides between the lockscreen activity (screen off) and
+        // an expanded heads-up alert (screen already unlocked). We never
+        // start an activity directly from a background receiver.
+        if(justFired)builder.setFullScreenIntent(fullView,true);
         manager.notify(BASE+item.id,builder.build());
     }
 }
