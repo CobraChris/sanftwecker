@@ -42,6 +42,20 @@ public final class ReminderToneService extends Service {
             handler.postDelayed(this,250L);
         }
     };
+    // Trigger phase 2 from the running alarm service, just like the wake alarm.
+    // The independent AlarmManager escalation remains a fallback if audio is off.
+    private final Runnable strongPhase=new Runnable(){
+        @Override public void run(){
+            if(!playing||!unifiedRamp||activeId<=0||activeDue<=0)return;
+            ReminderStore.Item live=ReminderStore.get(ReminderToneService.this,activeId);
+            if(live==null||live.done||live.dueAt!=activeDue||!live.cascade)return;
+            if(ActiveAlarmState.activeId(ReminderToneService.this)>0)return;
+            if(WakeCascade.strongStage(
+                    WakeCascade.elapsedSinceAlarm(activeDue,System.currentTimeMillis(),0)))
+                PhoneVibration.startReminder(ReminderToneService.this,
+                        WakeCascade.phoneMode(0),activeId,activeDue);
+        }
+    };
     private final Runnable finish=this::stopAudio;
     private final Runnable wakePriorityCheck=new Runnable(){
         @Override public void run(){
@@ -114,7 +128,11 @@ public final class ReminderToneService extends Service {
             startForeground(NOTIFICATION,notice,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
             beginAudio(reminder.tone);
-            if(unifiedRamp)handler.post(gainTick);
+            if(unifiedRamp){
+                handler.post(gainTick);
+                handler.postDelayed(strongPhase,
+                        WakeCascade.untilStrong(rampDue,System.currentTimeMillis(),0));
+            }
             handler.postDelayed(finish,unifiedRamp?180_000L:90_000L);
             handler.post(wakePriorityCheck);
         }catch(RuntimeException problem){
@@ -163,6 +181,7 @@ public final class ReminderToneService extends Service {
         playing=false;
         handler.removeCallbacks(finish);
         handler.removeCallbacks(gainTick);
+        handler.removeCallbacks(strongPhase);
         handler.removeCallbacks(wakePriorityCheck);
         AudioTrack old=sink;sink=null;
         if(old!=null){
