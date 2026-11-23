@@ -36,7 +36,7 @@ public final class WatchReminderService extends Service {
     private Vibrator motor;
     private int id,intensity,pulses,interval,played,postponeMinutes=10,strongPlayed;
     private long due;
-    private boolean cascade,strong,unifiedCascade;
+    private boolean cascade,strong;
     private final Runnable pulse=new Runnable(){
         @Override public void run(){
             if(due<=0||played>=pulses||strong)return;
@@ -58,7 +58,7 @@ public final class WatchReminderService extends Service {
         }
     };
     private final Runnable localEscalate=()->{
-        if(due>0&&cascade&&unifiedCascade&&!strong){
+        if(due>0&&cascade&&!strong){
             strong=true;strongPlayed=0;
             handler.removeCallbacks(pulse);
             handler.post(strongPulse);
@@ -86,13 +86,11 @@ public final class WatchReminderService extends Service {
     }
     private void vibrate(boolean hard){
         if(clockActive()||motor==null||!motor.hasVibrator())return;
-        int level=hard?255:intensity==0?45:intensity==1?80:110;
-        long[] timing=unifiedCascade
-            ?(hard?WatchCascade.strongTimings(intensity):WatchCascade.gentleTimings(intensity))
-            :(hard?new long[]{0,440,150,440}:new long[]{0,120});
-        int[] amplitudes=unifiedCascade
-            ?(hard?WatchCascade.strongAmplitudes(intensity):WatchCascade.gentleAmplitudes(intensity))
-            :(hard?new int[]{0,level,0,level}:new int[]{0,level});
+        // Reuse the established Watch alarm patterns for every reminder.
+        long[] timing=hard?WatchCascade.strongTimings(intensity):
+                WatchCascade.gentleTimings(intensity);
+        int[] amplitudes=hard?WatchCascade.strongAmplitudes(intensity):
+                WatchCascade.gentleAmplitudes(intensity);
         VibrationEffect pattern=motor.hasAmplitudeControl()?
             VibrationEffect.createWaveform(timing,amplitudes,-1):
             VibrationEffect.createWaveform(timing,-1);
@@ -183,7 +181,7 @@ public final class WatchReminderService extends Service {
             return START_NOT_STICKY;
         }
         if(STRONG.equals(action)){
-            if(requestedId==id&&when==due&&cascade&&(!strong||!unifiedCascade)){
+            if(requestedId==id&&when==due&&cascade&&!strong){
                 strong=true;strongPlayed=0;
                 handler.removeCallbacks(localEscalate);
                 handler.removeCallbacks(pulse);handler.post(strongPulse);
@@ -192,20 +190,9 @@ public final class WatchReminderService extends Service {
         }
         if(!START.equals(action)||requestedId<1||requestedId>9999||
                 when<=0||when<System.currentTimeMillis()-180_000L)return START_NOT_STICKY;
-        boolean receivedUnified=intent.getBooleanExtra("unified_cascade",false);
-        if(id==requestedId&&due==when){
-            // The optional extended message may arrive after the legacy packet.
-            // Mode changes are monotonic for this occurrence, not a restart.
-            if(receivedUnified&&cascade&&!unifiedCascade){
-                unifiedCascade=true;
-                handler.removeCallbacks(localEscalate);
-                if(WatchCascade.strong(due,System.currentTimeMillis()))
-                    handler.post(localEscalate);
-                else handler.postDelayed(localEscalate,
-                        WatchCascade.untilStrong(due,System.currentTimeMillis()));
-            }
-            return START_NOT_STICKY;
-        }
+        // Legacy and extended packets describe the same reminder: do not restart
+        // vibration or alter phase when a duplicate packet arrives.
+        if(id==requestedId&&due==when)return START_NOT_STICKY;
         // Replacing the current reminder must not stopSelf() and kill the new one.
         if(id>0){
             handler.removeCallbacks(pulse);handler.removeCallbacks(autoEnd);
@@ -213,14 +200,13 @@ public final class WatchReminderService extends Service {
         }
         id=requestedId;due=when;
         cascade=intent.getBooleanExtra("cascade",true);
-        unifiedCascade=cascade&&receivedUnified;
         intensity=Math.max(0,Math.min(2,intent.getIntExtra("intensity",1)));
         pulses=Math.max(1,Math.min(30,intent.getIntExtra("pulses",6)));
         interval=Math.max(1,Math.min(60,intent.getIntExtra("interval",5)));
         postponeMinutes=intent.getIntExtra("postpone",10);
         if(postponeMinutes!=5&&postponeMinutes!=10&&postponeMinutes!=30)postponeMinutes=10;
         played=0;strongPlayed=0;
-        strong=!cascade||(unifiedCascade&&WatchCascade.strong(due,System.currentTimeMillis()));
+        strong=!cascade||WatchCascade.strong(due,System.currentTimeMillis());
         try{show();}catch(RuntimeException ex){
             Log.w("SanftweckerWatch","Reminder notification unavailable",ex);
             stopSelf();
@@ -228,7 +214,7 @@ public final class WatchReminderService extends Service {
         }
         if(strong)handler.post(strongPulse);else handler.post(pulse);
         handler.removeCallbacks(localEscalate);
-        if(unifiedCascade&&cascade&&!strong)
+        if(cascade&&!strong)
             handler.postDelayed(localEscalate,
                     WatchCascade.untilStrong(due,System.currentTimeMillis()));
         handler.removeCallbacks(autoEnd);
