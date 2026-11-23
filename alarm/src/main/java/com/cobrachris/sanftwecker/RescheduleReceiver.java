@@ -19,6 +19,7 @@ public final class RescheduleReceiver extends BroadcastReceiver {
             AlarmRepository.diagnostic(c,"Nach App-Update: "+
                     FullScreenPermissionStatus.label(
                             FullScreenPermissionStatus.isAllowed(c)));
+            PostUpdatePermissionNotice.showIfMissing(c);
         }
         try {
             AlarmScheduler.rescheduleAll(c);
