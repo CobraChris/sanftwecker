@@ -239,6 +239,11 @@ public final class MainActivity extends Activity {
                 "Sortieren: Uhrzeit").setOnMenuItemClickListener(item->{
             sortByNext=false;saveSort();renderList();return true;
         });
+        menu.getMenu().add("12 Wecker aus Screenshots übernehmen")
+                .setOnMenuItemClickListener(item->{
+                    importScreenshotAlarms();
+                    return true;
+                });
         menu.getMenu().add("Galaxy Watch mit einem Tippen aktualisieren")
                 .setOnMenuItemClickListener(item->{
                     startActivity(new Intent(this,WatchUpdateActivity.class)
@@ -257,6 +262,44 @@ public final class MainActivity extends Activity {
             emergencyStop();return true;
         });
         menu.show();
+    }
+
+    private void importScreenshotAlarms(){
+        if(AlarmPresetImporter.wasImported(this)){
+            new AlertDialog.Builder(this).setTitle("Wecker bereits übernommen")
+                    .setMessage("Die Screenshot-Vorlagen wurden bereits verarbeitet. "
+                            +"Vorhandene Wecker bleiben unverändert.")
+                    .setPositiveButton("OK",null).show();
+            return;
+        }
+        StringBuilder names=new StringBuilder();
+        for(AlarmPresetImporter.Preset preset:AlarmPresetImporter.PRESETS){
+            names.append(String.format(Locale.GERMANY,"%02d:%02d – %s\n",
+                    preset.hour,preset.minute,preset.name));
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("12 Wecker aus Screenshots übernehmen?")
+                .setMessage("Übernommen werden ausschließlich Namen und Uhrzeiten. "
+                        +"Wochentage, Ton, Vibration und Schlummerdauer sind auf "
+                        +"den Bildern nicht erkennbar und müssen geprüft werden. "
+                        +"Alle neuen Wecker bleiben zunächst AUS; vorhandene "
+                        +"Wecker werden weder überschrieben noch dupliziert.\n\n"+names)
+                .setPositiveButton("Deaktiviert übernehmen",(dialog,which)->{
+                    try{
+                        int created=AlarmPresetImporter.importMissing(this);
+                        renderList();
+                        new AlertDialog.Builder(this).setTitle("Vorlagen übernommen")
+                                .setMessage(created+" neue deaktivierte Wecker angelegt. "
+                                        +"Öffne die Einträge und prüfe Wochentage "
+                                        +"sowie individuelle Klingel- und Schlummereinstellungen.")
+                                .setPositiveButton("OK",null).show();
+                    }catch(RuntimeException failure){
+                        error("Weckerübernahme unvollständig: "+failure.getMessage()
+                                +". Du kannst den Import erneut ausführen.");
+                        renderList();
+                    }
+                })
+                .setNegativeButton("Abbrechen",null).show();
     }
 
     private void openSetupAssistant() {
