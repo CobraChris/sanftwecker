@@ -28,6 +28,20 @@ public final class ReminderToneService extends Service {
     private long activeDue;
     private AudioTrack sink;
     private Thread writer;
+    private boolean unifiedRamp;
+    private long rampDue;
+    private final Runnable gainTick=new Runnable(){
+        @Override public void run(){
+            if(!playing||sink==null||!unifiedRamp)return;
+            try{
+                sink.setVolume(GentleGain.level(
+                    Math.max(0L,System.currentTimeMillis()-rampDue),0,60,42));
+            }catch(IllegalStateException failure){
+                Log.w("Sanftwecker","Reminder volume ramp unavailable",failure);
+            }
+            handler.postDelayed(this,250L);
+        }
+    };
     private final Runnable finish=this::stopAudio;
     private final Runnable wakePriorityCheck=new Runnable(){
         @Override public void run(){
@@ -81,11 +95,15 @@ public final class ReminderToneService extends Service {
                 !reminder.phoneSound||!ToneCatalog.valid(reminder.tone)){
             stopSelf();return START_NOT_STICKY;
         }
+        // The strong phase may retry a service already running; never reset the ramp.
+        if(playing&&activeId==id&&activeDue==due)return START_NOT_STICKY;
         // Genuine wake alarms take precedence. Do not mix the reminder's
         // waveform with a user-scheduled alarm's critical audio.
         if(ActiveAlarmState.activeId(this)>0){stopSelf();return START_NOT_STICKY;}
         resetAudio(false);
         activeId=id;activeDue=due;
+        unifiedRamp=reminder.cascade&&reminder.unifiedCascade;
+        rampDue=reminder.dueAt;
         Notification notice=new Notification.Builder(this,CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("Erinnerungston")
@@ -96,7 +114,8 @@ public final class ReminderToneService extends Service {
             startForeground(NOTIFICATION,notice,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
             beginAudio(reminder.tone);
-            handler.postDelayed(finish,90_000L);
+            if(unifiedRamp)handler.post(gainTick);
+            handler.postDelayed(finish,unifiedRamp?180_000L:90_000L);
             handler.post(wakePriorityCheck);
         }catch(RuntimeException problem){
             Log.w("Sanftwecker","Reminder audio startup failed",problem);
@@ -122,7 +141,9 @@ public final class ReminderToneService extends Service {
         if(track.getState()!=AudioTrack.STATE_INITIALIZED){
             track.release();throw new IllegalStateException("Audio output not initialized");
         }
-        sink=track;playing=true;track.setVolume(.42f);track.play();
+        sink=track;playing=true;
+        track.setVolume(unifiedRamp?0f:.42f);
+        track.play();
         writer=new Thread(()->{
             short[] samples=new short[2205];
             long pos=0;
@@ -141,6 +162,7 @@ public final class ReminderToneService extends Service {
     private void resetAudio(boolean endService){
         playing=false;
         handler.removeCallbacks(finish);
+        handler.removeCallbacks(gainTick);
         handler.removeCallbacks(wakePriorityCheck);
         AudioTrack old=sink;sink=null;
         if(old!=null){
@@ -155,6 +177,8 @@ public final class ReminderToneService extends Service {
         }
         if(old!=null)try{old.release();}catch(RuntimeException ignored){}
         activeId=0;activeDue=0;
+        unifiedRamp=false;
+        rampDue=0L;
         if(endService){
             stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
@@ -162,6 +186,7 @@ public final class ReminderToneService extends Service {
     }
     @Override public void onDestroy(){
         playing=false;handler.removeCallbacks(finish);
+        handler.removeCallbacks(gainTick);
         handler.removeCallbacks(wakePriorityCheck);
         AudioTrack old=sink;sink=null;
         if(old!=null){
