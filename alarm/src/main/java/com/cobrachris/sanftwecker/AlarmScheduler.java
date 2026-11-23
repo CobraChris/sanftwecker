@@ -158,17 +158,54 @@ public final class AlarmScheduler {
         return c.getSharedPreferences(PREF, Context.MODE_PRIVATE).getLong(TEST_WHEN, 0L);
     }
 
+    /** A single snoozed occurrence survives a regular in-place update or reboot. */
     public static long snooze(Context c, int id, int minutes) {
         if (AlarmRepository.get(c, id) == null) throw new IllegalArgumentException("Wecker fehlt");
         long when = System.currentTimeMillis() + minutes * 60_000L;
         schedule(c, when, ACTION_SNOOZE, SNOOZE_REQUEST, id);
+        if(!c.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
+                .putInt("snooze_id",id).putLong("snooze_when",when).commit()){
+            cancel(c,ACTION_SNOOZE,SNOOZE_REQUEST,id);
+            throw new IllegalStateException("Schlummerstatus nicht gespeichert");
+        }
         AlarmRepository.diagnostic(c, "Schlummern für " + minutes + " Minuten");
         WearAlarmBridge.schedule(c,WearAlarmBridge.SNOOZE_SLOT,id,when);
         return when;
     }
 
+    public static int snoozedId(Context c){
+        return c.getSharedPreferences(PREF,Context.MODE_PRIVATE).getInt("snooze_id",0);
+    }
+
+    public static long snoozedWhen(Context c){
+        return c.getSharedPreferences(PREF,Context.MODE_PRIVATE).getLong("snooze_when",0L);
+    }
+
+    public static void restoreSnooze(Context c){
+        int id=snoozedId(c);
+        long when=snoozedWhen(c);
+        if(id<=0||when<=0)return;
+        if(AlarmRepository.get(c,id)==null){cancelSnooze(c);return;}
+        if(!canSchedule(c)){
+            AlarmRepository.diagnostic(c,"WARNUNG: Schlummeralarm braucht genaue Alarme");
+            return;
+        }
+        if(when<=System.currentTimeMillis()){
+            when=System.currentTimeMillis()+2_000L;
+            if(!c.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
+                    .putLong("snooze_when",when).commit())
+                throw new IllegalStateException("Schlummerstatus nicht gespeichert");
+        }
+        schedule(c,when,ACTION_SNOOZE,SNOOZE_REQUEST,id);
+        WearAlarmBridge.schedule(c,WearAlarmBridge.SNOOZE_SLOT,id,when);
+        SnoozeNotice.show(c,id,when);
+    }
+
     public static void cancelSnooze(Context c) {
         cancel(c, ACTION_SNOOZE, SNOOZE_REQUEST, 1);
+        c.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit()
+                .remove("snooze_id").remove("snooze_when").commit();
+        SnoozeNotice.clear(c);
         WearAlarmBridge.schedule(c,WearAlarmBridge.SNOOZE_SLOT,1,0);
     }
 

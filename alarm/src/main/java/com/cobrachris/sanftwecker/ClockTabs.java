@@ -19,22 +19,24 @@ public final class ClockTabs {
         LinearLayout bar=UiKit.row(c);
         bar.setTag(BAR_MARKER);
         String[] names={"Wecker","Erinnerungen","Timer","Stoppuhr","Weltuhr"};
+        // Visual order is independent of historical constants used by the screens.
+        final int[] tabIds={ALARMS,REMINDERS,TIMERS,STOPWATCH,WORLD_CLOCK};
         Class<?>[] targets={MainActivity.class,ReminderActivity.class,
                 TimerActivity.class,StopwatchActivity.class,WorldClockActivity.class};
         for(int i=0;i<names.length;i++){
             final int index=i;
-            TextView tab=UiKit.label(c,names[i],i==REMINDERS?11:12,
-                    i==selected?UiKit.BLUE:Color.rgb(194,200,219));
-            tab.setTypeface(Typeface.DEFAULT,i==selected?Typeface.BOLD:Typeface.NORMAL);
+            TextView tab=UiKit.label(c,names[i],tabIds[i]==REMINDERS?11:12,
+                    tabIds[i]==selected?UiKit.BLUE:Color.rgb(194,200,219));
+            tab.setTypeface(Typeface.DEFAULT,tabIds[i]==selected?Typeface.BOLD:Typeface.NORMAL);
             tab.setGravity(Gravity.CENTER);
             tab.setMinHeight(UiKit.dp(c,52));
-            tab.setBackground(UiKit.shape(i==selected?UiKit.CARD_2:UiKit.BG,c,12));
+            tab.setBackground(UiKit.shape(tabIds[i]==selected?UiKit.CARD_2:UiKit.BG,c,12));
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,UiKit.dp(c,52),1);
             p.setMargins(UiKit.dp(c,1),UiKit.dp(c,8),UiKit.dp(c,1),UiKit.dp(c,12));
             bar.addView(tab,p);
-            tab.setContentDescription(names[i]+(i==selected?" ausgewählt":" öffnen"));
+            tab.setContentDescription(names[i]+(tabIds[i]==selected?" ausgewählt":" öffnen"));
             tab.setOnClickListener(v->{
-                if(index==selected)return;
+                if(tabIds[index]==selected)return;
                 Intent open=new Intent(c,targets[index])
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 c.startActivity(open);

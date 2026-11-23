@@ -19,6 +19,7 @@ public final class RescheduleReceiver extends BroadcastReceiver {
             AlarmRepository.diagnostic(c,"Nach App-Update: "+
                     FullScreenPermissionStatus.label(
                             FullScreenPermissionStatus.isAllowed(c)));
+            PostUpdatePermissionNotice.showIfMissing(c);
         }
         try {
             AlarmScheduler.rescheduleAll(c);
@@ -26,6 +27,12 @@ public final class RescheduleReceiver extends BroadcastReceiver {
         } catch (RuntimeException ex) {
             AlarmRepository.diagnostic(c,"WARNUNG: Wecker-Neuplanung fehlgeschlagen");
             Log.e("Sanftwecker","Alarm reschedule failure",ex);
+        }
+        try {
+            AlarmScheduler.restoreSnooze(c);
+        }catch(RuntimeException ex){
+            AlarmRepository.diagnostic(c,"WARNUNG: Schlummeralarm konnte nicht wiederhergestellt werden");
+            Log.e("Sanftwecker","Snooze restore failed",ex);
         }
         try {
             ReminderScheduler.restore(c);

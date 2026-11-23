@@ -29,6 +29,8 @@ public final class SetupAssistantActivity extends Activity {
     @Override public void onResume() {
         super.onResume();
         refreshPermissionStates();
+        if(FullScreenPermissionStatus.isAllowed(this))
+            PostUpdatePermissionNotice.clear(this);
     }
 
     @Override public void onRequestPermissionsResult(int requestCode,

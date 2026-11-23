@@ -196,7 +196,7 @@ test('five clock navigation tabs remain pinned while each content page scrolls',
     assert.match(tabs,/frame.addView\(bar,new LinearLayout.LayoutParams\(/);
     assert.match(tabs,/frame.addView\(scrollArea,new LinearLayout.LayoutParams\(/);
     assert.match(tabs,/ViewGroup.LayoutParams.MATCH_PARENT,0,1f/);
-    assert.match(tabs,/if\(index==selected\)return/);
+    assert.match(tabs,/if\(tabIds\[index\]==selected\)return/);
     assert.match(tabs,/Intent.FLAG_ACTIVITY_CLEAR_TOP\|Intent.FLAG_ACTIVITY_SINGLE_TOP/);
     assert.match(tabs,/c.finish\(\)/);
     const pages=[

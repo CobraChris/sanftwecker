@@ -33,6 +33,7 @@ public final class ReminderActivity extends Activity {
     private Spinner recurrence,postpone,tone;
     private Switch phoneSound;
     private long chosenAt;
+    private int editingId=-1;
     private boolean timeConfirmed;
     private final SimpleDateFormat format=
         new SimpleDateFormat("dd.MM.yyyy · HH:mm",Locale.GERMANY);
@@ -49,7 +50,7 @@ public final class ReminderActivity extends Activity {
         root.addView(UiKit.label(this,"Offen bis Erledigt – Stoppen beendet nur den Alarm.",14,UiKit.MUTED));
         Button newButton=UiKit.button(this,"+ Neue Erinnerung",true);
         root.addView(newButton);
-        newButton.setOnClickListener(v->editor());
+        newButton.setOnClickListener(v->editor(null));
         list=UiKit.column(this);
         root.addView(list);
         setContentView(ClockTabs.pin(this,root,UiKit.scroll(this,root)));
@@ -66,6 +67,9 @@ public final class ReminderActivity extends Activity {
                 " · Überfällig":" · Offen")+
                 (item.cascade?" · Kaskade":" · Sanft")+
                 (item.repeat==1?" · Täglich":item.repeat==2?" · Wöchentlich":""),14,UiKit.MUTED));
+            Button edit=UiKit.button(this,"Erinnerung bearbeiten",false);
+            edit.setOnClickListener(v->editor(item));
+            card.addView(edit);
             if(!item.done){
                 Button done=UiKit.button(this,"Erledigt",false);
                 done.setOnClickListener(v->{
@@ -112,16 +116,18 @@ public final class ReminderActivity extends Activity {
             UiKit.placeCard(this,list,card);
         }
     }
-    private void editor(){
+    private void editor(ReminderStore.Item existing){
+        editingId=existing==null?-1:existing.id;
         Calendar when=Calendar.getInstance();
         when.add(Calendar.HOUR_OF_DAY,1);
-        chosenAt=when.getTimeInMillis();
-        timeConfirmed=false;
+        chosenAt=existing==null?when.getTimeInMillis():existing.dueAt;
+        timeConfirmed=existing!=null && existing.dueAt>System.currentTimeMillis();
         LinearLayout form=UiKit.mainColumn(this);
         title=new EditText(this);
         title.setSingleLine(false);title.setMaxLines(3);
         title.setTextColor(UiKit.TEXT);title.setHintTextColor(UiKit.MUTED);
         title.setHint("Woran möchtest du erinnert werden?");
+        if(existing!=null)title.setText(existing.title);
         form.addView(title);
         Button voice=UiKit.button(this,"🎙 Erinnerung einsprechen",false);
         voice.setOnClickListener(v->{
@@ -143,39 +149,42 @@ public final class ReminderActivity extends Activity {
         cascade=UiKit.toggle(this);
         cascade.setText("Sanft-stark-Kaskade mit Handy in Phase 2");
         cascade.setTextColor(UiKit.TEXT);
-        cascade.setChecked(true);form.addView(cascade);
+        cascade.setChecked(existing==null||existing.cascade);form.addView(cascade);
         form.addView(UiKit.label(this,"Watch-Vibrationsstärke (0 sanft · 1 normal · 2 intensiv)",
                 13,UiKit.MUTED));
-        intensity=UiKit.seek(this,2);intensity.setProgress(1);form.addView(intensity);
+        intensity=UiKit.seek(this,2);intensity.setProgress(existing==null?1:existing.watchIntensity);form.addView(intensity);
         form.addView(UiKit.label(this,"Watch-Impulse Phase 1 (1–30)",13,UiKit.MUTED));
-        pulses=UiKit.seek(this,29);pulses.setProgress(5);form.addView(pulses);
+        pulses=UiKit.seek(this,29);pulses.setProgress(existing==null?5:existing.watchPulses-1);form.addView(pulses);
         form.addView(UiKit.label(this,"Impulsabstand in Sekunden (1–60)",13,UiKit.MUTED));
-        interval=UiKit.seek(this,59);interval.setProgress(4);form.addView(interval);
+        interval=UiKit.seek(this,59);interval.setProgress(existing==null?4:existing.watchIntervalSeconds-1);form.addView(interval);
         form.addView(UiKit.label(this,"Wiederholung",15,UiKit.TEXT));
         recurrence=new Spinner(this);
         recurrence.setAdapter(new ArrayAdapter<String>(this,
             android.R.layout.simple_spinner_dropdown_item,
             new String[]{"Einmalig","Täglich","Wöchentlich"}));
+        recurrence.setSelection(existing==null?0:existing.repeat);
         form.addView(recurrence);
         form.addView(UiKit.label(this,"Später erinnern um",15,UiKit.TEXT));
         postpone=new Spinner(this);
         postpone.setAdapter(new ArrayAdapter<String>(this,
             android.R.layout.simple_spinner_dropdown_item,
             new String[]{"5 Minuten","10 Minuten","30 Minuten"}));
-        postpone.setSelection(1);
+        postpone.setSelection(existing==null?1:existing.postponeMinutes==5?0:
+                existing.postponeMinutes==30?2:1);
         form.addView(postpone);
         form.addView(UiKit.label(this,"Erinnerungston (Sanftwecker-Klänge)",15,UiKit.TEXT));
         tone=new Spinner(this);
         tone.setAdapter(new ArrayAdapter<String>(this,
             android.R.layout.simple_spinner_dropdown_item,ToneCatalog.LABELS));
+        tone.setSelection(existing==null?0:existing.tone);
         form.addView(tone);
         phoneSound=UiKit.toggle(this);
         phoneSound.setText("Handy-Alarmton bei starker Phase");
         phoneSound.setTextColor(UiKit.TEXT);
-        phoneSound.setChecked(true);
+        phoneSound.setChecked(existing==null||existing.phoneSound);
         form.addView(phoneSound);
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
-            .setTitle("Neue Erinnerung")
+            .setTitle(existing==null?"Neue Erinnerung":"Erinnerung bearbeiten")
             .setView(UiKit.scroll(this,form))
             .setPositiveButton("Speichern",null)
             .setNegativeButton("Abbrechen",null).create();
@@ -227,16 +236,45 @@ public final class ReminderActivity extends Activity {
                 return false;
             }
             int minutes=new int[]{5,10,30}[postpone.getSelectedItemPosition()];
-            int id=ReminderStore.create(this,title.getText().toString(),chosenAt,
-                    cascade.isChecked(),intensity.getProgress(),
-                    pulses.getProgress()+1,interval.getProgress()+1,
-                    recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                    tone.getSelectedItemPosition());
-            try{ReminderScheduler.schedule(this,id);}
-            catch(RuntimeException failure){
-                ReminderStore.abandon(this,id);
+            ReminderStore.Item previous=editingId>0?ReminderStore.get(this,editingId):null;
+            int id;
+            if(editingId>0){
+                if(previous==null)throw new IllegalStateException("Erinnerung nicht mehr vorhanden");
+                id=previous.id;
+                ReminderStore.update(this,id,title.getText().toString(),chosenAt,
+                        cascade.isChecked(),intensity.getProgress(),
+                        pulses.getProgress()+1,interval.getProgress()+1,
+                        recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
+                        tone.getSelectedItemPosition());
+            }else{
+                id=ReminderStore.create(this,title.getText().toString(),chosenAt,
+                        cascade.isChecked(),intensity.getProgress(),
+                        pulses.getProgress()+1,interval.getProgress()+1,
+                        recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
+                        tone.getSelectedItemPosition());
+            }
+            try{
+                if(previous!=null){
+                    ReminderScheduler.cancel(this,id);
+                    ReminderNotice.clear(this,id);
+                    ReminderWatchBridge.stop(this,previous);
+                    ReminderToneService.stop(this,previous);
+                }
+                ReminderScheduler.schedule(this,id);
+            }catch(RuntimeException failure){
+                if(previous!=null){
+                    ReminderStore.restore(this,previous);
+                    if(!previous.done && previous.dueAt>System.currentTimeMillis()){
+                        try{ReminderScheduler.schedule(this,id);}
+                        catch(RuntimeException restoreError){
+                            AlarmRepository.diagnostic(this,
+                                    "WARNUNG: Erinnerung nach fehlgeschlagener Bearbeitung nicht eingeplant");
+                        }
+                    }
+                }else ReminderStore.abandon(this,id);
                 throw failure;
             }
+            editingId=-1;
             toast("Erinnerung gespeichert und eingeplant");render();
             return true;
         }catch(RuntimeException e){

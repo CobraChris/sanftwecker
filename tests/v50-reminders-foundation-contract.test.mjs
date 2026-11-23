@@ -13,7 +13,7 @@ test('new fifth tab and private reminder screen coexist with original navigation
  assert.match(activity,/ClockTabs\.REMINDERS/);
  assert.match(activity,/RecognizerIntent\.ACTION_RECOGNIZE_SPEECH/);
  assert.match(activity,/ReminderVoiceParser\.parse/);
- assert.match(activity,/cascade\.setChecked\(true\)/);
+ assert.match(activity,/cascade\.setChecked\(existing==null\|\|existing\.cascade\)/);
 });
 test('reminders never share clock or timer identity and stay open until done',()=>{
  const model=phone('ReminderStore'),scheduler=phone('ReminderScheduler'),receiver=phone('ReminderReceiver');
