@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V53_WITH_EXISTING_V52_CERTIFICATE",
+  "expected_version_code": 53,
+  "intent": "signed-native-wear-v53",
+  "request_id": "2026-11-23-v53-fullscreen-reminder-cascade-owner-approved",
+  "source_sha": "c43df55f213759f8023ae0555fcc0834236c4e3a",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
