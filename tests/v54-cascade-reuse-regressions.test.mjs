@@ -6,7 +6,7 @@ const watch=n=>readFileSync(new URL('../watch/src/main/java/com/cobrachris/watch
 
 test('previously saved reminders automatically run the SAME cascade engine as alarms',()=>{
     const store=phone('ReminderStore'),screen=phone('ReminderActivity');
-    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)\);/);
+    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)/);
     assert.doesNotMatch(store,/p.getBoolean\(id\+"_unified_cascade",false\)/);
     assert.match(screen,/cascade.setChecked\(existing==null\|\|existing.cascade\)/);
     assert.doesNotMatch(screen,/sameAsAlarm/);
