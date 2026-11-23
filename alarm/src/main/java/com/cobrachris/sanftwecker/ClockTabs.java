@@ -25,7 +25,7 @@ public final class ClockTabs {
                 TimerActivity.class,StopwatchActivity.class,WorldClockActivity.class};
         for(int i=0;i<names.length;i++){
             final int index=i;
-            TextView tab=UiKit.label(c,names[i],i==REMINDERS?11:12,
+            TextView tab=UiKit.label(c,names[i],tabIds[i]==REMINDERS?11:12,
                     tabIds[i]==selected?UiKit.BLUE:Color.rgb(194,200,219));
             tab.setTypeface(Typeface.DEFAULT,tabIds[i]==selected?Typeface.BOLD:Typeface.NORMAL);
             tab.setGravity(Gravity.CENTER);
