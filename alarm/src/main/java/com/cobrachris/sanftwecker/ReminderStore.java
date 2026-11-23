@@ -77,6 +77,45 @@ public final class ReminderStore {
             throw new IllegalStateException("Erinnerung nicht gespeichert");
         return id;
     }
+    /** Edit the original reminder ID, atomically, without creating a duplicate. */
+    public static synchronized void update(Context c,int id,String title,long dueAt,
+            boolean cascade,int intensity,int pulses,int interval,
+            int repeat,int postponeMinutes,boolean phoneSound,int tone){
+        Item original=get(c,id);
+        if(original==null)throw new IllegalArgumentException("Erinnerung nicht gefunden");
+        if(title==null||title.trim().isEmpty()||title.length()>200||
+                dueAt<=System.currentTimeMillis()||intensity<0||intensity>2||
+                pulses<1||pulses>30||interval<1||interval>60||
+                repeat<0||repeat>2||!ToneCatalog.valid(tone)||
+                !(postponeMinutes==5||postponeMinutes==10||postponeMinutes==30))
+            throw new IllegalArgumentException("Erinnerung oder Termin ungültig");
+        SharedPreferences.Editor edit=prefs(c).edit();
+        if(!edit.putString(id+"_title",title.trim())
+                .putLong(id+"_due",dueAt).putLong(id+"_anchor",dueAt)
+                .putBoolean(id+"_cascade",cascade).putBoolean(id+"_done",false)
+                .putInt(id+"_intensity",intensity).putInt(id+"_pulses",pulses)
+                .putInt(id+"_interval",interval).putInt(id+"_repeat",repeat)
+                .putInt(id+"_postpone",postponeMinutes).putBoolean(id+"_sound",phoneSound)
+                .putInt(id+"_tone",tone).commit())
+            throw new IllegalStateException("Bearbeitung nicht gespeichert");
+    }
+
+    /** Roll back a failed re-schedule, including the original recurring anchor. */
+    public static synchronized void restore(Context c,Item item){
+        if(item==null||get(c,item.id)==null)return;
+        if(!prefs(c).edit().putString(item.id+"_title",item.title)
+                .putLong(item.id+"_due",item.dueAt).putLong(item.id+"_anchor",item.anchorAt)
+                .putBoolean(item.id+"_cascade",item.cascade).putBoolean(item.id+"_done",item.done)
+                .putInt(item.id+"_intensity",item.watchIntensity)
+                .putInt(item.id+"_pulses",item.watchPulses)
+                .putInt(item.id+"_interval",item.watchIntervalSeconds)
+                .putInt(item.id+"_repeat",item.repeat)
+                .putInt(item.id+"_postpone",item.postponeMinutes)
+                .putBoolean(item.id+"_sound",item.phoneSound)
+                .putInt(item.id+"_tone",item.tone).commit())
+            throw new IllegalStateException("Vorherigen Zustand nicht wiederhergestellt");
+    }
+
     /** A recurring reminder schedules the next local wall-clock occurrence.
      * One-time reminders are completed; the current occurrence is always closed.
      */
