@@ -120,8 +120,9 @@ public final class RingingService extends Service {
                         "Schlummern abgewiesen: kein aktiver schlummerbarer Alarm");
                 return START_NOT_STICKY;
             }
+            long snoozeUntil=0L;
             if (snoozing) {
-                try { AlarmScheduler.snooze(this, id, minutes); }
+                try { snoozeUntil=AlarmScheduler.snooze(this, id, minutes); }
                 catch (RuntimeException e) {
                     // Keep the audible alarm and wrist alarm active if exact
                     // scheduling failed. No misleading 'snoozed' state.
@@ -134,6 +135,7 @@ public final class RingingService extends Service {
             AlarmRepository.diagnostic(this,
                     snoozing ? "Schlummern aktiv" : "Alarm gestoppt");
             stopPlaying();
+            if(snoozing)SnoozeNotice.show(this,id,snoozeUntil);
             stopSelf();
             return START_NOT_STICKY;
         }
