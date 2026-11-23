@@ -30,7 +30,7 @@ public final class RingingService extends Service {
     public static final String RING_FINISHED = "com.cobrachris.sanftwecker.RING_FINISHED";
     public static final String WATCH_CHANNEL = "sanftwecker_watch_v3";
     public static final String EXTRA_QUICK_TEST = "quick_test";
-    private static final String ACTIVE_CHANNEL = "sanftwecker_active_v4";
+    static final String ACTIVE_CHANNEL = "sanftwecker_active_v4";
     private static final int ONGOING_ID = 601;
     // Watch notification IDs are owned by WatchAlert.
     private static final long MAX_RING = 30L * 60_000L;
