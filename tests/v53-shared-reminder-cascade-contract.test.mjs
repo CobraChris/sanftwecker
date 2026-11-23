@@ -4,18 +4,16 @@ import {readFileSync} from 'node:fs';
 const phone=n=>readFileSync(new URL('../alarm/src/main/java/com/cobrachris/sanftwecker/'+n+'.java',import.meta.url),'utf8');
 const watch=n=>readFileSync(new URL('../watch/src/main/java/com/cobrachris/watchvibrationpoc/'+n+'.java',import.meta.url),'utf8');
 
-test('legacy reminders stay unchanged and new shared cascade is explicit',()=>{
+test('existing and new cascades use the wake profile automatically',()=>{
     const store=phone('ReminderStore'),ui=phone('ReminderActivity');
-    assert.match(store,/p.getBoolean\(id\+"_unified_cascade",false\)/);
-    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)/);
+    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)\);/);
     assert.match(store,/public final boolean cascade,done,unifiedCascade/);
-    assert.match(store,/putBoolean\(id\+"_unified_cascade",cascade&&unifiedCascade\)/);
+    assert.match(store,/putBoolean\(id\+"_unified_cascade",cascade\)/);
     assert.match(store,/putBoolean\(item.id\+"_unified_cascade",item.unifiedCascade\)/);
     assert.match(store,/remove\(id\+"_unified_cascade"\)/);
-    assert.match(ui,/sameAsAlarm.setChecked\(existing==null \|\| existing.unifiedCascade\)/);
-    assert.match(ui,/sameAsAlarm.setEnabled\(cascade.isChecked\(\)\)/);
-    assert.match(ui,/tone.getSelectedItemPosition\(\),sameAsAlarm.isChecked\(\)/);
-    assert.match(ui,/item.unifiedCascade\?" · Wecker-Kaskade"/);
+    assert.doesNotMatch(ui,/sameAsAlarm/);
+    assert.match(ui,/tone.getSelectedItemPosition\(\),cascade.isChecked\(\)/);
+    assert.match(ui,/item.cascade\?" · Wecker-Kaskade"/);
 });
 
 test('new cascade uses the actual alarm envelope and only current reminder owns vibration',()=>{
