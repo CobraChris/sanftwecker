@@ -28,6 +28,8 @@ public final class AlarmReceiver extends BroadcastReceiver {
                     .putLong(AlarmScheduler.TEST_WHEN, 0).apply();
             AlarmRepository.diagnostic(c, "Testwecker ausgelöst: " + profile.name);
         } else if (AlarmScheduler.ACTION_SNOOZE.equals(action)) {
+            if(AlarmScheduler.snoozedId(c)!=id||AlarmScheduler.snoozedWhen(c)!=when)return;
+            AlarmScheduler.cancelSnooze(c);
             AlarmRepository.diagnostic(c, "Schlummerwecker ausgelöst: " + profile.name);
         } else return;
 
