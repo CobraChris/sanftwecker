@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 /** Full set of user-chosen actions for an actual live reminder occurrence. */
 public final class ReminderOptionsActivity extends Activity {
+    public static final String EXTRA_FULLSCREEN="from_fullscreen_reminder";
     public static final String EXTRA_ID=ReminderScheduler.ID;
     public static final String EXTRA_DUE=ReminderScheduler.DUE;
     private int id;
@@ -19,6 +20,12 @@ public final class ReminderOptionsActivity extends Activity {
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
         UiKit.window(this);
+        if(getIntent().getBooleanExtra(EXTRA_FULLSCREEN,false)){
+            // Only the system-launched urgent reminder may cover the lockscreen.
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
         id=getIntent().getIntExtra(EXTRA_ID,0);
         due=getIntent().getLongExtra(EXTRA_DUE,0);
         ReminderStore.Item item=ReminderStore.get(this,id);
