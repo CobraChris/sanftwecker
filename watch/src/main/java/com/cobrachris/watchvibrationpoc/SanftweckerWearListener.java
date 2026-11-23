@@ -44,7 +44,7 @@ public final class SanftweckerWearListener extends WearableListenerService {
         }
         if(path.startsWith("/sanftwecker/reminder/v1/")){
             String value=new String(event.getData(),StandardCharsets.UTF_8);
-            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[01]:[012]:[1-9][0-9]?:[1-9][0-9]?:([5]|10|30)"))
+            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[01]:[012]:[1-9][0-9]?:[1-9][0-9]?:([5]|10|30)(:[01])?"))
                 return;
             String[] a=value.split(":");
             int id=Integer.parseInt(a[0]);
@@ -52,6 +52,7 @@ public final class SanftweckerWearListener extends WearableListenerService {
             Intent command=new Intent(this,WatchReminderService.class)
                     .putExtra("id",id).putExtra("due",due)
                     .putExtra("cascade","1".equals(a[2]))
+                    .putExtra("unified_cascade",a.length==8 && "1".equals(a[7]))
                     .putExtra("intensity",Integer.parseInt(a[3]))
                     .putExtra("pulses",Integer.parseInt(a[4]))
                     .putExtra("interval",Integer.parseInt(a[5]))
