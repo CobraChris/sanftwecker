@@ -59,7 +59,7 @@ test('stopwatch stays full-width on phone and navigation contrast improves',()=>
   assert.match(stopwatch,/screenWidthDp>=600/);
   assert.match(stopwatch,/if\(!twoColumns\)\{[\s\S]*?cards\.addView\(card\(/);
   assert.match(stopwatch,/StopwatchRepository\.put\(this,s\.pause\(wall,now\)\)/);
-  assert.match(tabs,/i==selected\?UiKit\.BLUE:Color\.rgb\(194,200,219\)/);
+  assert.match(tabs,/tabIds\[i\]==selected\?UiKit\.BLUE:Color\.rgb\(194,200,219\)/);
 });
 
 test('alarm cards are vertically compact without sacrificing critical controls',()=>{
