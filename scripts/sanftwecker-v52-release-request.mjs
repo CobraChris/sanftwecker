@@ -9,8 +9,8 @@ import path from 'node:path';
 export const REPO='CobraChris/sanftwecker';
 export const REQUEST='requests/sanftwecker-v52-release.json';
 export const EXPECTED_CODE=52;
-export const PHONE_V52_SHA256='bf7f37b078b2b5017e967d35c6ba793cfcdae2633f3c59c69a50c661d04f4f14';
-export const WATCH_V52_SHA256='26aa6e2af0dc7e58962419f952704eb1bae428cf84c6e2ef7c996aeb11fdaadb';
+export const PHONE_V51_SHA256='bf7f37b078b2b5017e967d35c6ba793cfcdae2633f3c59c69a50c661d04f4f14';
+export const WATCH_V51_SHA256='26aa6e2af0dc7e58962419f952704eb1bae428cf84c6e2ef7c996aeb11fdaadb';
 export const EXPECTED_PACKAGE='com.cobrachris.sanftwecker';
 export function validateActor(e){
   if(e.GITHUB_REPOSITORY!==REPO||e.GITHUB_ACTOR!=='CobraChris'||
