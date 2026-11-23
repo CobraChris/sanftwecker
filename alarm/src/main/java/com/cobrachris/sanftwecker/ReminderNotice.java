@@ -8,7 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
-/** Reminder notifications never reuse the clock-alarm notification/channel. */
+/** Reminder notifications retain their own IDs; cascades reuse the proven clock-alarm channel. */
 public final class ReminderNotice {
     private static final String SOFT="sanftwecker_reminder_soft_v1";
     private static final String STRONG="sanftwecker_reminder_strong_custom_v2";
