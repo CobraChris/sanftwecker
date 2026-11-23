@@ -28,7 +28,7 @@ public final class ReminderActivity extends Activity {
     private LinearLayout list;
     private EditText title;
     private TextView whenLabel;
-    private Switch cascade;
+    private Switch cascade,sameAsAlarm;
     private SeekBar intensity,pulses,interval;
     private Spinner recurrence,postpone,tone;
     private Switch phoneSound;
@@ -65,7 +65,7 @@ public final class ReminderActivity extends Activity {
             card.addView(UiKit.label(this,format.format(new Date(item.dueAt))+
                 (item.done?" · Erledigt":item.dueAt<System.currentTimeMillis()?
                 " · Überfällig":" · Offen")+
-                (item.cascade?" · Kaskade":" · Sanft")+
+                (item.cascade?(item.unifiedCascade?" · Wecker-Kaskade":" · Bisherige Kaskade"):" · Sanft")+
                 (item.repeat==1?" · Täglich":item.repeat==2?" · Wöchentlich":""),14,UiKit.MUTED));
             Button edit=UiKit.button(this,"Erinnerung bearbeiten",false);
             edit.setOnClickListener(v->editor(item));
@@ -150,6 +150,14 @@ public final class ReminderActivity extends Activity {
         cascade.setText("Sanft-stark-Kaskade mit Handy in Phase 2");
         cascade.setTextColor(UiKit.TEXT);
         cascade.setChecked(existing==null||existing.cascade);form.addView(cascade);
+        sameAsAlarm=UiKit.toggle(this);
+        sameAsAlarm.setText("Kaskade wie beim Wecker: Tonrampe ab Start, kräftige Watch- und Handyvibration ab Minute 2");
+        sameAsAlarm.setTextColor(UiKit.TEXT);
+        // Existing reminder settings are kept unless explicitly changed.
+        sameAsAlarm.setChecked(existing==null || existing.unifiedCascade);
+        sameAsAlarm.setEnabled(cascade.isChecked());
+        cascade.setOnCheckedChangeListener((button,on)->sameAsAlarm.setEnabled(on));
+        form.addView(sameAsAlarm);
         form.addView(UiKit.label(this,"Watch-Vibrationsstärke (0 sanft · 1 normal · 2 intensiv)",
                 13,UiKit.MUTED));
         intensity=UiKit.seek(this,2);intensity.setProgress(existing==null?1:existing.watchIntensity);form.addView(intensity);
@@ -245,13 +253,13 @@ public final class ReminderActivity extends Activity {
                         cascade.isChecked(),intensity.getProgress(),
                         pulses.getProgress()+1,interval.getProgress()+1,
                         recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                        tone.getSelectedItemPosition());
+                        tone.getSelectedItemPosition(),sameAsAlarm.isChecked());
             }else{
                 id=ReminderStore.create(this,title.getText().toString(),chosenAt,
                         cascade.isChecked(),intensity.getProgress(),
                         pulses.getProgress()+1,interval.getProgress()+1,
                         recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                        tone.getSelectedItemPosition());
+                        tone.getSelectedItemPosition(),sameAsAlarm.isChecked());
             }
             try{
                 if(previous!=null){
