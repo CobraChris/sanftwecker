@@ -41,8 +41,10 @@ public final class ReminderOptionsActivity extends Activity {
         Button stop=UiKit.button(this,"Stoppen (bleibt offen)",false);
         stop.setOnClickListener(v->dispatch(ReminderScheduler.STOP,0));
         root.addView(stop);
-        // Completion remains possible in the reminder list, but is not
-        // confused with merely stopping its current vibration/sound.
+        // Completion is explicit: Stoppen only ends output and leaves it open.
+        Button done=UiKit.button(this,"Erledigt (abschließen)",false);
+        done.setOnClickListener(v->dispatch(ReminderScheduler.DONE,0));
+        root.addView(done);
         setContentView(UiKit.scroll(this,root));
     }
     private void add(LinearLayout root,String text,int delay){
