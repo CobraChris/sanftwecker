@@ -12,7 +12,7 @@ test('previously saved reminders automatically run the SAME cascade engine as al
     assert.doesNotMatch(screen,/sameAsAlarm/);
     assert.match(screen,/Wecker-Kaskade: Tonrampe/);
     assert.match(screen,/item.cascade\?" · Wecker-Kaskade"/);
-    assert.match(screen,/tone.getSelectedItemPosition\(\),cascade.isChecked\(\)/);
+    assert.match(screen,/tone.getSelectedItemPosition\(\)\);/);
 });
 
 test('reminder notification uses exact working clock-alarm channel when it first rings',()=>{
@@ -53,5 +53,5 @@ test('watch reuses original WatchCascade patterns, not hard-coded reminder pulse
     assert.match(watchReminder,/WatchCascade.strongAmplitudes\(intensity\)/);
     assert.match(watchReminder,/WatchCascade.gentleAmplitudes\(intensity\)/);
     assert.match(watchReminder,/WatchCascade.untilStrong\(due,System.currentTimeMillis\(\)\)/);
-    assert.match(phone('ReminderWatchBridge'),/item.cascade&&item.unifiedCascade/);
+    assert.match(phone('ReminderWatchBridge'),/if\(START.equals\(path\)&&item.cascade\)/);
 });
