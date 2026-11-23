@@ -248,13 +248,13 @@ public final class ReminderActivity extends Activity {
                         cascade.isChecked(),intensity.getProgress(),
                         pulses.getProgress()+1,interval.getProgress()+1,
                         recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                        tone.getSelectedItemPosition(),cascade.isChecked());
+                        tone.getSelectedItemPosition());
             }else{
                 id=ReminderStore.create(this,title.getText().toString(),chosenAt,
                         cascade.isChecked(),intensity.getProgress(),
                         pulses.getProgress()+1,interval.getProgress()+1,
                         recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                        tone.getSelectedItemPosition(),cascade.isChecked());
+                        tone.getSelectedItemPosition());
             }
             try{
                 if(previous!=null){
