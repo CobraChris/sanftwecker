@@ -28,6 +28,12 @@ public final class RescheduleReceiver extends BroadcastReceiver {
             Log.e("Sanftwecker","Alarm reschedule failure",ex);
         }
         try {
+            AlarmScheduler.restoreSnooze(c);
+        }catch(RuntimeException ex){
+            AlarmRepository.diagnostic(c,"WARNUNG: Schlummeralarm konnte nicht wiederhergestellt werden");
+            Log.e("Sanftwecker","Snooze restore failed",ex);
+        }
+        try {
             ReminderScheduler.restore(c);
         }catch(RuntimeException ex){
             AlarmRepository.diagnostic(c,"WARNUNG: Erinnerungen konnten nicht wiederhergestellt werden");
