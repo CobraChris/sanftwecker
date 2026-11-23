@@ -53,7 +53,7 @@ public final class ReminderStore {
             p.getInt(id+"_pulses",6),p.getInt(id+"_interval",5),
             p.getInt(id+"_repeat",0),p.getInt(id+"_postpone",10),
             p.getBoolean(id+"_sound",true),p.getInt(id+"_tone",0),
-            p.getBoolean(id+"_unified_cascade",false));
+            p.getBoolean(id+"_cascade",true));
     }
     public static synchronized int create(Context c,String title,long dueAt,
             boolean cascade,int intensity,int pulses,int interval){
@@ -83,7 +83,7 @@ public final class ReminderStore {
                 .putInt(id+"_interval",interval).putBoolean(id+"_done",false)
                 .putInt(id+"_repeat",repeat).putInt(id+"_postpone",postponeMinutes)
                 .putBoolean(id+"_sound",phoneSound).putInt(id+"_tone",tone)
-                .putBoolean(id+"_unified_cascade",cascade&&unifiedCascade).commit())
+                .putBoolean(id+"_unified_cascade",cascade).commit())
             throw new IllegalStateException("Erinnerung nicht gespeichert");
         return id;
     }
@@ -114,7 +114,7 @@ public final class ReminderStore {
                 .putInt(id+"_interval",interval).putInt(id+"_repeat",repeat)
                 .putInt(id+"_postpone",postponeMinutes).putBoolean(id+"_sound",phoneSound)
                 .putInt(id+"_tone",tone)
-                .putBoolean(id+"_unified_cascade",cascade&&unifiedCascade).commit())
+                .putBoolean(id+"_unified_cascade",cascade).commit())
             throw new IllegalStateException("Bearbeitung nicht gespeichert");
     }
 
