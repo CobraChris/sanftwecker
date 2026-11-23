@@ -41,11 +41,12 @@ test('Watch transport retains seven-field legacy packets and adds optional mode'
     assert.match(bridge,/String payload=item.id/);
     assert.match(bridge,/String shared=payload\+":1"/);
     assert.match(bridge,/if\(START.equals\(path\)&&item.cascade\)/);
-    assert.match(listener,/putExtra\("unified_cascade",a.length==8 && "1".equals\(a\[7\]\)\)/);
+    // New watch app accepts both packet shapes, but never routes legacy haptics.
     assert.match(listener,/\(:\[01\]\)\?/);
-    assert.match(service,/unifiedCascade=cascade&&receivedUnified/);
-    assert.match(service,/if\(id==requestedId&&due==when\)/);
-    assert.match(service,/if\(receivedUnified&&cascade&&!unifiedCascade\)/);
+    assert.doesNotMatch(listener,/putExtra\("unified_cascade"/);
+    assert.doesNotMatch(service,/unifiedCascade|receivedUnified/);
+    assert.match(service,/if\(id==requestedId&&due==when\)return START_NOT_STICKY/);
+    assert.match(service,/strong=!cascade\|\|WatchCascade.strong\(due,System.currentTimeMillis\(\)\)/);
     assert.match(service,/WatchCascade.strongTimings\(intensity\)/);
     assert.match(service,/WatchCascade.gentleTimings\(intensity\)/);
     assert.match(service,/WatchCascade.untilStrong\(due,System.currentTimeMillis\(\)\)/);
