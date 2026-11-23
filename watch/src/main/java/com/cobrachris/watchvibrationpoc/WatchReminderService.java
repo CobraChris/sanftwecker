@@ -124,7 +124,8 @@ public final class WatchReminderService extends Service {
             .setContentTitle("Erinnerung")
             .setContentText("10 / 30 / 60 Minuten / morgen / stoppen")
             .setContentIntent(options())
-            .setCategory(Notification.CATEGORY_REMINDER)
+            .setFullScreenIntent(options(),true)
+            .setCategory(Notification.CATEGORY_ALARM)
             .setOngoing(true)
             .addAction(new Notification.Action.Builder(
                 android.R.drawable.ic_input_add,"Erledigt",action(DONE,49501)).build())
