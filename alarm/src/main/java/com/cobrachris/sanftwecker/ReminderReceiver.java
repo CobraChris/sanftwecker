@@ -15,7 +15,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
         ReminderStore.Item item=ReminderStore.get(c,id);
         if(item==null||item.done||due!=item.dueAt)return;
         if(ReminderScheduler.FIRE.equals(action)){
-            ReminderNotice.show(c,item,!item.cascade);
+            ReminderNotice.show(c,item,!item.cascade,true);
             ReminderWatchBridge.start(c,item);
             if(!item.cascade)ReminderToneService.start(c,item);
             if(item.cascade){
