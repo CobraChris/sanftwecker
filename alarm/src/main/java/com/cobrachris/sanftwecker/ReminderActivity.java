@@ -78,6 +78,7 @@ public final class ReminderActivity extends Activity {
                     ReminderNotice.clear(this,item.id);
                     ReminderWatchBridge.stop(this,item);
                     ReminderToneService.stop(this,item);
+                    PhoneVibration.stopReminder(this,item.id,item.dueAt);
                     ReminderStore.Item next=ReminderStore.get(this,item.id);
                     if(next!=null&&!next.done){
                         try{ReminderScheduler.schedule(this,next.id);}
@@ -92,6 +93,7 @@ public final class ReminderActivity extends Activity {
                     ReminderNotice.clear(this,item.id);
                     ReminderWatchBridge.stop(this,item);
                     ReminderToneService.stop(this,item);
+                    PhoneVibration.stopReminder(this,item.id,item.dueAt);
                     ReminderStore.postpone(this,item.id,System.currentTimeMillis()+item.postponeMinutes*60_000L);
                     try{ReminderScheduler.schedule(this,item.id);}
                     catch(RuntimeException e){toast("Genaue Alarme fehlen: "+e.getMessage());}
@@ -108,6 +110,7 @@ public final class ReminderActivity extends Activity {
                     ReminderNotice.clear(this,item.id);
                     ReminderWatchBridge.stop(this,item);
                     ReminderToneService.stop(this,item);
+                    PhoneVibration.stopReminder(this,item.id,item.dueAt);
                     ReminderStore.delete(this,item.id);
                     render();
                 })
@@ -267,6 +270,7 @@ public final class ReminderActivity extends Activity {
                     ReminderNotice.clear(this,id);
                     ReminderWatchBridge.stop(this,previous);
                     ReminderToneService.stop(this,previous);
+                    PhoneVibration.stopReminder(this,previous.id,previous.dueAt);
                 }
                 ReminderScheduler.schedule(this,id);
             }catch(RuntimeException failure){
