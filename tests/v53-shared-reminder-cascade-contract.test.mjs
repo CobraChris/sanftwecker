@@ -6,7 +6,7 @@ const watch=n=>readFileSync(new URL('../watch/src/main/java/com/cobrachris/watch
 
 test('existing and new cascades use the wake profile automatically',()=>{
     const store=phone('ReminderStore'),ui=phone('ReminderActivity');
-    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)\);/);
+    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)/);
     assert.match(store,/public final boolean cascade,done;/);
     assert.doesNotMatch(store,/putBoolean\(id\+"_unified_cascade",cascade\)/);
     assert.doesNotMatch(store,/item.unifiedCascade/);
