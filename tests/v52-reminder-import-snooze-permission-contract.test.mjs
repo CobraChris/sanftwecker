@@ -62,10 +62,36 @@ test('screenshot import is opt-in, idempotent, preserves current alarms and stay
     assert.match(imp,/if\(exists\(AlarmRepository.all\(c\),preset\)\)continue/);
     assert.match(imp,/new AlarmProfile\(id,preset.name,false/);
     assert.match(imp,/AlarmRepository.create\(c,null\)/);
-    assert.match(imp,/AlarmRepository.put\(c,draft\)/);
+    assert.match(imp,/AlarmProfile reference=referenceAlarm\(c\)/);
+    assert.match(imp,/AlarmRepository.put\(c,identity.withSettingsFrom\(reference\)\)/);
+    assert.match(imp,/if\(alarm.name.equals\(preset.name\)&&alarm.hour==preset.hour/);
     assert.match(main,/12 Wecker aus Screenshots übernehmen/);
     assert.match(main,/setPositiveButton\("Deaktiviert übernehmen"/);
     assert.match(main,/AlarmPresetImporter.importMissing\(this\)/);
+});
+
+test('screenshot-import fix uses the SAVED Testwecker, including old already imported entries',()=>{
+    const imp=phone('AlarmPresetImporter'),alarm=phone('AlarmProfile'),main=phone('MainActivity');
+    assert.match(imp,/if\(!"Testwecker".equals\(alarm.name\)\)continue/);
+    assert.match(imp,/if\(match!=null\)/);
+    assert.match(imp,/throw new IllegalStateException\("Mehrere Testwecker/);
+    assert.match(alarm,/public AlarmProfile withSettingsFrom\(AlarmProfile reference\)/);
+    for(const property of ['days','delaySeconds','rampSeconds','maxVolume',
+        'watchPulses','watchIntervalSeconds','snoozeMinutes','tone','rampEnabled',
+        'autoStopMinutes','snoozeEnabled','vibrationMode','audibleWhenMuted',
+        'cascadeEnabled','watchIntensity'])
+        assert.ok(alarm.includes('reference.'+property),property);
+    assert.match(alarm,/new AlarmProfile\(id, name, enabled, hour, minute,/);
+    assert.match(imp,/public static synchronized List<AlarmProfile> repairCandidates/);
+    assert.match(imp,/if\(!alarm.enabled&&matchesPreset\(alarm\)/);
+    assert.match(imp,/public static synchronized int applyTestweckerSettings/);
+    assert.match(imp,/public static synchronized int repairUntouchedDefaultsOnce/);
+    assert.match(imp,/if\(original.enabled\|\|!matchesPreset\(original\)\|\|/);
+    assert.match(imp,/isOriginalImportDefaults\(original\)/);
+    assert.match(main,/AlarmPresetImporter.repairUntouchedDefaultsOnce\(this\)/);
+    assert.match(main,/Importierte Wecker wie Testwecker einstellen/);
+    assert.match(main,/AlarmPresetImporter.applyTestweckerSettings\(this\)/);
+    assert.match(main,/setPositiveButton\("Einstellungen übernehmen"/);
 });
 
 test('post-update permission warning only if Android reports missing special access',()=>{
