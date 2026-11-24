@@ -114,6 +114,53 @@ public final class AlarmPresetImporter {
         }
     }
 
+    /**
+     * Correct only the demonstrably untouched, disabled presets from the old
+     * defaults-based import. Explicitly edited or active alarms are skipped.
+     * Runs once on first launch after upgrade; no user interaction required.
+     */
+    public static synchronized int repairUntouchedDefaultsOnce(Context c){
+        if(!wasImported(c)||prefs(c).getBoolean("testwecker_default_repair_v1",false))
+            return 0;
+        AlarmProfile reference;
+        try{reference=referenceAlarm(c);}
+        catch(IllegalStateException unavailable){return 0;}
+        List<AlarmProfile> changed=new ArrayList<>();
+        try{
+            for(AlarmProfile original:AlarmRepository.all(c)){
+                if(original.enabled||!matchesPreset(original)||
+                        !isOriginalImportDefaults(original))continue;
+                AlarmProfile corrected=original.withSettingsFrom(reference);
+                if(original.sameConfiguration(corrected))continue;
+                AlarmRepository.put(c,corrected);
+                changed.add(original);
+            }
+            if(!prefs(c).edit().putBoolean("testwecker_default_repair_v1",true).commit())
+                throw new IllegalStateException("Automatische Reparatur nicht gespeichert");
+            return changed.size();
+        }catch(RuntimeException failure){
+            for(int i=changed.size()-1;i>=0;i--){
+                try{AlarmRepository.put(c,changed.get(i));}
+                catch(RuntimeException rollbackFailed){
+                    throw new IllegalStateException(
+                            "Teilweise Wecker-Reparatur – Einstellungen bitte prüfen",rollbackFailed);
+                }
+            }
+            throw failure;
+        }
+    }
+
+    private static boolean isOriginalImportDefaults(AlarmProfile alarm){
+        AlarmProfile old=AlarmProfile.defaults(alarm.id);
+        AlarmProfile baseline=new AlarmProfile(alarm.id,alarm.name,false,
+                alarm.hour,alarm.minute,old.days,old.delaySeconds,old.rampSeconds,
+                old.maxVolume,old.watchPulses,old.watchIntervalSeconds,
+                old.snoozeMinutes,old.tone,old.rampEnabled,old.autoStopMinutes,
+                0L,0L,0L,old.snoozeEnabled,old.vibrationMode,old.audibleWhenMuted,
+                old.cascadeEnabled,old.watchIntensity);
+        return alarm.sameConfiguration(baseline);
+    }
+
     /** Returns count of newly added, always inactive alarms. */
     public static synchronized int importMissing(Context c){
         if(wasImported(c))return 0;
