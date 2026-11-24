@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V55_WITH_EXISTING_V54_CERTIFICATE",
+  "expected_version_code": 55,
+  "intent": "signed-native-wear-v55",
+  "request_id": "2026-11-24-v55-testwecker-tone-release-approved",
+  "source_sha": "d69e22665e8622c23b2cc7e716ef630c808f10c1",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
