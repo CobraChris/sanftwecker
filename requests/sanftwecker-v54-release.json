@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V54_WITH_EXISTING_V53_CERTIFICATE",
+  "expected_version_code": 54,
+  "intent": "signed-native-wear-v54",
+  "request_id": "2026-11-24-v54-testwecker-import-and-reminder-cascade-approved",
+  "source_sha": "489fd5566d05ace7473daf0d2b35043a1abafd1d",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
