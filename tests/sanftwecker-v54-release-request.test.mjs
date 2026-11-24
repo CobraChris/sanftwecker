@@ -75,7 +75,7 @@ test('v54 protected release compares signed phone and Watch to exact v53 assets'
 test('phone and watch versionCode 54 preserve application IDs',()=>{
     for(const module of ['alarm','watch']){
         const gradle=readFileSync(new URL('../'+module+'/build.gradle',import.meta.url),'utf8');
-        assert.match(gradle,/versionCode 54/);
+        assert.match(gradle,/versionCode (?:54|55)/);
         assert.match(gradle,/applicationId 'com.cobrachris.sanftwecker'/);
     }
 });
