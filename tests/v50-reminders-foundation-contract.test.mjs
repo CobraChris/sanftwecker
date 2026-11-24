@@ -113,8 +113,8 @@ test('the nine original tones play in a separate bounded reminder service',()=>{
  assert.match(ui,/tone\.getSelectedItemPosition\(\)/);
  assert.match(receiver,/ReminderToneService\.start\(c,item\)/);
  assert.match(receiver,/ReminderToneService\.stop\(c,item\)/);
- assert.match(sound,/ToneCatalog\.sample\(tone,t\)/);
- assert.match(sound,/handler\.postDelayed\(finish,cascadeRamp\?180_000L:90_000L\)/);
+ assert.match(sound,/AlarmPcm.sample\(tone,t\)/);
+ assert.match(sound,/handler.postDelayed\(finish,WakeCascade.duration\(/);
  assert.match(sound,/ActiveAlarmState\.activeId\(this\)>0/);
  assert.match(sound,/ReminderScheduler\.DUE/);
  assert.match(sound,/reminder\.dueAt!=due/);
