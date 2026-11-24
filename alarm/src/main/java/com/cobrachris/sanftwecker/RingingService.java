@@ -355,10 +355,7 @@ public final class RingingService extends Service {
             while (active && !Thread.currentThread().isInterrupted()) {
                 for (int i = 0; i < buffer.length; i++, sampleIndex++) {
                     double t = sampleIndex / (double) rate;
-                    double oscillation = ToneCatalog.sample(tone,t);
-                    // Slowly breathe to avoid a sharp onset, but preserve a smooth continuous waveform.
-                    double breathe = 0.75 + 0.25 * Math.cos(2 * Math.PI * 0.24 * t);
-                    buffer[i] = (short) (Short.MAX_VALUE * 0.36 * breathe * oscillation);
+                    buffer[i] = AlarmPcm.sample(tone,t);
                 }
                 try { if (sink.write(buffer, 0, buffer.length) < 0) break; }
                 catch (IllegalStateException e) { break; }

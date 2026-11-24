@@ -13,6 +13,7 @@ import android.media.AudioTrack;
 import android.os.IBinder;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 /** Dedicated bounded reminder sound playback. Never owns wake-alarm audio. */
@@ -21,7 +22,7 @@ public final class ReminderToneService extends Service {
     public static final String STOP="com.cobrachris.sanftwecker.REMINDER_TONE_STOP";
     private static final String CHANNEL="sanftwecker_reminder_tone_playback_v1";
     private static final int NOTIFICATION=99111;
-    private static final int RATE=22050;
+    private static final int RATE=AlarmPcm.RATE;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private volatile boolean playing;
     private int activeId;
@@ -30,16 +31,22 @@ public final class ReminderToneService extends Service {
     private Thread writer;
     private boolean cascadeRamp;
     private long rampDue;
+    private AlarmProfile soundProfile;
+    private long soundStartedAt;
     private final Runnable gainTick=new Runnable(){
         @Override public void run(){
-            if(!playing||sink==null||!cascadeRamp)return;
+            if(!playing||sink==null||soundProfile==null)return;
+            long elapsed=soundProfile.cascadeEnabled ?
+                    WakeCascade.elapsedSinceAlarm(activeDue,System.currentTimeMillis(),
+                            SystemClock.elapsedRealtime()-soundStartedAt) :
+                    SystemClock.elapsedRealtime()-soundStartedAt;
             try{
-                sink.setVolume(GentleGain.level(
-                    Math.max(0L,System.currentTimeMillis()-rampDue),0,60,42));
+                // Same gain function and saved peak as a real Testwecker alarm.
+                sink.setVolume(AlarmEnvelope.gain(soundProfile,false,elapsed));
             }catch(IllegalStateException failure){
-                Log.w("Sanftwecker","Reminder volume ramp unavailable",failure);
+                Log.w("Sanftwecker","Reminder gain unavailable",failure);
             }
-            handler.postDelayed(this,250L);
+            handler.postDelayed(this,200L);
         }
     };
     // Trigger phase 2 from the running alarm service, just like the wake alarm.
@@ -118,6 +125,21 @@ public final class ReminderToneService extends Service {
         activeId=id;activeDue=due;
         cascadeRamp=reminder.cascade;
         rampDue=reminder.dueAt;
+        final AlarmProfile reference;
+        int selectedTone;
+        AlarmProfile savedTestwecker;
+        try{
+            savedTestwecker=AlarmPresetImporter.referenceAlarm(this);
+            selectedTone=savedTestwecker.tone;
+        }catch(IllegalStateException absent){
+            // A renamed/deleted or ambiguous Testwecker must not silence reminders.
+            savedTestwecker=AlarmProfile.defaults(1);
+            selectedTone=reminder.tone;
+            AlarmRepository.diagnostic(this,
+                    "HINWEIS: Testwecker-Audiovorlage nicht eindeutig – Erinnerung mit Ersatzklang");
+        }
+        reference=savedTestwecker;
+        soundProfile=reference;
         Notification notice=new Notification.Builder(this,CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("Erinnerungston")
@@ -127,13 +149,15 @@ public final class ReminderToneService extends Service {
         try{
             startForeground(NOTIFICATION,notice,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-            beginAudio(reminder.tone);
-            if(cascadeRamp){
-                handler.post(gainTick);
+            if(reference.audibleWhenMuted)AlarmVolumeGuard.ensureAudible(this);
+            beginAudio(selectedTone);
+            soundStartedAt=SystemClock.elapsedRealtime();
+            handler.post(gainTick);
+            if(cascadeRamp)
                 handler.postDelayed(strongPhase,
                         WakeCascade.untilStrong(rampDue,System.currentTimeMillis(),0));
-            }
-            handler.postDelayed(finish,cascadeRamp?180_000L:90_000L);
+            handler.postDelayed(finish,WakeCascade.duration(
+                    false,false,reference.cascadeEnabled,reference.autoStopMinutes));
             handler.post(wakePriorityCheck);
         }catch(RuntimeException problem){
             Log.w("Sanftwecker","Reminder audio startup failed",problem);
@@ -160,7 +184,7 @@ public final class ReminderToneService extends Service {
             track.release();throw new IllegalStateException("Audio output not initialized");
         }
         sink=track;playing=true;
-        track.setVolume(cascadeRamp?0f:.42f);
+        track.setVolume(0f);
         track.play();
         writer=new Thread(()->{
             short[] samples=new short[2205];
@@ -168,7 +192,7 @@ public final class ReminderToneService extends Service {
             while(playing&&!Thread.currentThread().isInterrupted()){
                 for(int k=0;k<samples.length;k++,pos++){
                     double t=pos/(double)RATE;
-                    samples[k]=(short)(Short.MAX_VALUE*.35*ToneCatalog.sample(tone,t));
+                    samples[k]=AlarmPcm.sample(tone,t);
                 }
                 try{if(track.write(samples,0,samples.length)<0)break;}
                 catch(IllegalStateException error){break;}
@@ -198,19 +222,16 @@ public final class ReminderToneService extends Service {
         activeId=0;activeDue=0;
         cascadeRamp=false;
         rampDue=0L;
+        soundProfile=null;
+        soundStartedAt=0L;
+        if(ActiveAlarmState.activeId(this)<=0)AlarmVolumeGuard.restore(this);
         if(endService){
             stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
         }
     }
     @Override public void onDestroy(){
-        playing=false;handler.removeCallbacks(finish);
-        handler.removeCallbacks(gainTick);
-        handler.removeCallbacks(wakePriorityCheck);
-        AudioTrack old=sink;sink=null;
-        if(old!=null){
-            try{old.pause();old.flush();old.release();}catch(RuntimeException ignored){}
-        }
+        resetAudio(false);
         super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent){return null;}

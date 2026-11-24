@@ -6,8 +6,8 @@ android {
         applicationId 'com.cobrachris.sanftwecker'
         minSdk 30
         targetSdk 35
-        versionCode 54
-        versionName '0.9.35-beta'
+        versionCode 55
+        versionName '0.9.36-beta'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

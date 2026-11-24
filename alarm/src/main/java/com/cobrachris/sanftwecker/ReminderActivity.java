@@ -175,14 +175,18 @@ public final class ReminderActivity extends Activity {
         postpone.setSelection(existing==null?1:existing.postponeMinutes==5?0:
                 existing.postponeMinutes==30?2:1);
         form.addView(postpone);
-        form.addView(UiKit.label(this,"Erinnerungston (Sanftwecker-Klänge)",15,UiKit.TEXT));
+        form.addView(UiKit.label(this,
+                "Klang und Lautstärke werden vom gespeicherten Wecker \"Testwecker\" übernommen.",
+                14,UiKit.MUTED));
+        form.addView(UiKit.label(this,
+                "Ersatzton (nur wenn Testwecker fehlt)",15,UiKit.TEXT));
         tone=new Spinner(this);
         tone.setAdapter(new ArrayAdapter<String>(this,
             android.R.layout.simple_spinner_dropdown_item,ToneCatalog.LABELS));
         tone.setSelection(existing==null?0:existing.tone);
         form.addView(tone);
         phoneSound=UiKit.toggle(this);
-        phoneSound.setText("Handy-Alarmton bei starker Phase");
+        phoneSound.setText("Am Handy wie Testwecker klingeln (aus = stumm)");
         phoneSound.setTextColor(UiKit.TEXT);
         phoneSound.setChecked(existing==null||existing.phoneSound);
         form.addView(phoneSound);
