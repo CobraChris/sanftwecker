@@ -88,6 +88,8 @@ jobs:
         run: node --test tests/v51-watch-update-one-step-ux.test.mjs
       - name: Verify shared reminder cascade, legacy persistence and Watch compatibility
         run: node --test tests/v53-shared-reminder-cascade-contract.test.mjs
+      - name: Verify identical Testwecker and reminder audio engine
+        run: node --test tests/v55-testwecker-audio-parity-contract.test.mjs
       - name: Verify old and new reminders share the existing wake alarm cascade
         run: node --test tests/v54-cascade-reuse-regressions.test.mjs
       - name: Verify time-sensitive reminder full-screen display and options
