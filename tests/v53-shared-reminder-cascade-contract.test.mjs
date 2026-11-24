@@ -18,11 +18,11 @@ test('existing and new cascades use the wake profile automatically',()=>{
 
 test('new cascade uses the actual alarm envelope and only current reminder owns vibration',()=>{
     const tone=phone('ReminderToneService'),recv=phone('ReminderReceiver'),motor=phone('PhoneVibration');
-    assert.match(tone,/GentleGain.level\(/);
-    assert.match(tone,/System.currentTimeMillis\(\)-rampDue/);
-    assert.match(tone,/0,60,42/);
+    assert.match(tone,/AlarmEnvelope.gain\(soundProfile,false,elapsed\)/);
+    assert.match(tone,/WakeCascade.elapsedSinceAlarm\(activeDue,System.currentTimeMillis\(\)/);
+    assert.doesNotMatch(tone,/0,60,42/);
     assert.match(tone,/cascadeRamp=reminder.cascade/);
-    assert.match(tone,/track.setVolume\(cascadeRamp\?0f:.42f\)/);
+    assert.match(tone,/track.setVolume\(0f\)/);
     assert.match(tone,/if\(playing&&activeId==id&&activeDue==due\)return START_NOT_STICKY/);
     assert.match(recv,/ReminderToneService.start\(c,item\)/);
     assert.match(recv,/if\(item.cascade\)PhoneVibration.startReminder/);
