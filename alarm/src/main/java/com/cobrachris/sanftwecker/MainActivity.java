@@ -62,6 +62,17 @@ public final class MainActivity extends Activity {
 
     @Override public void onResume() {
         super.onResume();
+        // Repair only untouched, disabled presets that older versions imported
+        // with defaults instead of the saved Testwecker settings.
+        try{
+            int corrected=AlarmPresetImporter.repairUntouchedDefaultsOnce(this);
+            if(corrected>0)android.widget.Toast.makeText(this,
+                    corrected+" importierte Wecker an Testwecker angeglichen (weiterhin AUS)",
+                    android.widget.Toast.LENGTH_LONG).show();
+        }catch(RuntimeException problem){
+            AlarmRepository.diagnostic(this,
+                    "WARNUNG: Screenshot-Wecker nicht vollständig angeglichen");
+        }
         if (list != null) {
             if (!AlarmScheduler.canSchedule(this)) {
                 for (AlarmProfile p : AlarmRepository.all(this))
