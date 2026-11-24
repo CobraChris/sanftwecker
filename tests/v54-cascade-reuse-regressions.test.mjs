@@ -31,7 +31,7 @@ test('reminder notification uses exact working clock-alarm channel when it first
 test('same timed 60s escalation as wake alarm without relying only on a second broadcast',()=>{
     const tone=phone('ReminderToneService'),recv=phone('ReminderReceiver'),
           vibration=phone('PhoneVibration'),sched=phone('ReminderScheduler');
-    assert.match(tone,/GentleGain.level\(/);
+    assert.match(tone,/AlarmEnvelope.gain\(soundProfile,false,elapsed\)/);
     assert.match(tone,/WakeCascade.untilStrong\(rampDue,System.currentTimeMillis\(\),0\)/);
     assert.match(tone,/handler.postDelayed\(strongPhase,/);
     assert.match(tone,/WakeCascade.strongStage\(/);
