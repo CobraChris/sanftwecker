@@ -14,9 +14,9 @@ const valid={
 test('only exact owner-v55 approval permits both original-signer APKs',()=>{
     assert.deepEqual(validateRequest(valid),{source_sha:before,expected_version_code:'55'});
     for(const patch of [
-        {expected_version_code:54},{expected_version_code:55},{source_sha:'main'},
+        {expected_version_code:54},{expected_version_code:56},{source_sha:'main'},
         {source_sha:'a'.repeat(41)},{watch_application_id:'invalid'},
-        {confirmation:'SIGN_PHONE_AND_WATCH_V55_WITH_EXISTING_V51_CERTIFICATE'},
+        {confirmation:'SIGN_PHONE_AND_WATCH_V55_WITH_EXISTING_V53_CERTIFICATE'},
         {confirmation:'GENERATE_NEW_KEY'},{extra:'unexpected'},{request_id:'../bad'}
     ])assert.throws(()=>validateRequest({...valid,...patch}));
     for(const bad of [null,[],true,'bad'])assert.throws(()=>validateRequest(bad));
