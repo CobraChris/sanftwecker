@@ -239,7 +239,9 @@ public final class MainActivity extends Activity {
                 "Sortieren: Uhrzeit").setOnMenuItemClickListener(item->{
             sortByNext=false;saveSort();renderList();return true;
         });
-        menu.getMenu().add("12 Wecker aus Screenshots übernehmen")
+        menu.getMenu().add(AlarmPresetImporter.wasImported(this)
+                ?"Importierte Wecker wie Testwecker einstellen"
+                :"12 Wecker aus Screenshots übernehmen")
                 .setOnMenuItemClickListener(item->{
                     importScreenshotAlarms();
                     return true;
@@ -266,12 +268,12 @@ public final class MainActivity extends Activity {
 
     private void importScreenshotAlarms(){
         if(AlarmPresetImporter.wasImported(this)){
-            new AlertDialog.Builder(this).setTitle("Wecker bereits übernommen")
-                    .setMessage("Die Screenshot-Vorlagen wurden bereits verarbeitet. "
-                            +"Vorhandene Wecker bleiben unverändert.")
-                    .setPositiveButton("OK",null).show();
+            repairImportedAlarms();
             return;
         }
+        final AlarmProfile reference;
+        try{reference=AlarmPresetImporter.referenceAlarm(this);}
+        catch(RuntimeException failure){error(failure.getMessage());return;}
         StringBuilder names=new StringBuilder();
         for(AlarmPresetImporter.Preset preset:AlarmPresetImporter.PRESETS){
             names.append(String.format(Locale.GERMANY,"%02d:%02d – %s\n",
@@ -279,19 +281,22 @@ public final class MainActivity extends Activity {
         }
         new AlertDialog.Builder(this)
                 .setTitle("12 Wecker aus Screenshots übernehmen?")
-                .setMessage("Übernommen werden ausschließlich Namen und Uhrzeiten. "
-                        +"Wochentage, Ton, Vibration und Schlummerdauer sind auf "
-                        +"den Bildern nicht erkennbar und müssen geprüft werden. "
-                        +"Alle neuen Wecker bleiben zunächst AUS; vorhandene "
+                .setMessage("Namen und Uhrzeiten stammen aus den Screenshots. "
+                        +"Alle übrigen Einstellungen werden aus dem aktuell gespeicherten "
+                        +"Testwecker ("+String.format(Locale.GERMANY,"%02d:%02d",
+                                reference.hour,reference.minute)+") kopiert: "
+                        +"Weckmodus, Wochentage, Ton, Lautstärke, Watch-Impulse, "
+                        +"Handyvibration, Schlummern und Auto-Stopp. "
+                        +"Alle zwölf Vorlagen bleiben zunächst AUS; vorhandene "
                         +"Wecker werden weder überschrieben noch dupliziert.\n\n"+names)
                 .setPositiveButton("Deaktiviert übernehmen",(dialog,which)->{
                     try{
                         int created=AlarmPresetImporter.importMissing(this);
                         renderList();
                         new AlertDialog.Builder(this).setTitle("Vorlagen übernommen")
-                                .setMessage(created+" neue deaktivierte Wecker angelegt. "
-                                        +"Öffne die Einträge und prüfe Wochentage "
-                                        +"sowie individuelle Klingel- und Schlummereinstellungen.")
+                                .setMessage(created+" neue deaktivierte Wecker mit "
+                                        +"den aktuellen Einstellungen des Testweckers angelegt. "
+                                        +"Namen und Uhrzeiten wurden aus den Screenshots übernommen.")
                                 .setPositiveButton("OK",null).show();
                     }catch(RuntimeException failure){
                         error("Weckerübernahme unvollständig: "+failure.getMessage()
@@ -300,6 +305,54 @@ public final class MainActivity extends Activity {
                     }
                 })
                 .setNegativeButton("Abbrechen",null).show();
+    }
+
+    /** Fixes the previous defaults-based import without re-creating any alarms. */
+    private void repairImportedAlarms(){
+        final AlarmProfile reference;
+        final List<AlarmProfile> candidates;
+        try{
+            reference=AlarmPresetImporter.referenceAlarm(this);
+            candidates=AlarmPresetImporter.repairCandidates(this);
+        }catch(RuntimeException failure){error(failure.getMessage());return;}
+        if(candidates.isEmpty()){
+            new AlertDialog.Builder(this).setTitle("Importierte Wecker")
+                    .setMessage("Keine abweichenden, deaktivierten Screenshot-Wecker gefunden. "
+                            +"Bereits aktivierte oder umbenannte Wecker werden nicht automatisch geändert.")
+                    .setPositiveButton("OK",null).show();
+            return;
+        }
+        StringBuilder entries=new StringBuilder();
+        for(AlarmProfile target:candidates)
+            entries.append(String.format(Locale.GERMANY,
+                    "%02d:%02d – %s\\n",target.hour,target.minute,target.name));
+        new AlertDialog.Builder(this)
+            .setTitle(candidates.size()+" Wecker wie Testwecker konfigurieren?")
+            .setMessage("Quelle: gespeicherter Testwecker ("+
+                    String.format(Locale.GERMANY,"%02d:%02d",reference.hour,reference.minute)+
+                    "). Es werden alle Weck- und Watch-Einstellungen einschließlich "
+                    +"2-Stufen-Modus, Lautstärke, 12/3-Impulsen (falls so gespeichert), "
+                    +"Schlummern und Auto-Stopp kopiert.\\n\\n"
+                    +"Name, Uhrzeit, ID und Aktivierungszustand jedes Zielweckers "
+                    +"bleiben erhalten. Bereits aktivierte Wecker werden aus "
+                    +"Sicherheitsgründen übersprungen. Individuelle Einstellungen "
+                    +"der aufgeführten deaktivierten Wecker werden ersetzt.\\n\\n"+entries)
+            .setPositiveButton("Einstellungen übernehmen",(dialog,which)->{
+                try{
+                    int changed=AlarmPresetImporter.applyTestweckerSettings(this);
+                    renderList();
+                    new AlertDialog.Builder(this)
+                            .setTitle("Wecker angeglichen")
+                            .setMessage(changed+" deaktivierte Wecker haben jetzt "
+                                    +"die Einstellungen des Testweckers. "
+                                    +"Es wurden keine Wecker aktiviert.")
+                            .setPositiveButton("OK",null).show();
+                }catch(RuntimeException failure){
+                    error("Übernahme nicht abgeschlossen: "+failure.getMessage());
+                    renderList();
+                }
+            })
+            .setNegativeButton("Abbrechen",null).show();
     }
 
     private void openSetupAssistant() {
