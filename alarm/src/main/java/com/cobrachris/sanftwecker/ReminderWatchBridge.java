@@ -13,23 +13,25 @@ public final class ReminderWatchBridge {
     public static final String ACTION="/sanftwecker/reminder/v1/action";
     private ReminderWatchBridge(){}
     private static void send(Context c,String path,ReminderStore.Item item){
-        // Always send the legacy seven-field packet for older Watch builds.
+        // Old Watch releases understand seven fields only. The eighth field
+        // marks the shared wake-cascade profile for Watch v53+.
+        // Keep the legacy packet until both devices can reliably negotiate versions.
         String payload=item.id+":"+item.dueAt+":"+(item.cascade?"1":"0")+":"+
             item.watchIntensity+":"+item.watchPulses+":"+item.watchIntervalSeconds+":"+item.postponeMinutes;
-        // A newer Watch receives this optional 8th field; older Watch software
-        // ignores it and still receives the legacy packet (no lost reminders).
         String shared=payload+":1";
         try{
             Wearable.getNodeClient(c).getConnectedNodes().addOnSuccessListener(nodes->{
                 for(com.google.android.gms.wearable.Node node:nodes){
-                    Wearable.getMessageClient(c).sendMessage(node.getId(),path,
-                        payload.getBytes(StandardCharsets.UTF_8))
-                        .addOnFailureListener(e->Log.w("Sanftwecker","Reminder Watch delivery deferred",e));
-                    if(START.equals(path)&&item.cascade&&item.unifiedCascade)
+                    // Try the shared mode first: newer Watch versions start
+                    // immediately with the correct haptics instead of a legacy pulse.
+                    if(START.equals(path)&&item.cascade)
                         Wearable.getMessageClient(c).sendMessage(node.getId(),path,
                             shared.getBytes(StandardCharsets.UTF_8))
                             .addOnFailureListener(e->Log.w("Sanftwecker",
                                     "Shared reminder mode delivery deferred",e));
+                    Wearable.getMessageClient(c).sendMessage(node.getId(),path,
+                        payload.getBytes(StandardCharsets.UTF_8))
+                        .addOnFailureListener(e->Log.w("Sanftwecker","Reminder Watch delivery deferred",e));
                 }
             });
         }catch(RuntimeException e){

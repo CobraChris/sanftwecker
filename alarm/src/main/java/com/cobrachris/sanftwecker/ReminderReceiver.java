@@ -17,7 +17,8 @@ public final class ReminderReceiver extends BroadcastReceiver {
         if(ReminderScheduler.FIRE.equals(action)){
             ReminderNotice.show(c,item,!item.cascade,true);
             ReminderWatchBridge.start(c,item);
-            if(!item.cascade||item.unifiedCascade)ReminderToneService.start(c,item);
+            // Same tone engine for every reminder; cascade controls the ramp.
+            ReminderToneService.start(c,item);
             if(item.cascade){
                 try{ReminderScheduler.scheduleEscalation(c,item);}
                 catch(RuntimeException e){Log.w("Sanftwecker","Reminder escalation unavailable",e);}
@@ -26,7 +27,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderNotice.show(c,item,true);
             ReminderWatchBridge.escalate(c,item);
             ReminderToneService.start(c,item);
-            if(item.unifiedCascade)PhoneVibration.startReminder(c,
+            if(item.cascade)PhoneVibration.startReminder(c,
                     WakeCascade.phoneMode(0),item.id,item.dueAt);
         }else if(ReminderScheduler.DONE.equals(action)){
             ReminderStore.complete(c,id);

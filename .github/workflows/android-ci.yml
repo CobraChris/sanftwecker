@@ -62,6 +62,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v54 owner-only original-signer dual-device release gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v54-release-request.mjs
+          node --test tests/sanftwecker-v54-release-request.test.mjs
       - name: Verify v53 owner-only original-signer release gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v53-release-request.mjs
@@ -84,6 +88,8 @@ jobs:
         run: node --test tests/v51-watch-update-one-step-ux.test.mjs
       - name: Verify shared reminder cascade, legacy persistence and Watch compatibility
         run: node --test tests/v53-shared-reminder-cascade-contract.test.mjs
+      - name: Verify old and new reminders share the existing wake alarm cascade
+        run: node --test tests/v54-cascade-reuse-regressions.test.mjs
       - name: Verify time-sensitive reminder full-screen display and options
         run: node --test tests/v53-reminder-fullscreen-contract.test.mjs
       - name: Verify v52 reminder edits, lockscreen snooze and safe screenshot import

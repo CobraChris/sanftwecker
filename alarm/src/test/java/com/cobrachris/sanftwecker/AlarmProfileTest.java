@@ -85,6 +85,53 @@ public class AlarmProfileTest {
         assertEquals(WatchIntensity.SANFT,sanft.withExceptions(0,0,0).watchIntensity);
         assertEquals(WatchIntensity.SANFT,sanft.duplicateAs(2).watchIntensity);
     }
+    @Test public void screenshotAlarmsCopyEveryPreferenceFromSavedTestwecker(){
+        AlarmProfile reference=new AlarmProfile(1,"Testwecker",false,10,11,
+                0x1f,0,180,88,12,3,5,2,
+                true,30,0,0,0,true,3,true,true,WatchIntensity.SANFT);
+        AlarmProfile imported=new AlarmProfile(40,"6:45 Uhr bei Gero los",
+                false,5,30,0x7f,10,60,55,6,5,5,0,
+                true,20,0,0,0,true,1,false,false,WatchIntensity.NORMAL);
+        AlarmProfile fixed=imported.withSettingsFrom(reference);
+        assertEquals(imported.id,fixed.id);
+        assertEquals(imported.name,fixed.name);
+        assertEquals(imported.hour,fixed.hour);
+        assertEquals(imported.minute,fixed.minute);
+        assertFalse(fixed.enabled);
+        assertEquals(reference.days,fixed.days);
+        assertEquals(reference.delaySeconds,fixed.delaySeconds);
+        assertEquals(reference.rampSeconds,fixed.rampSeconds);
+        assertEquals(reference.maxVolume,fixed.maxVolume);
+        assertEquals(reference.watchPulses,fixed.watchPulses);
+        assertEquals(reference.watchIntervalSeconds,fixed.watchIntervalSeconds);
+        assertEquals(reference.watchIntensity,fixed.watchIntensity);
+        assertEquals(reference.snoozeMinutes,fixed.snoozeMinutes);
+        assertEquals(reference.tone,fixed.tone);
+        assertEquals(reference.rampEnabled,fixed.rampEnabled);
+        assertEquals(reference.autoStopMinutes,fixed.autoStopMinutes);
+        assertEquals(reference.snoozeEnabled,fixed.snoozeEnabled);
+        assertEquals(reference.vibrationMode,fixed.vibrationMode);
+        assertEquals(reference.audibleWhenMuted,fixed.audibleWhenMuted);
+        assertEquals(reference.cascadeEnabled,fixed.cascadeEnabled);
+        assertEquals(imported.skipAt,fixed.skipAt);
+        assertEquals(imported.oneTimeAt,fixed.oneTimeAt);
+        assertEquals(imported.replacedAt,fixed.replacedAt);
+        assertTrue(fixed.sameConfiguration(fixed.withSettingsFrom(reference)));
+        assertEquals(6,imported.watchPulses); // Existing objects stay immutable
+        assertEquals(12,reference.watchPulses);
+    }
+
+    @Test public void copyingSettingsCannotActivateASleepingAlarm(){
+        AlarmProfile original=AlarmProfile.defaults(17);
+        AlarmProfile activeReference=AlarmProfile.defaults(1).withEnabled(true);
+        AlarmProfile copied=original.withSettingsFrom(activeReference);
+        assertFalse(copied.enabled);
+        assertEquals(original.id,copied.id);
+        assertEquals(original.name,copied.name);
+        assertEquals(original.hour,copied.hour);
+        assertEquals(original.minute,copied.minute);
+    }
+
     @Test(expected=IllegalArgumentException.class)
     public void rejectsInvalidWatchIntensity(){
         AlarmProfile old=AlarmProfile.defaults(1);

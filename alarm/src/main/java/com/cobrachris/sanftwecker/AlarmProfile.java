@@ -153,6 +153,23 @@ public final class AlarmProfile {
                 snoozeMinutes, tone, rampEnabled, autoStopMinutes, 0, 0, 0, snoozeEnabled, vibrationMode, audibleWhenMuted, cascadeEnabled, watchIntensity);
     }
 
+    /**
+     * Copy every configurable alarm preference from the saved reference alarm.
+     * Keep this alarm's identity, scheduled clock time, enabled state and
+     * existing one-time exceptions; no alarm is implicitly activated.
+     */
+    public AlarmProfile withSettingsFrom(AlarmProfile reference) {
+        if (reference == null) throw new IllegalArgumentException("Referenzwecker fehlt");
+        return new AlarmProfile(id, name, enabled, hour, minute,
+                reference.days, reference.delaySeconds, reference.rampSeconds,
+                reference.maxVolume, reference.watchPulses, reference.watchIntervalSeconds,
+                reference.snoozeMinutes, reference.tone, reference.rampEnabled,
+                reference.autoStopMinutes, skipAt, oneTimeAt, replacedAt,
+                reference.snoozeEnabled, reference.vibrationMode,
+                reference.audibleWhenMuted, reference.cascadeEnabled,
+                reference.watchIntensity);
+    }
+
     public boolean sameConfiguration(AlarmProfile b) {
         return b != null && id == b.id && name.equals(b.name) &&
                 enabled == b.enabled && hour == b.hour && minute == b.minute &&

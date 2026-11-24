@@ -28,11 +28,11 @@ public final class ReminderToneService extends Service {
     private long activeDue;
     private AudioTrack sink;
     private Thread writer;
-    private boolean unifiedRamp;
+    private boolean cascadeRamp;
     private long rampDue;
     private final Runnable gainTick=new Runnable(){
         @Override public void run(){
-            if(!playing||sink==null||!unifiedRamp)return;
+            if(!playing||sink==null||!cascadeRamp)return;
             try{
                 sink.setVolume(GentleGain.level(
                     Math.max(0L,System.currentTimeMillis()-rampDue),0,60,42));
@@ -40,6 +40,20 @@ public final class ReminderToneService extends Service {
                 Log.w("Sanftwecker","Reminder volume ramp unavailable",failure);
             }
             handler.postDelayed(this,250L);
+        }
+    };
+    // Trigger phase 2 from the running alarm service, just like the wake alarm.
+    // The independent AlarmManager escalation remains a fallback if audio is off.
+    private final Runnable strongPhase=new Runnable(){
+        @Override public void run(){
+            if(!playing||!cascadeRamp||activeId<=0||activeDue<=0)return;
+            ReminderStore.Item live=ReminderStore.get(ReminderToneService.this,activeId);
+            if(live==null||live.done||live.dueAt!=activeDue||!live.cascade)return;
+            if(ActiveAlarmState.activeId(ReminderToneService.this)>0)return;
+            if(WakeCascade.strongStage(
+                    WakeCascade.elapsedSinceAlarm(activeDue,System.currentTimeMillis(),0)))
+                PhoneVibration.startReminder(ReminderToneService.this,
+                        WakeCascade.phoneMode(0),activeId,activeDue);
         }
     };
     private final Runnable finish=this::stopAudio;
@@ -102,7 +116,7 @@ public final class ReminderToneService extends Service {
         if(ActiveAlarmState.activeId(this)>0){stopSelf();return START_NOT_STICKY;}
         resetAudio(false);
         activeId=id;activeDue=due;
-        unifiedRamp=reminder.cascade&&reminder.unifiedCascade;
+        cascadeRamp=reminder.cascade;
         rampDue=reminder.dueAt;
         Notification notice=new Notification.Builder(this,CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -114,8 +128,12 @@ public final class ReminderToneService extends Service {
             startForeground(NOTIFICATION,notice,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
             beginAudio(reminder.tone);
-            if(unifiedRamp)handler.post(gainTick);
-            handler.postDelayed(finish,unifiedRamp?180_000L:90_000L);
+            if(cascadeRamp){
+                handler.post(gainTick);
+                handler.postDelayed(strongPhase,
+                        WakeCascade.untilStrong(rampDue,System.currentTimeMillis(),0));
+            }
+            handler.postDelayed(finish,cascadeRamp?180_000L:90_000L);
             handler.post(wakePriorityCheck);
         }catch(RuntimeException problem){
             Log.w("Sanftwecker","Reminder audio startup failed",problem);
@@ -142,7 +160,7 @@ public final class ReminderToneService extends Service {
             track.release();throw new IllegalStateException("Audio output not initialized");
         }
         sink=track;playing=true;
-        track.setVolume(unifiedRamp?0f:.42f);
+        track.setVolume(cascadeRamp?0f:.42f);
         track.play();
         writer=new Thread(()->{
             short[] samples=new short[2205];
@@ -163,6 +181,7 @@ public final class ReminderToneService extends Service {
         playing=false;
         handler.removeCallbacks(finish);
         handler.removeCallbacks(gainTick);
+        handler.removeCallbacks(strongPhase);
         handler.removeCallbacks(wakePriorityCheck);
         AudioTrack old=sink;sink=null;
         if(old!=null){
@@ -177,7 +196,7 @@ public final class ReminderToneService extends Service {
         }
         if(old!=null)try{old.release();}catch(RuntimeException ignored){}
         activeId=0;activeDue=0;
-        unifiedRamp=false;
+        cascadeRamp=false;
         rampDue=0L;
         if(endService){
             stopForeground(STOP_FOREGROUND_REMOVE);

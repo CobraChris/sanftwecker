@@ -95,6 +95,9 @@ public final class PhoneVibration {
     /** Share the same vibration patterns, but never preempt a genuine wake alarm. */
     public static synchronized boolean startReminder(Context c,int mode,int id,long due){
         if(id<1||due<=0||ActiveAlarmState.activeId(c)>0)return false;
+        // Foreground-service phase transition and AlarmManager fallback may
+        // both arrive: never restart the exact same vibration occurrence.
+        if(alarmRunning&&reminderId==id&&reminderWhen==due)return true;
         start(c,mode);
         if(!alarmRunning)return false;
         reminderId=id;
