@@ -325,18 +325,18 @@ public final class MainActivity extends Activity {
         StringBuilder entries=new StringBuilder();
         for(AlarmProfile target:candidates)
             entries.append(String.format(Locale.GERMANY,
-                    "%02d:%02d – %s\\n",target.hour,target.minute,target.name));
+                    "%02d:%02d – %s\n",target.hour,target.minute,target.name));
         new AlertDialog.Builder(this)
             .setTitle(candidates.size()+" Wecker wie Testwecker konfigurieren?")
             .setMessage("Quelle: gespeicherter Testwecker ("+
                     String.format(Locale.GERMANY,"%02d:%02d",reference.hour,reference.minute)+
                     "). Es werden alle Weck- und Watch-Einstellungen einschließlich "
-                    +"2-Stufen-Modus, Lautstärke, 12/3-Impulsen (falls so gespeichert), "
-                    +"Schlummern und Auto-Stopp kopiert.\\n\\n"
+                    +"2-Stufen-Modus, Lautstärke, Watch-Impulsen und Intervallen, "
+                    +"Schlummern und Auto-Stopp kopiert.\n\n"
                     +"Name, Uhrzeit, ID und Aktivierungszustand jedes Zielweckers "
                     +"bleiben erhalten. Bereits aktivierte Wecker werden aus "
                     +"Sicherheitsgründen übersprungen. Individuelle Einstellungen "
-                    +"der aufgeführten deaktivierten Wecker werden ersetzt.\\n\\n"+entries)
+                    +"der aufgeführten deaktivierten Wecker werden ersetzt.\n\n"+entries)
             .setPositiveButton("Einstellungen übernehmen",(dialog,which)->{
                 try{
                     int changed=AlarmPresetImporter.applyTestweckerSettings(this);
