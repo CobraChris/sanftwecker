@@ -44,7 +44,7 @@ public final class SanftweckerWearListener extends WearableListenerService {
         }
         if(path.startsWith("/sanftwecker/reminder/v1/")){
             String value=new String(event.getData(),StandardCharsets.UTF_8);
-            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[01]:[012]:[1-9][0-9]?:[1-9][0-9]?:([5]|10|30)(:[01])?"))
+            if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:[01]:[012]:[1-9][0-9]?:[1-9][0-9]?:([5]|10|30)(:[01](:([1-9]|[12][0-9]|30))?)?"))
                 return;
             String[] a=value.split(":");
             int id=Integer.parseInt(a[0]);
@@ -55,7 +55,8 @@ public final class SanftweckerWearListener extends WearableListenerService {
                     .putExtra("intensity",Integer.parseInt(a[3]))
                     .putExtra("pulses",Integer.parseInt(a[4]))
                     .putExtra("interval",Integer.parseInt(a[5]))
-                    .putExtra("postpone",Integer.parseInt(a[6]));
+                    .putExtra("postpone",Integer.parseInt(a[6]))
+                    .putExtra("autostop",a.length>=9?Integer.parseInt(a[8]):0);
             if("/sanftwecker/reminder/v1/start".equals(path))
                 command.setAction(WatchReminderService.START);
             else if("/sanftwecker/reminder/v1/escalate".equals(path))
