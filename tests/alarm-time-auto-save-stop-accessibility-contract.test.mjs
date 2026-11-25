@@ -62,5 +62,5 @@ test('ordinary ring screen has a single visible anti-accidental stop method',()=
   assert.doesNotMatch(screen,/accessibleStop\.setOnClickListener/);
   assert.match(screen,/RingingService\.STOP/);
   assert.match(screen,/snooze\.setOnClickListener\(v->snoozeAlarm\(\)\)/);
-  assert.match(service,/\.addAction\(action\("Stoppen", STOP/);
+  assert.match(service,/builder.addAction\(action\("Stoppen",\s*STOP/);
 });
