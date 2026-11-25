@@ -4,15 +4,14 @@ import {readFileSync} from 'node:fs';
 const phone=n=>readFileSync(new URL('../alarm/src/main/java/com/cobrachris/sanftwecker/'+n+'.java',import.meta.url),'utf8');
 const watch=n=>readFileSync(new URL('../watch/src/main/java/com/cobrachris/watchvibrationpoc/'+n+'.java',import.meta.url),'utf8');
 
-test('previously saved reminders automatically run the SAME cascade engine as alarms',()=>{
-    const store=phone('ReminderStore'),screen=phone('ReminderActivity');
+test('all existing reminders use saved Testwecker cascade regardless of old flags',()=>{
+    const store=phone('ReminderStore'),screen=phone('ReminderActivity'),
+          config=phone('ReminderAlarmConfig');
     assert.match(store,/p.getBoolean\(id\+"_cascade",true\)/);
     assert.doesNotMatch(store,/p.getBoolean\(id\+"_unified_cascade",false\)/);
-    assert.match(screen,/cascade.setChecked\(existing==null\|\|existing.cascade\)/);
-    assert.doesNotMatch(screen,/sameAsAlarm/);
-    assert.match(screen,/Wecker-Kaskade: Tonrampe/);
-    assert.match(screen,/item.cascade\?" · Wecker-Kaskade"/);
-    assert.match(screen,/tone.getSelectedItemPosition\(\)\);/);
+    assert.match(config,/AlarmPresetImporter.referenceAlarm\(context\)/);
+    assert.match(screen,/Ausgabe wie Testwecker/);
+    assert.doesNotMatch(screen,/cascade.setChecked|sameAsAlarm/);
 });
 
 test('reminder notification uses exact working clock-alarm channel when it first rings',()=>{
@@ -28,15 +27,15 @@ test('reminder notification uses exact working clock-alarm channel when it first
     assert.match(phone('ReminderOptionsActivity'),/setTurnScreenOn\(true\)/);
 });
 
-test('same timed 60s escalation as wake alarm without relying only on a second broadcast',()=>{
-    const tone=phone('ReminderToneService'),recv=phone('ReminderReceiver'),
-          vibration=phone('PhoneVibration'),sched=phone('ReminderScheduler');
-    assert.match(tone,/AlarmEnvelope.gain\(soundProfile,false,elapsed\)/);
-    assert.match(tone,/WakeCascade.untilStrong\(rampDue,System.currentTimeMillis\(\),0\)/);
-    assert.match(tone,/handler.postDelayed\(strongPhase,/);
-    assert.match(tone,/WakeCascade.strongStage\(/);
-    assert.match(tone,/PhoneVibration.startReminder\(/);
-    assert.match(tone,/handler.removeCallbacks\(strongPhase\)/);
+test('same 60s escalation executes from real wake audio service with occurrence-safe fallback',()=>{
+    const adapter=phone('ReminderToneService'),ring=phone('RingingService'),
+          recv=phone('ReminderReceiver'),vibration=phone('PhoneVibration'),
+          sched=phone('ReminderScheduler');
+    assert.match(adapter,/RingingService.REMINDER_START/);
+    assert.match(ring,/WakeCascade.untilStrong\(ringWhen,System.currentTimeMillis\(\)/);
+    assert.match(ring,/WakeCascade.strongStage\(/);
+    assert.match(ring,/PhoneVibration.startReminder\(this,strongMode,/);
+    assert.match(ring,/expectedReminder=reminderActive/);
     assert.match(recv,/ReminderScheduler.ESCALATE.equals\(action\)/);
     assert.match(sched,/item.dueAt\+WakeCascade.SECOND_STAGE_MS/);
     assert.match(vibration,/if\(alarmRunning&&reminderId==id&&reminderWhen==due\)return true/);
@@ -53,5 +52,5 @@ test('watch reuses original WatchCascade patterns, not hard-coded reminder pulse
     assert.match(watchReminder,/WatchCascade.strongAmplitudes\(intensity\)/);
     assert.match(watchReminder,/WatchCascade.gentleAmplitudes\(intensity\)/);
     assert.match(watchReminder,/WatchCascade.untilStrong\(due,System.currentTimeMillis\(\)\)/);
-    assert.match(phone('ReminderWatchBridge'),/if\(START.equals\(path\)&&item.cascade\)/);
+    assert.match(phone('ReminderWatchBridge'),/reference.cascadeEnabled/);
 });
