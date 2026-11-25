@@ -56,8 +56,9 @@ public final class ReminderNotice {
                 fullScreen,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         // Cascade reminders use the SAME high-priority notification channel as
         // real wake alarms. Distinct notification IDs keep both occurrences safe.
-        if(item.cascade)RingingService.ensureChannels(c);
-        String channel=item.cascade&&(strong||justFired)
+        boolean cascade=ReminderAlarmConfig.profile(c).cascadeEnabled;
+        if(cascade)RingingService.ensureChannels(c);
+        String channel=cascade&&(strong||justFired)
                 ?RingingService.ACTIVE_CHANNEL
                 :strong?(item.phoneSound?STRONG:VIBRATE_ONLY):SOFT;
         Notification.Builder builder=new Notification.Builder(c,channel)
@@ -66,7 +67,7 @@ public final class ReminderNotice {
                 .setContentText(strong?"Wichtige Erinnerung – bitte bearbeiten":
                         "Noch offen – erledigen oder später erinnern")
                 .setContentIntent(view)
-                .setCategory(item.cascade?Notification.CATEGORY_ALARM:Notification.CATEGORY_REMINDER)
+                .setCategory(cascade?Notification.CATEGORY_ALARM:Notification.CATEGORY_REMINDER)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setOnlyAlertOnce(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
