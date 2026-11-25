@@ -111,7 +111,7 @@ public final class RingingService extends Service {
             if(active&&reminderActive&&reminderId==id&&reminderDue==due){
                 AlarmRepository.diagnostic(this,"Erinnerungston gestoppt: "+reminderTitle);
                 stopPlaying();stopSelf();
-            }
+            }else if(!active)stopSelf();
             return START_NOT_STICKY;
         }
         if (STOP_PREVIEW.equals(action)) {
@@ -172,7 +172,10 @@ public final class RingingService extends Service {
         if(reminderRequested){
             reminder=ReminderStore.get(this,requestedId);
             if(reminder==null||reminder.done||reminder.dueAt!=requestedDue
-                    ||requestedDue<=0)return START_NOT_STICKY;
+                    ||requestedDue<=0){
+                if(!active)stopSelf();
+                return START_NOT_STICKY;
+            }
             if(active&&reminderActive&&reminderId==requestedId
                     &&reminderDue==requestedDue)return START_NOT_STICKY;
             // Never replace a true wake alarm with a reminder.
