@@ -44,7 +44,8 @@ public final class WatchReminderService extends Service {
                 vibrate(false);
                 played++;
             }
-            handler.postDelayed(this,interval*1000L);
+            if(played<pulses)
+                handler.postDelayed(this,interval*1000L);
         }
     };
     // The actual WatchAlarmService repeats the strong WatchCascade waveform
@@ -217,7 +218,14 @@ public final class WatchReminderService extends Service {
         }
         // Replacing the current reminder must not stopSelf() and kill the new one.
         if(id>0){
-            handler.removeCallbacks(pulse);handler.removeCallbacks(autoEnd);
+            // All callbacks belong to the previous occurrence. A late
+            // escalation could otherwise switch the NEW reminder immediately
+            // to the strong phase, and a stale priority check could stop it.
+            handler.removeCallbacks(pulse);
+            handler.removeCallbacks(strongPulse);
+            handler.removeCallbacks(localEscalate);
+            handler.removeCallbacks(autoEnd);
+            handler.removeCallbacks(wakePriorityCheck);
             if(motor!=null&&!clockActive())try{motor.cancel();}catch(RuntimeException ignored){}
         }
         id=requestedId;due=when;
