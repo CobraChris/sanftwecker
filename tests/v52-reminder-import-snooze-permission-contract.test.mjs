@@ -18,10 +18,14 @@ test('reminders are edited in place with fields prefilled and prior state restor
     assert.match(activity,/Button edit=UiKit.button\(this,"Erinnerung bearbeiten"/);
     assert.match(activity,/edit.setOnClickListener\(v->editor\(item\)\)/);
     assert.match(activity,/editingId=existing==null\?-1:existing.id/);
-    for(const prop of ['existing.title','existing.dueAt','existing.watchIntensity',
-        'existing.watchPulses','existing.watchIntervalSeconds','existing.repeat',
-        'existing.postponeMinutes','existing.tone','existing.phoneSound'])
+    // Existing saved alarm-related fields remain unchanged but can no longer
+    // override the real Testwecker's active output.
+    for(const prop of ['existing.title','existing.dueAt','existing.repeat',
+        'existing.postponeMinutes','previous.watchIntensity','previous.watchPulses',
+        'previous.watchIntervalSeconds','previous.tone','previous.phoneSound'])
         assert.ok(activity.includes(prop),prop);
+    assert.match(activity,/Ausgabe wie Testwecker/);
+    assert.doesNotMatch(activity,/phoneSound.isChecked|cascade.isChecked/);
     assert.match(store,/public static synchronized void update\(Context c,int id/);
     assert.match(store,/public static synchronized void restore\(Context c,Item item\)/);
     assert.match(activity,/ReminderStore.update\(this,id/);
