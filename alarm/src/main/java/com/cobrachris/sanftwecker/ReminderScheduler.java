@@ -67,7 +67,7 @@ public final class ReminderScheduler {
         }
     }
     public static void scheduleEscalation(Context c,ReminderStore.Item item){
-        if(item==null||!item.cascade)return;
+        if(item==null||!ReminderAlarmConfig.profile(c).cascadeEnabled)return;
         AlarmManager manager=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
         if(manager==null)return;
         manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,
