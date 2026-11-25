@@ -24,6 +24,9 @@ import android.util.Log;
  */
 public final class RingingService extends Service {
     public static final String START = "com.cobrachris.sanftwecker.START";
+    // Reminders use this exact foreground/audio engine, not a clone.
+    public static final String REMINDER_START = "com.cobrachris.sanftwecker.REMINDER_ALARM_START";
+    public static final String REMINDER_STOP = "com.cobrachris.sanftwecker.REMINDER_ALARM_STOP";
     public static final String STOP = "com.cobrachris.sanftwecker.STOP";
     public static final String STOP_PREVIEW = "com.cobrachris.sanftwecker.STOP_PREVIEW";
     public static final String SNOOZE = "com.cobrachris.sanftwecker.SNOOZE";
@@ -49,6 +52,10 @@ public final class RingingService extends Service {
     private boolean toneOnlyPreview;
     private int activeTone;
     private boolean quickTest;
+    private boolean reminderActive;
+    private int reminderId;
+    private long reminderDue;
+    private String reminderTitle;
 
     private final Runnable gainTick = new Runnable() {
         @Override public void run() {
@@ -67,7 +74,7 @@ public final class RingingService extends Service {
 
     private final Runnable pulse = new Runnable() {
         @Override public void run() {
-            if (!active || profile.cascadeEnabled || profile.watchPulses == 0 ||
+            if (!active || reminderActive || profile.cascadeEnabled || profile.watchPulses == 0 ||
                     pulseCount >= profile.watchPulses) return;
             WatchAlert.send(RingingService.this, profile, pulseCount++);
             if (pulseCount < profile.watchPulses) {
@@ -98,6 +105,15 @@ public final class RingingService extends Service {
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
+        if (REMINDER_STOP.equals(action)) {
+            int id=intent.getIntExtra(ReminderScheduler.ID,0);
+            long due=intent.getLongExtra(ReminderScheduler.DUE,0L);
+            if(active&&reminderActive&&reminderId==id&&reminderDue==due){
+                AlarmRepository.diagnostic(this,"Erinnerungston gestoppt: "+reminderTitle);
+                stopPlaying();stopSelf();
+            }
+            return START_NOT_STICKY;
+        }
         if (STOP_PREVIEW.equals(action)) {
             // A picker must NEVER stop a real alarm that started during its preview.
             if(active && toneOnlyPreview){stopPlaying();stopSelf();}
@@ -105,6 +121,8 @@ public final class RingingService extends Service {
             return START_NOT_STICKY;
         }
         if (STOP.equals(action) || SNOOZE.equals(action)) {
+            // A wake-alarm stop must not accidentally stop a reminder.
+            if(reminderActive)return START_NOT_STICKY;
             // Watch-originated stops must match the active alarm occurrence.
             long expectedWhen=intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
             if(expectedWhen>0&&(!active||expectedWhen!=ringWhen||
@@ -139,49 +157,79 @@ public final class RingingService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (!START.equals(action)) {
-            stopSelf();
+        final boolean reminderRequested=REMINDER_START.equals(action);
+        if (!START.equals(action) && !reminderRequested) {
+            if(!active)stopSelf();
             return START_NOT_STICKY;
         }
-        int requestedId = intent.getIntExtra(AlarmScheduler.EXTRA_ID, 1);
-        if (requestedId < 1 || requestedId > AlarmProfile.MAX_ALARMS ||
-                AlarmRepository.get(this,requestedId)==null) {
-            stopSelf(); return START_NOT_STICKY;
+        int requestedId = reminderRequested
+                ?intent.getIntExtra(ReminderScheduler.ID,-1)
+                :intent.getIntExtra(AlarmScheduler.EXTRA_ID,1);
+        long requestedDue=reminderRequested?
+                intent.getLongExtra(ReminderScheduler.DUE,0L):0L;
+        ReminderStore.Item reminder=null;
+        AlarmProfile requestedProfile;
+        if(reminderRequested){
+            reminder=ReminderStore.get(this,requestedId);
+            if(reminder==null||reminder.done||reminder.dueAt!=requestedDue
+                    ||requestedDue<=0)return START_NOT_STICKY;
+            if(active&&reminderActive&&reminderId==requestedId
+                    &&reminderDue==requestedDue)return START_NOT_STICKY;
+            // Never replace a true wake alarm with a reminder.
+            if(active&&!reminderActive&&!toneOnlyPreview){
+                AlarmRepository.diagnostic(this,
+                        "Erinnerung unterdrückt: echter Wecker hat Vorrang");
+                return START_NOT_STICKY;
+            }
+            requestedProfile=ReminderAlarmConfig.profile(this);
+        }else{
+            requestedProfile=AlarmRepository.get(this,requestedId);
+            if (requestedId<1||requestedId>AlarmProfile.MAX_ALARMS
+                    ||requestedProfile==null){
+                if(!active)stopSelf();
+                return START_NOT_STICKY;
+            }
         }
-        boolean previewRequested=intent.getBooleanExtra("tone_only_preview",false);
+        boolean previewRequested=!reminderRequested
+                &&intent.getBooleanExtra("tone_only_preview",false);
         if(active && !toneOnlyPreview && previewRequested){
             AlarmRepository.diagnostic(this,"Tonprobe blockiert: echter Alarm klingelt");
-            return START_NOT_STICKY; // User-facing preview must never interrupt a real alarm.
+            return START_NOT_STICKY;
         }
-        if (active) {
-            // An overlapping alarm replaces the earlier ringtone, not a second audio stream.
-            stopPlaying();
-        }
-        ringId = requestedId;
-        ringWhen = intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0);
-        profile = AlarmRepository.get(this, ringId);
-        toneOnlyPreview = previewRequested;
-        activeTone = toneOnlyPreview ? ToneCatalog.safe(
+        if(active)stopPlaying();
+        reminderActive=reminderRequested;
+        reminderId=reminderRequested?requestedId:0;
+        reminderDue=reminderRequested?requestedDue:0L;
+        reminderTitle=reminderRequested?reminder.title:null;
+        ringId=requestedProfile.id;
+        ringWhen=reminderRequested?requestedDue:
+                intent.getLongExtra(AlarmScheduler.EXTRA_WHEN,0L);
+        profile=requestedProfile;
+        toneOnlyPreview=previewRequested;
+        activeTone=toneOnlyPreview?ToneCatalog.safe(
                 intent.getIntExtra("tone_preview_index",profile.tone)):profile.tone;
-        quickTest = intent.getBooleanExtra(EXTRA_QUICK_TEST, false);
+        quickTest=!reminderRequested&&intent.getBooleanExtra(EXTRA_QUICK_TEST,false);
         final long ringDuration=WakeCascade.duration(toneOnlyPreview,quickTest,
                 profile.cascadeEnabled,profile.autoStopMinutes);
         try {
             // Store the active occurrence before Android can open the
             // foreground notification. This is only a UI fallback, not alarm scheduling.
-            if(!toneOnlyPreview){
+            if(!toneOnlyPreview && !reminderActive){
                 ActiveAlarmState.start(this,ringId,ringWhen);
-                // A wake alarm always preempts any reminder that is
-                // currently using the handset vibrator.
+                // A wake alarm always preempts reminder vibration.
                 PhoneVibration.stop();
             }
             startForegroundNotification();
             active = true;
             startedAt = SystemClock.elapsedRealtime();
-            pulseCount = toneOnlyPreview || profile.cascadeEnabled ?
+            pulseCount = reminderActive || toneOnlyPreview || profile.cascadeEnabled ?
                     profile.watchPulses : Math.min(1, profile.watchPulses);
-            AlarmRepository.diagnostic(this, "Audiodienst gestartet: " + profile.name +
-                    (toneOnlyPreview ? " (Tonprobe)" : quickTest ? " (Kurztest)" : ""));
+            AlarmRepository.diagnostic(this, (reminderActive?
+                    "Erinnerung über RingingService: "+reminderTitle+
+                        " / Vorlage "+profile.name+" / Kaskade "+profile.cascadeEnabled+
+                        " / Ton "+profile.tone+" / Lautstärke "+profile.maxVolume:
+                    "Audiodienst gestartet: "+profile.name+
+                    (toneOnlyPreview?" (Tonprobe)":quickTest?" (Kurztest)":"")));
             try {
                 acquireWakeLock();
             } catch (RuntimeException e) {
@@ -218,21 +266,29 @@ public final class RingingService extends Service {
             // Cascade alarms are completely vibration-free on the handset in
             // minute one; phase two begins exactly 60 s after alarm start.
             if(!toneOnlyPreview && !profile.cascadeEnabled){
-                PhoneVibration.start(this,profile.vibrationMode);
+                if(reminderActive)
+                    PhoneVibration.startReminder(this,profile.vibrationMode,
+                            reminderId,reminderDue);
+                else PhoneVibration.start(this,profile.vibrationMode);
             }else if(!toneOnlyPreview && profile.cascadeEnabled){
-                final int expectedId=ringId;
+                final int expectedId=reminderActive?reminderId:ringId;
                 final long expectedWhen=ringWhen;
                 final long expectedStart=startedAt;
+                final boolean expectedReminder=reminderActive;
                 final int strongMode=WakeCascade.phoneMode(profile.vibrationMode);
                 handler.postDelayed(()->{
                     if(active && !toneOnlyPreview && profile!=null &&
-                            profile.cascadeEnabled && ringId==expectedId &&
+                            profile.cascadeEnabled && reminderActive==expectedReminder &&
+                            (reminderActive?reminderId:ringId)==expectedId &&
                             ringWhen==expectedWhen && startedAt==expectedStart &&
                             WakeCascade.strongStage(
                                     WakeCascade.elapsedSinceAlarm(
                                             ringWhen,System.currentTimeMillis(),
                                             SystemClock.elapsedRealtime()-startedAt))){
-                        PhoneVibration.start(this,strongMode);
+                        if(reminderActive)
+                            PhoneVibration.startReminder(this,strongMode,
+                                    reminderId,reminderDue);
+                        else PhoneVibration.start(this,strongMode);
                         AlarmRepository.diagnostic(this,
                                 "Kaskade Phase 2: Handyvibration gestartet");
                     }
@@ -248,7 +304,7 @@ public final class RingingService extends Service {
                 Log.e("Sanftwecker", "Audio unavailable, watch alerts still active", audioError);
                 AlarmRepository.diagnostic(this, "WARNUNG: Audio fehlgeschlagen; Watch-Impulse laufen");
             }
-            if (!toneOnlyPreview && pulseCount < profile.watchPulses)
+            if (!reminderActive && !toneOnlyPreview && pulseCount < profile.watchPulses)
                 handler.postDelayed(pulse, profile.watchIntervalSeconds * 1000L);
             handler.postDelayed(() -> {
                 AlarmRepository.diagnostic(this, "Alarm automatisch beendet");
@@ -280,6 +336,14 @@ public final class RingingService extends Service {
     }
 
     private PendingIntent openApp() {
+        if(reminderActive){
+            Intent open=new Intent(this,ReminderOptionsActivity.class)
+                    .putExtra(ReminderScheduler.ID,reminderId)
+                    .putExtra(ReminderScheduler.DUE,reminderDue)
+                    .putExtra(ReminderOptionsActivity.EXTRA_FULLSCREEN,true);
+            return PendingIntent.getActivity(this,160000+reminderId,open,
+                    PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        }
         Intent open = new Intent(this, AlarmActivity.class)
                 .putExtra(AlarmScheduler.EXTRA_ID, ringId)
                 .putExtra("from_alarm", true);
@@ -294,8 +358,10 @@ public final class RingingService extends Service {
     private void startForegroundNotification() {
         Notification.Builder builder = new Notification.Builder(this, ACTIVE_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(toneOnlyPreview ? "Sanftwecker-Tonprobe" : profile.name+" klingelt")
-                .setContentText(toneOnlyPreview ? "Tonprobe – jederzeit stoppen" :
+                .setContentTitle(reminderActive?"Erinnerung: "+reminderTitle:
+                        toneOnlyPreview?"Sanftwecker-Tonprobe":profile.name+" klingelt")
+                .setContentText(reminderActive?"Wie Testwecker • später / erledigt / stoppen":
+                        toneOnlyPreview?"Tonprobe – jederzeit stoppen":
                         "Zum Bedienen antippen • Stoppen / Schlummern")
                 .setContentIntent(openApp())
                 .setCategory(Notification.CATEGORY_ALARM)
@@ -303,17 +369,25 @@ public final class RingingService extends Service {
                 .setOnlyAlertOnce(true)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setLocalOnly(true)
-                .addAction(action("Stoppen", STOP, android.R.drawable.ic_media_pause, 612));
+                .setLocalOnly(true);
+        if(reminderActive){
+            builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_media_pause,"Erinnerung stoppen",
+                    ReminderScheduler.pending(this,reminderId,reminderDue,
+                            ReminderScheduler.STOP)).build());
+            builder.addAction(new Notification.Action.Builder(
+                    android.R.drawable.ic_menu_recent_history,
+                    "Später / Erledigt",openApp()).build());
+        }else{
+            builder.addAction(action("Stoppen",STOP,android.R.drawable.ic_media_pause,612));
+        }
         if (!toneOnlyPreview) {
+            // Same system-managed full-screen notification as a real Testwecker.
             builder.setFullScreenIntent(openApp(), true);
-            // Heads-up on an unlocked Android phone can show only a subset of
-            // actions. Keep STOP first and provide explicit alarm-screen action;
-            // notification body also opens the same screen.
             builder.addAction(new Notification.Action.Builder(
                     android.R.drawable.ic_lock_idle_alarm,
-                    "Alarmansicht",openApp()).build());
-            if (profile.snoozeEnabled)
+                    reminderActive?"Erinnerung bedienen":"Alarmansicht",openApp()).build());
+            if (!reminderActive && profile.snoozeEnabled)
                 builder.addAction(action("Schlummern", SNOOZE, android.R.drawable.ic_media_play, 613));
         }
         Notification running = builder.build();
@@ -368,16 +442,24 @@ public final class RingingService extends Service {
 
     private void stopPlaying(boolean removeWatchNotifications) {
         boolean wasActive=active;
+        final boolean wasReminder=reminderActive;
+        final int previousReminderId=reminderId;
+        final long previousReminderDue=reminderDue;
         if (wasActive) {
-            AlarmRepository.diagnostic(this, "Ton und Watch-Impulse beendet");
-            if(!toneOnlyPreview&&ringWhen>0)
+            AlarmRepository.diagnostic(this,wasReminder?
+                    "Erinnerungston beendet":"Ton und Watch-Impulse beendet");
+            if(!wasReminder&&!toneOnlyPreview&&ringWhen>0)
                 WearAlarmBridge.alarmStopped(this,ringId,ringWhen);
         }
-        active = false;
-        ActiveAlarmState.clear(this);
-        PhoneVibration.stop();
+        active=false;
+        if(wasReminder)PhoneVibration.stopReminder(this,previousReminderId,previousReminderDue);
+        else{
+            ActiveAlarmState.clear(this);
+            PhoneVibration.stop();
+        }
         AlarmVolumeGuard.restore(this);
-        if(wasActive) sendBroadcast(new Intent(RING_FINISHED).setPackage(getPackageName()));
+        if(wasActive&&!wasReminder)
+            sendBroadcast(new Intent(RING_FINISHED).setPackage(getPackageName()));
         handler.removeCallbacksAndMessages(null);
         AudioTrack old = audio;
         audio = null;
@@ -397,8 +479,9 @@ public final class RingingService extends Service {
         }
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         wakeLock = null;
-        if (removeWatchNotifications && manager != null)
+        if (removeWatchNotifications && !wasReminder && manager != null)
             for (int i = 0; i < 12; i++) manager.cancel(WatchAlert.ID_BASE + i);
+        reminderActive=false;reminderId=0;reminderDue=0L;reminderTitle=null;
         stopForeground(STOP_FOREGROUND_REMOVE);
     }
 
