@@ -4,52 +4,50 @@ import {readFileSync} from 'node:fs';
 const phone=n=>readFileSync(new URL('../alarm/src/main/java/com/cobrachris/sanftwecker/'+n+'.java',import.meta.url),'utf8');
 const watch=n=>readFileSync(new URL('../watch/src/main/java/com/cobrachris/watchvibrationpoc/'+n+'.java',import.meta.url),'utf8');
 
-test('existing and new cascades use the wake profile automatically',()=>{
+test('previously saved reminder flags cannot override the Testwecker output configuration',()=>{
     const store=phone('ReminderStore'),ui=phone('ReminderActivity');
-    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)/);
-    assert.match(store,/public final boolean cascade,done;/);
-    assert.doesNotMatch(store,/putBoolean\(id\+"_unified_cascade",cascade\)/);
-    assert.doesNotMatch(store,/item.unifiedCascade/);
-    assert.match(store,/remove\(id\+"_unified_cascade"\)/);
-    assert.doesNotMatch(ui,/sameAsAlarm/);
-    assert.match(ui,/tone.getSelectedItemPosition\(\)\);/);
-    assert.match(ui,/item.cascade\?" · Wecker-Kaskade"/);
+    const config=phone('ReminderAlarmConfig');
+    assert.match(store,/p.getBoolean\(id\+"_cascade",true\)/); // backwards-readable
+    assert.match(store,/remove\(id\+"_unified_cascade"\)/); // one-time cleanup
+    assert.match(config,/AlarmPresetImporter\.referenceAlarm\(context\)/);
+    assert.match(ui,/ReminderAlarmConfig\.profile\(this\)/);
+    assert.doesNotMatch(ui,/cascade\.setChecked|sameAsAlarm|phoneSound\.isChecked/);
+    assert.match(ui,/Ausgabe wie Testwecker/);
 });
 
-test('new cascade uses the actual alarm envelope and only current reminder owns vibration',()=>{
-    const tone=phone('ReminderToneService'),recv=phone('ReminderReceiver'),motor=phone('PhoneVibration');
-    assert.match(tone,/AlarmEnvelope.gain\(soundProfile,false,elapsed\)/);
-    assert.match(tone,/WakeCascade.elapsedSinceAlarm\(activeDue,System.currentTimeMillis\(\)/);
-    assert.doesNotMatch(tone,/0,60,42/);
-    assert.match(tone,/cascadeRamp=reminder.cascade/);
-    assert.match(tone,/track.setVolume\(0f\)/);
-    assert.match(tone,/if\(playing&&activeId==id&&activeDue==due\)return START_NOT_STICKY/);
+test('real wake audio engine owns every reminder; no independent PCM or gain path survives',()=>{
+    const adapter=phone('ReminderToneService'),recv=phone('ReminderReceiver'),
+          ring=phone('RingingService'),motor=phone('PhoneVibration');
+    assert.match(adapter,/new Intent\(c,RingingService.class\)/);
+    assert.match(adapter,/RingingService.REMINDER_START/);
+    assert.doesNotMatch(adapter,/AudioTrack|ToneCatalog\.sample|GentleGain/);
+    assert.match(ring,/AlarmEnvelope\.gain\(profile,/);
+    assert.match(ring,/AlarmPcm\.sample\(tone,t\)/);
+    assert.match(ring,/REMINDER_START.equals\(action\)/);
+    assert.match(ring,/profile=|profile=requestedProfile/);
+    assert.match(ring,/PhoneVibration.startReminder\(this,strongMode,/);
+    assert.match(ring,/WakeCascade\.strongStage\(/);
     assert.match(recv,/ReminderToneService.start\(c,item\)/);
-    assert.match(recv,/if\(item.cascade\)PhoneVibration.startReminder/);
-    assert.match(recv,/WakeCascade.phoneMode\(0\)/);
+    assert.match(recv,/settings.cascadeEnabled\)PhoneVibration.startReminder/);
     assert.match(motor,/ActiveAlarmState.activeId\(c\)>0/);
-    assert.match(motor,/if\(id==reminderId&&due==reminderWhen/);
-    assert.match(motor,/ActiveAlarmState.activeId\(c\)<=0/);
     assert.match(recv,/PhoneVibration.stopReminder\(c,item.id,item.dueAt\)/);
-    assert.match(uiNoExtra(phone('ReminderActivity')),/PhoneVibration.stopReminder\(this,item.id,item.dueAt\)/);
-    function uiNoExtra(s){return s;}
 });
 
-test('Watch transport retains seven-field legacy packets and adds optional mode',()=>{
+test('Watch transport stays backward compatible, but new Watch receives Testwecker settings',()=>{
     const bridge=phone('ReminderWatchBridge'),listener=watch('SanftweckerWearListener'),
-        service=watch('WatchReminderService');
+          service=watch('WatchReminderService');
     assert.match(bridge,/String payload=item.id/);
-    assert.match(bridge,/String shared=payload\+":1"/);
-    assert.match(bridge,/if\(START.equals\(path\)&&item.cascade\)/);
-    // New watch app accepts both packet shapes, but never routes legacy haptics.
-    assert.match(listener,/\(:\[01\]\)\?/);
-    assert.doesNotMatch(listener,/putExtra\("unified_cascade"/);
+    assert.match(bridge,/reference.watchIntensity/);
+    assert.match(bridge,/reference.watchIntervalSeconds/);
+    assert.match(bridge,/String detailed=shared/);
+    assert.match(listener,/putExtra\("autostop"/);
     assert.doesNotMatch(service,/unifiedCascade|receivedUnified/);
-    assert.match(service,/if\(id==requestedId&&due==when\)return START_NOT_STICKY/);
+    assert.match(service,/if\(id==requestedId&&due==when\)/);
     assert.match(service,/strong=!cascade\|\|WatchCascade.strong\(due,System.currentTimeMillis\(\)\)/);
     assert.match(service,/WatchCascade.strongTimings\(intensity\)/);
     assert.match(service,/WatchCascade.gentleTimings\(intensity\)/);
-    assert.match(service,/WatchCascade.untilStrong\(due,System.currentTimeMillis\(\)\)/);
+    assert.match(service,/repeatIndex=hard\?0:-1/);
+    assert.match(service,/scheduleAutoEnd\(\)/);
     assert.match(service,/handler.removeCallbacks\(localEscalate\)/);
 });
 
