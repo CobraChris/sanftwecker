@@ -12,8 +12,8 @@ test('only genuinely fired reminder requests full-screen alarm display',()=>{
     const notice=phone('ReminderNotice'),receiver=phone('ReminderReceiver');
     assert.match(notice,/show\(Context c,ReminderStore.Item item,boolean strong,\s*boolean justFired\)/);
     assert.match(notice,/if\(justFired\)builder.setFullScreenIntent\(fullView,true\)/);
-    assert.match(notice,/item.cascade\?Notification.CATEGORY_ALARM/);
-    assert.match(receiver,/ReminderScheduler.FIRE.equals\(action\)[\s\S]*?ReminderNotice.show\(c,item,!item.cascade,true\)/);
+    assert.match(notice,/cascade\?Notification.CATEGORY_ALARM/);
+    assert.match(receiver,/ReminderScheduler.FIRE.equals\(action\)[\s\S]*?ReminderNotice.show\(c,item,false\)/);
     assert.match(receiver,/ReminderScheduler.ESCALATE.equals\(action\)[\s\S]*?ReminderNotice.show\(c,item,true\)/);
     assert.match(phone('ReminderScheduler'),/ReminderNotice.show\(c,item,false\)/);
     assert.doesNotMatch(receiver,/startActivity\(/);
@@ -24,6 +24,8 @@ test('full-screen intent opens own occurrence-safe internal options activity',()
     assert.match(n,/new Intent\(c,ReminderOptionsActivity.class\)/);
     assert.match(n,/putExtra\(ReminderOptionsActivity.EXTRA_FULLSCREEN,true\)/);
     assert.match(n,/PendingIntent.getActivity\(c,BASE\+10_000\+item.id/);
+    assert.match(phone('RingingService'),/builder.setFullScreenIntent\(openApp\(\), true\)/);
+    assert.match(phone('RingingService'),/new Intent\(this,ReminderOptionsActivity.class\)/);
     assert.match(ui,/if\(getIntent\(\).getBooleanExtra\(EXTRA_FULLSCREEN,false\)\)/);
     assert.match(ui,/setShowWhenLocked\(true\)/);
     assert.match(ui,/setTurnScreenOn\(true\)/);

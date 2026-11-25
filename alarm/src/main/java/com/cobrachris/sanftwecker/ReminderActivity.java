@@ -12,8 +12,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Switch;
-import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
@@ -28,10 +26,7 @@ public final class ReminderActivity extends Activity {
     private LinearLayout list;
     private EditText title;
     private TextView whenLabel;
-    private Switch cascade;
-    private SeekBar intensity,pulses,interval;
-    private Spinner recurrence,postpone,tone;
-    private Switch phoneSound;
+    private Spinner recurrence,postpone;
     private long chosenAt;
     private int editingId=-1;
     private boolean timeConfirmed;
@@ -65,7 +60,7 @@ public final class ReminderActivity extends Activity {
             card.addView(UiKit.label(this,format.format(new Date(item.dueAt))+
                 (item.done?" · Erledigt":item.dueAt<System.currentTimeMillis()?
                 " · Überfällig":" · Offen")+
-                (item.cascade?" · Wecker-Kaskade":" · Sanft")+
+                " · Ausgabe wie Testwecker"+
                 (item.repeat==1?" · Täglich":item.repeat==2?" · Wöchentlich":""),14,UiKit.MUTED));
             Button edit=UiKit.button(this,"Erinnerung bearbeiten",false);
             edit.setOnClickListener(v->editor(item));
@@ -149,17 +144,24 @@ public final class ReminderActivity extends Activity {
         Button date=UiKit.button(this,"Datum und Uhrzeit auswählen",false);
         date.setOnClickListener(v->chooseDate());
         form.addView(date);
-        cascade=UiKit.toggle(this);
-        cascade.setText("Wecker-Kaskade: Tonrampe + sanfte Watch, ab Minute 2 kräftige Watch- und Handyvibration");
-        cascade.setTextColor(UiKit.TEXT);
-        cascade.setChecked(existing==null||existing.cascade);form.addView(cascade);
-        form.addView(UiKit.label(this,"Watch-Vibrationsstärke (0 sanft · 1 normal · 2 intensiv)",
-                13,UiKit.MUTED));
-        intensity=UiKit.seek(this,2);intensity.setProgress(existing==null?1:existing.watchIntensity);form.addView(intensity);
-        form.addView(UiKit.label(this,"Watch-Impulse Phase 1 (1–30)",13,UiKit.MUTED));
-        pulses=UiKit.seek(this,29);pulses.setProgress(existing==null?5:existing.watchPulses-1);form.addView(pulses);
-        form.addView(UiKit.label(this,"Impulsabstand in Sekunden (1–60)",13,UiKit.MUTED));
-        interval=UiKit.seek(this,59);interval.setProgress(existing==null?4:existing.watchIntervalSeconds-1);form.addView(interval);
+        final AlarmProfile template=ReminderAlarmConfig.profile(this);
+        String templateDescription="Ausgabe wie Testwecker: "
+                +ToneCatalog.LABELS[template.tone]+" · "
+                +template.watchPulses+" Watch-Impulse · "
+                +template.watchIntervalSeconds+" s Abstand · "
+                +(template.cascadeEnabled?"2-Stufen-Kaskade":"eine Stufe")
+                +" · Auto-Stopp "+template.autoStopMinutes+" min.";
+        form.addView(UiKit.label(this,templateDescription,14,UiKit.TEXT));
+        AlarmProfile linked=ReminderAlarmConfig.linked(this);
+        if(linked==null)
+            form.addView(UiKit.label(this,
+                    "WARNUNG: Gespeicherter Testwecker nicht verknüpft. "
+                    +"Bis zur Korrektur wird ein Ersatzprofil abgespielt.",
+                    14,UiKit.MUTED));
+        else if(!"Testwecker".equals(linked.name))
+            form.addView(UiKit.label(this,
+                    "Mit zuvor gespeichertem Testwecker verknüpft: "+linked.name,
+                    14,UiKit.MUTED));
         form.addView(UiKit.label(this,"Wiederholung",15,UiKit.TEXT));
         recurrence=new Spinner(this);
         recurrence.setAdapter(new ArrayAdapter<String>(this,
@@ -175,21 +177,6 @@ public final class ReminderActivity extends Activity {
         postpone.setSelection(existing==null?1:existing.postponeMinutes==5?0:
                 existing.postponeMinutes==30?2:1);
         form.addView(postpone);
-        form.addView(UiKit.label(this,
-                "Klang und Lautstärke werden vom gespeicherten Wecker \"Testwecker\" übernommen.",
-                14,UiKit.MUTED));
-        form.addView(UiKit.label(this,
-                "Ersatzton (nur wenn Testwecker fehlt)",15,UiKit.TEXT));
-        tone=new Spinner(this);
-        tone.setAdapter(new ArrayAdapter<String>(this,
-            android.R.layout.simple_spinner_dropdown_item,ToneCatalog.LABELS));
-        tone.setSelection(existing==null?0:existing.tone);
-        form.addView(tone);
-        phoneSound=UiKit.toggle(this);
-        phoneSound.setText("Am Handy wie Testwecker klingeln (aus = stumm)");
-        phoneSound.setTextColor(UiKit.TEXT);
-        phoneSound.setChecked(existing==null||existing.phoneSound);
-        form.addView(phoneSound);
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
             .setTitle(existing==null?"Neue Erinnerung":"Erinnerung bearbeiten")
             .setView(UiKit.scroll(this,form))
@@ -248,17 +235,19 @@ public final class ReminderActivity extends Activity {
             if(editingId>0){
                 if(previous==null)throw new IllegalStateException("Erinnerung nicht mehr vorhanden");
                 id=previous.id;
+                // Preserve legacy stored values without letting them change
+                // the output: all ringing and Watch settings come from Testwecker.
                 ReminderStore.update(this,id,title.getText().toString(),chosenAt,
-                        cascade.isChecked(),intensity.getProgress(),
-                        pulses.getProgress()+1,interval.getProgress()+1,
-                        recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                        tone.getSelectedItemPosition());
+                        previous.cascade,previous.watchIntensity,
+                        previous.watchPulses,previous.watchIntervalSeconds,
+                        recurrence.getSelectedItemPosition(),minutes,previous.phoneSound,
+                        previous.tone);
             }else{
+                AlarmProfile profile=ReminderAlarmConfig.profile(this);
                 id=ReminderStore.create(this,title.getText().toString(),chosenAt,
-                        cascade.isChecked(),intensity.getProgress(),
-                        pulses.getProgress()+1,interval.getProgress()+1,
-                        recurrence.getSelectedItemPosition(),minutes,phoneSound.isChecked(),
-                        tone.getSelectedItemPosition());
+                        profile.cascadeEnabled,profile.watchIntensity,
+                        Math.max(1,profile.watchPulses),profile.watchIntervalSeconds,
+                        recurrence.getSelectedItemPosition(),minutes,true,profile.tone);
             }
             try{
                 if(previous!=null){

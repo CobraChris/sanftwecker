@@ -16,19 +16,29 @@ public final class ReminderWatchBridge {
         // Old Watch releases understand seven fields only. The eighth field
         // marks the shared wake-cascade profile for Watch v53+.
         // Keep the legacy packet until both devices can reliably negotiate versions.
-        String payload=item.id+":"+item.dueAt+":"+(item.cascade?"1":"0")+":"+
-            item.watchIntensity+":"+item.watchPulses+":"+item.watchIntervalSeconds+":"+item.postponeMinutes;
+        // The actual reference Testwecker owns ALL Watch haptic settings,
+        // including previously saved reminders with old cascade=false flags.
+        AlarmProfile reference=ReminderAlarmConfig.profile(c);
+        String payload=item.id+":"+item.dueAt+":"+(reference.cascadeEnabled?"1":"0")+":"+
+            reference.watchIntensity+":"+Math.max(1,reference.watchPulses)+":"+
+            reference.watchIntervalSeconds+":"+item.postponeMinutes;
         String shared=payload+":1";
+        String detailed=shared+":"+reference.autoStopMinutes;
         try{
             Wearable.getNodeClient(c).getConnectedNodes().addOnSuccessListener(nodes->{
                 for(com.google.android.gms.wearable.Node node:nodes){
-                    // Try the shared mode first: newer Watch versions start
-                    // immediately with the correct haptics instead of a legacy pulse.
-                    if(START.equals(path)&&item.cascade)
+                    // Prefer the versioned 9-field profile. Legacy watches
+                    // receive the old 8- and 7-field packets as compatibility.
+                    if(START.equals(path)){
+                        Wearable.getMessageClient(c).sendMessage(node.getId(),path,
+                            detailed.getBytes(StandardCharsets.UTF_8))
+                            .addOnFailureListener(e->Log.w("Sanftwecker",
+                                    "Profile-based reminder delivery deferred",e));
                         Wearable.getMessageClient(c).sendMessage(node.getId(),path,
                             shared.getBytes(StandardCharsets.UTF_8))
                             .addOnFailureListener(e->Log.w("Sanftwecker",
-                                    "Shared reminder mode delivery deferred",e));
+                                    "Compatible reminder delivery deferred",e));
+                    }
                     Wearable.getMessageClient(c).sendMessage(node.getId(),path,
                         payload.getBytes(StandardCharsets.UTF_8))
                         .addOnFailureListener(e->Log.w("Sanftwecker","Reminder Watch delivery deferred",e));
