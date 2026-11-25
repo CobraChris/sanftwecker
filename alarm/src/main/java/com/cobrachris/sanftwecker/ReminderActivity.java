@@ -152,13 +152,16 @@ public final class ReminderActivity extends Activity {
                 +(template.cascadeEnabled?"2-Stufen-Kaskade":"eine Stufe")
                 +" · Auto-Stopp "+template.autoStopMinutes+" min.";
         form.addView(UiKit.label(this,templateDescription,14,UiKit.TEXT));
-        try{AlarmPresetImporter.referenceAlarm(this);}
-        catch(IllegalStateException missing){
+        AlarmProfile linked=ReminderAlarmConfig.linked(this);
+        if(linked==null)
             form.addView(UiKit.label(this,
-                    "WARNUNG: Gespeicherter Wecker \"Testwecker\" nicht eindeutig gefunden. "
+                    "WARNUNG: Gespeicherter Testwecker nicht verknüpft. "
                     +"Bis zur Korrektur wird ein Ersatzprofil abgespielt.",
                     14,UiKit.MUTED));
-        }
+        else if(!"Testwecker".equals(linked.name))
+            form.addView(UiKit.label(this,
+                    "Mit zuvor gespeichertem Testwecker verknüpft: "+linked.name,
+                    14,UiKit.MUTED));
         form.addView(UiKit.label(this,"Wiederholung",15,UiKit.TEXT));
         recurrence=new Spinner(this);
         recurrence.setAdapter(new ArrayAdapter<String>(this,
