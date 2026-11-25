@@ -88,3 +88,17 @@ test('legacy reminder data is still readable but never drives audio or haptics',
  assert.match(ui,/ReminderStore.restore\(this,previous\)/);
  assert.match(phone('ReminderScheduler'),/new Intent\(c,ReminderReceiver.class\)/);
 });
+
+test('a replacement Watch reminder cannot inherit stale gentle/strong/escalation callbacks',()=>{
+ const source=watch('WatchReminderService');
+ const start=source.indexOf('if(id>0){');
+ const end=source.indexOf('id=requestedId;due=when;',start);
+ assert.ok(start>=0&&end>start);
+ const replaceBlock=source.slice(start,end);
+ for(const task of ['pulse','strongPulse','localEscalate','autoEnd','wakePriorityCheck'])
+     assert.ok(replaceBlock.includes('handler.removeCallbacks('+task+')'),task);
+ assert.match(source,/if\(played<pulses\)\s*handler.postDelayed\(this,interval\*1000L\)/);
+ assert.match(source,/if\(id==requestedId&&due==when\)/);
+ assert.match(source,/if\(requestedId==id&&when==due&&cascade&&!strong\)/);
+ assert.match(source,/handler\.postDelayed\(localEscalate,\s*WatchCascade\.untilStrong/);
+});
