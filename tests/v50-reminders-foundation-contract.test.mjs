@@ -13,7 +13,7 @@ test('new fifth tab and private reminder screen coexist with original navigation
  assert.match(activity,/ClockTabs\.REMINDERS/);
  assert.match(activity,/RecognizerIntent\.ACTION_RECOGNIZE_SPEECH/);
  assert.match(activity,/ReminderVoiceParser\.parse/);
- assert.match(activity,/cascade\.setChecked\(existing==null\|\|existing\.cascade\)/);
+ assert.match(activity,/ReminderAlarmConfig\.profile\(this\)/);
 });
 test('reminders never share clock or timer identity and stay open until done',()=>{
  const model=phone('ReminderStore'),scheduler=phone('ReminderScheduler'),receiver=phone('ReminderReceiver');
@@ -82,7 +82,7 @@ test('editor never silently accepts unrecognized voice time or unscheduled save'
  assert.match(model,/public static synchronized void abandon/);
  assert.match(ui,/Wöchentlich/);
  assert.match(ui,/new int\[\]\{5,10,30\}/);
- assert.match(ui,/phoneSound\.isChecked\(\)/);
+ assert.match(ui,/previous\.phoneSound/);
 });
 test('strong reminder chooses system tone or silent vibration without other alarm channels',()=>{
  const notice=phone('ReminderNotice'),model=phone('ReminderStore');
@@ -102,23 +102,26 @@ test('deleting an open or finished reminder cancels only its own scheduled and W
  assert.match(ui,/setTitle\("Erinnerung löschen\?"\)/);
 });
 
-test('the nine original tones play in a separate bounded reminder service',()=>{
+test('reminders now launch exactly the real alarm foreground/audio service',()=>{
  const model=phone('ReminderStore'),ui=phone('ReminderActivity');
- const receiver=phone('ReminderReceiver'),sound=phone('ReminderToneService');
- const notice=phone('ReminderNotice');
+ const receiver=phone('ReminderReceiver'),adapter=phone('ReminderToneService');
+ const wake=phone('RingingService'),notice=phone('ReminderNotice');
  const manifest=read('alarm/src/main/AndroidManifest.xml');
- assert.match(model,/!ToneCatalog\.valid\(tone\)/);
+ assert.match(model,/!ToneCatalog\.valid\(tone\)/); // migration format preserved
  assert.match(model,/putInt\(id\+"_tone",tone\)/);
  assert.match(ui,/ToneCatalog\.LABELS/);
- assert.match(ui,/tone\.getSelectedItemPosition\(\)/);
+ assert.doesNotMatch(ui,/tone\.getSelectedItemPosition\(\)/);
  assert.match(receiver,/ReminderToneService\.start\(c,item\)/);
  assert.match(receiver,/ReminderToneService\.stop\(c,item\)/);
- assert.match(sound,/AlarmPcm.sample\(tone,t\)/);
- assert.match(sound,/handler.postDelayed\(finish,WakeCascade.duration\(/);
- assert.match(sound,/ActiveAlarmState\.activeId\(this\)>0/);
- assert.match(sound,/ReminderScheduler\.DUE/);
- assert.match(sound,/reminder\.dueAt!=due/);
- assert.match(manifest,/\.ReminderToneService/);
+ assert.match(adapter,/new Intent\(c,RingingService\.class\)/);
+ assert.match(adapter,/RingingService\.REMINDER_START/);
+ assert.match(adapter,/c\.startForegroundService\(intent\)/);
+ assert.match(wake,/AlarmPcm\.sample\(tone,t\)/);
+ assert.match(wake,/AlarmEnvelope\.gain\(profile,/);
+ assert.match(wake,/ActiveAlarmState\.start\(this,ringId,ringWhen\)/);
+ assert.match(wake,/profile\.autoStopMinutes/);
+ assert.match(manifest,/\.RingingService/);
+ assert.doesNotMatch(manifest,/android:name="\.ReminderToneService"/);
  assert.match(notice,/loud\.setSound\(null,null\)/);
 });
 
@@ -130,8 +133,8 @@ test('two-stage Watch vibration respects selected postpone time and protects wak
  assert.match(bridge,/item\.postponeMinutes/);
  assert.match(listener,/putExtra\("postpone",Integer\.parseInt\(a\[6\]\)\)/);
  assert.match(service,/postponeMinutes!=5&&postponeMinutes!=10&&postponeMinutes!=30/);
- assert.match(service,/strongPlayed>=12/);
- assert.match(service,/handler\.postDelayed\(this,8_000L\)/);
+ assert.doesNotMatch(service,/strongPlayed>=12/);
+ assert.match(service,/repeatIndex=hard\?0:-1/);
  assert.match(service,/clockActive\(\)/);
  assert.match(service,/handler\.removeCallbacks\(strongPulse\)/);
  assert.match(manifest,/android:pathPrefix="\/sanftwecker\/reminder\/v1"/);
@@ -148,6 +151,7 @@ test('reminder tone stops when user stops or defers and when a wake alarm starts
  const tone=phone('ReminderToneService');
  assert.match(receiver,/ReminderScheduler\.STOP\.equals\(action\)[\s\S]*ReminderToneService\.stop\(c,item\)/);
  assert.match(receiver,/ReminderScheduler\.LATER\.equals\(action\)[\s\S]*ReminderToneService\.stop\(c,item\)/);
- assert.match(tone,/private final Runnable wakePriorityCheck/);
- assert.match(tone,/ActiveAlarmState\.activeId\(ReminderToneService\.this\)>0/);
+ assert.match(tone,/RingingService.REMINDER_STOP/);
+ assert.match(phone('RingingService'),/if\(active&&!reminderActive&&!toneOnlyPreview\)/);
+ assert.match(phone('RingingService'),/if\(active&&reminderActive&&reminderId==id&&reminderDue==due\)/);
 });
