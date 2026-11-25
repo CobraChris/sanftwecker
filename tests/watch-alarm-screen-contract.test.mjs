@@ -122,8 +122,8 @@ test('unlocked phone has explicit alarm-screen entry and stop without bypassing 
     assert.match(service,/ActiveAlarmState\.start\(this,ringId,ringWhen\)/);
     assert.match(service,/ActiveAlarmState\.clear\(this\)/);
     assert.match(service,/\.setFullScreenIntent\(openApp\(\), true\)/);
-    assert.match(service,/"Stoppen", STOP/);
-    assert.match(service,/"Alarmansicht",openApp\(\)/);
+    assert.match(service,/action\("Stoppen",\s*STOP/);
+    assert.match(service,/reminderActive\?"Erinnerung bedienen":"Alarmansicht",openApp\(\)/);
     assert.match(main,/LAUFENDEN WECKER ÖFFNEN/);
     assert.match(main,/ActiveAlarmState\.activeId\(this\)/);
     assert.match(main,/new Intent\(this,AlarmActivity\.class\)/);
