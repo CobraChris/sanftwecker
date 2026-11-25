@@ -34,7 +34,7 @@ public final class WatchReminderService extends Service {
     private static final int NOTIFY_ID=49010;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private Vibrator motor;
-    private int id,intensity,pulses,interval,played,postponeMinutes=10,strongPlayed;
+    private int id,intensity,pulses,interval,played,postponeMinutes=10,autoStopMinutes=3;
     private long due;
     private boolean cascade,strong;
     private final Runnable pulse=new Runnable(){
@@ -47,24 +47,33 @@ public final class WatchReminderService extends Service {
             handler.postDelayed(this,interval*1000L);
         }
     };
-    private final Runnable strongPulse=new Runnable(){
-        @Override public void run(){
-            if(due<=0||!strong||strongPlayed>=12)return;
-            if(!clockActive()){
-                vibrate(true);
-                strongPlayed++;
-            }
-            handler.postDelayed(this,8_000L);
-        }
+    // The actual WatchAlarmService repeats the strong WatchCascade waveform
+    // continuously until stop; do the SAME, not 12 finite reminder pulses.
+    private final Runnable strongPulse=()->{
+        if(due>0&&strong&&!clockActive())vibrate(true);
     };
     private final Runnable localEscalate=()->{
         if(due>0&&cascade&&!strong){
-            strong=true;strongPlayed=0;
+            strong=true;
             handler.removeCallbacks(pulse);
+            if(motor!=null&&!clockActive())try{motor.cancel();}catch(RuntimeException ignored){}
             handler.post(strongPulse);
         }
     };
     private final Runnable autoEnd=()->stopLocal();
+    private void scheduleAutoEnd(){
+        handler.removeCallbacks(autoEnd);
+        long duration=Math.max(cascade?2:1,Math.min(15,autoStopMinutes))*60_000L;
+        long elapsed=Math.max(0L,System.currentTimeMillis()-due);
+        handler.postDelayed(autoEnd,Math.max(1000L,duration-elapsed));
+    }
+    private final Runnable wakePriorityCheck=new Runnable(){
+        @Override public void run(){
+            if(due<=0)return;
+            if(clockActive()){stopLocal();return;}
+            handler.postDelayed(this,800L);
+        }
+    };
     @Override public void onCreate(){
         super.onCreate();
         if(Build.VERSION.SDK_INT>=31){
@@ -91,9 +100,11 @@ public final class WatchReminderService extends Service {
                 WatchCascade.gentleTimings(intensity);
         int[] amplitudes=hard?WatchCascade.strongAmplitudes(intensity):
                 WatchCascade.gentleAmplitudes(intensity);
+        // Exactly as WatchAlarmService: repeat strong waveform from index 0.
+        int repeatIndex=hard?0:-1;
         VibrationEffect pattern=motor.hasAmplitudeControl()?
-            VibrationEffect.createWaveform(timing,amplitudes,-1):
-            VibrationEffect.createWaveform(timing,-1);
+            VibrationEffect.createWaveform(timing,amplitudes,repeatIndex):
+            VibrationEffect.createWaveform(timing,repeatIndex);
         try{
             if(Build.VERSION.SDK_INT>=33)
                 motor.vibrate(pattern,new VibrationAttributes.Builder()
@@ -152,6 +163,7 @@ public final class WatchReminderService extends Service {
         handler.removeCallbacks(pulse);handler.removeCallbacks(strongPulse);
         handler.removeCallbacks(localEscalate);
         handler.removeCallbacks(autoEnd);
+        handler.removeCallbacks(wakePriorityCheck);
         if(motor!=null&&!clockActive())try{motor.cancel();}catch(RuntimeException ignored){}
         id=0;due=0;
         stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();
@@ -182,9 +194,12 @@ public final class WatchReminderService extends Service {
         }
         if(STRONG.equals(action)){
             if(requestedId==id&&when==due&&cascade&&!strong){
-                strong=true;strongPlayed=0;
+                strong=true;
                 handler.removeCallbacks(localEscalate);
-                handler.removeCallbacks(pulse);handler.post(strongPulse);
+                handler.removeCallbacks(pulse);
+                if(motor!=null&&!clockActive())
+                    try{motor.cancel();}catch(RuntimeException ignored){}
+                handler.post(strongPulse);
             }
             return START_NOT_STICKY;
         }
@@ -192,7 +207,14 @@ public final class WatchReminderService extends Service {
                 when<=0||when<System.currentTimeMillis()-180_000L)return START_NOT_STICKY;
         // Legacy and extended packets describe the same reminder: do not restart
         // vibration or alter phase when a duplicate packet arrives.
-        if(id==requestedId&&due==when)return START_NOT_STICKY;
+        if(id==requestedId&&due==when){
+            int supplied=intent.getIntExtra("autostop",0);
+            if(supplied>0 && supplied!=autoStopMinutes){
+                autoStopMinutes=supplied;
+                scheduleAutoEnd();
+            }
+            return START_NOT_STICKY;
+        }
         // Replacing the current reminder must not stopSelf() and kill the new one.
         if(id>0){
             handler.removeCallbacks(pulse);handler.removeCallbacks(autoEnd);
@@ -205,7 +227,9 @@ public final class WatchReminderService extends Service {
         interval=Math.max(1,Math.min(60,intent.getIntExtra("interval",5)));
         postponeMinutes=intent.getIntExtra("postpone",10);
         if(postponeMinutes!=5&&postponeMinutes!=10&&postponeMinutes!=30)postponeMinutes=10;
-        played=0;strongPlayed=0;
+        played=0;
+        autoStopMinutes=intent.getIntExtra("autostop",0);
+        if(autoStopMinutes<1||autoStopMinutes>30)autoStopMinutes=3;
         strong=!cascade||WatchCascade.strong(due,System.currentTimeMillis());
         try{show();}catch(RuntimeException ex){
             Log.w("SanftweckerWatch","Reminder notification unavailable",ex);
@@ -217,14 +241,18 @@ public final class WatchReminderService extends Service {
         if(cascade&&!strong)
             handler.postDelayed(localEscalate,
                     WatchCascade.untilStrong(due,System.currentTimeMillis()));
-        handler.removeCallbacks(autoEnd);
-        handler.postDelayed(autoEnd,180_000L);
+        scheduleAutoEnd();
+        handler.removeCallbacks(wakePriorityCheck);
+        handler.postDelayed(wakePriorityCheck,800L);
         return START_NOT_STICKY;
     }
     @Override public void onDestroy(){
         handler.removeCallbacks(pulse);handler.removeCallbacks(strongPulse);
         handler.removeCallbacks(localEscalate);
         handler.removeCallbacks(autoEnd);
+        handler.removeCallbacks(wakePriorityCheck);
+        if(motor!=null&&!clockActive())
+            try{motor.cancel();}catch(RuntimeException ignored){}
         super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent){return null;}
