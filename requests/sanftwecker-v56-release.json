@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V56_WITH_EXISTING_V55_CERTIFICATE",
+  "expected_version_code": 56,
+  "intent": "signed-native-wear-v56",
+  "request_id": "2026-11-25-v56-reminder-direct-testwecker-approved",
+  "source_sha": "c68bbc6626a6b248cd25f025721ae42e6ec7ff60",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
