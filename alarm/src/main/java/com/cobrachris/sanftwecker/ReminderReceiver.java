@@ -15,11 +15,14 @@ public final class ReminderReceiver extends BroadcastReceiver {
         ReminderStore.Item item=ReminderStore.get(c,id);
         if(item==null||item.done||due!=item.dueAt)return;
         if(ReminderScheduler.FIRE.equals(action)){
-            ReminderNotice.show(c,item,!item.cascade,true);
+            // Keep the persistent open-item notification as a safety fallback.
+            // The actual full-screen alert now comes from RingingService,
+            // exactly as for the reference Testwecker.
+            ReminderNotice.show(c,item,false);
             ReminderWatchBridge.start(c,item);
             // Same tone engine for every reminder; cascade controls the ramp.
             ReminderToneService.start(c,item);
-            if(item.cascade){
+            if(ReminderAlarmConfig.profile(c).cascadeEnabled){
                 try{ReminderScheduler.scheduleEscalation(c,item);}
                 catch(RuntimeException e){Log.w("Sanftwecker","Reminder escalation unavailable",e);}
             }
@@ -27,8 +30,9 @@ public final class ReminderReceiver extends BroadcastReceiver {
             ReminderNotice.show(c,item,true);
             ReminderWatchBridge.escalate(c,item);
             ReminderToneService.start(c,item);
-            if(item.cascade)PhoneVibration.startReminder(c,
-                    WakeCascade.phoneMode(0),item.id,item.dueAt);
+            AlarmProfile settings=ReminderAlarmConfig.profile(c);
+            if(settings.cascadeEnabled)PhoneVibration.startReminder(c,
+                    WakeCascade.phoneMode(settings.vibrationMode),item.id,item.dueAt);
         }else if(ReminderScheduler.DONE.equals(action)){
             ReminderStore.complete(c,id);
             ReminderScheduler.cancel(c,id);
