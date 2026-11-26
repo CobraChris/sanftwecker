@@ -62,6 +62,12 @@ public final class ReminderActivity extends Activity {
                 " · Überfällig":" · Offen")+
                 " · Ausgabe wie Testwecker"+
                 (item.repeat==1?" · Täglich":item.repeat==2?" · Wöchentlich":""),14,UiKit.MUTED));
+            // This reflects the last real device attempt, not an assumed
+            // outcome from passing source-code/CI tests.
+            String status=ReminderPlaybackStatus.summary(this,item.id,item.dueAt);
+            if(!status.isEmpty())
+                card.addView(UiKit.label(this,"Letzter Auslöseversuch: "+status,
+                        13,UiKit.MUTED));
             Button edit=UiKit.button(this,"Erinnerung bearbeiten",false);
             edit.setOnClickListener(v->editor(item));
             card.addView(edit);
