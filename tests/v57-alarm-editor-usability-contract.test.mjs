@@ -11,7 +11,7 @@ test('overview and editor both show unambiguous weekdays without changing saved 
    assert.match(src,/\{"Mo","Di","Mi","Do","Fr","Sa","So"\}/);
  assert.match(detail,/days\[which\]=!days\[which\]/);
  assert.match(detail,/if\(days\[i\]\)mask\|=1<<i/);
- assert.match(layout,/weekdayColumns\(int screenWidthDp,float fontScale\)/);
+ assert.match(layout,/weekdayColumns\(int screenWidthDp,\s*float fontScale\)/);
  assert.match(detail,/getConfiguration\(\)\.fontScale/);
  assert.match(detail,/chips\[i\]\.setContentDescription|chips\[index\]\.setContentDescription/);
 });
