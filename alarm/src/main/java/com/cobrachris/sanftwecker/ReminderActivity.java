@@ -6,6 +6,10 @@ import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Build;
+import com.google.android.gms.wearable.Wearable;
 import android.speech.RecognizerIntent;
 import android.view.View;
 import android.widget.Button;
@@ -24,6 +28,8 @@ import java.util.Locale;
 public final class ReminderActivity extends Activity {
     private static final int VOICE=8301;
     private LinearLayout list;
+    private TextView watchVersionLabel;
+    private final Handler uiHandler=new Handler(Looper.getMainLooper());
     private EditText title;
     private TextView whenLabel;
     private Spinner recurrence,postpone;
@@ -43,6 +49,8 @@ public final class ReminderActivity extends Activity {
         ClockTabs.add(this,root,ClockTabs.REMINDERS);
         root.addView(UiKit.heading(this,"Erinnerungen"));
         root.addView(UiKit.label(this,"Offen bis Erledigt – Stoppen beendet nur den Alarm.",14,UiKit.MUTED));
+        watchVersionLabel=UiKit.label(this,"Galaxy Watch: Version wird geprüft",13,UiKit.MUTED);
+        root.addView(watchVersionLabel);
         Button newButton=UiKit.button(this,"+ Neue Erinnerung",true);
         root.addView(newButton);
         newButton.setOnClickListener(v->editor(null));
@@ -51,7 +59,61 @@ public final class ReminderActivity extends Activity {
         setContentView(ClockTabs.pin(this,root,UiKit.scroll(this,root)));
         render();
     }
-    @Override protected void onResume(){super.onResume();if(list!=null)render();}
+    @Override protected void onResume(){
+        super.onResume();
+        if(list!=null)render();
+        renderWatchVersion();
+        requestWatchVersion();
+    }
+    @Override protected void onPause(){
+        uiHandler.removeCallbacksAndMessages(null);
+        super.onPause();
+    }
+    private long phoneVersion(){
+        try{
+            android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(
+                    getPackageName(),0);
+            return Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode;
+        }catch(Exception ignored){return 0;}
+    }
+    private void renderWatchVersion(){
+        if(watchVersionLabel==null)return;
+        android.content.SharedPreferences p=getSharedPreferences(
+                "sanftwecker_watch_relay",MODE_PRIVATE);
+        long code=p.getLong("installed_watch_code",0L);
+        long checked=p.getLong("installed_watch_checked",0L);
+        if(code<=0||checked<=0||System.currentTimeMillis()-checked>30*60_000L){
+            watchVersionLabel.setText("Galaxy Watch: installierte Version noch nicht bestätigt");
+            return;
+        }
+        long phone=phoneVersion();
+        watchVersionLabel.setText("Galaxy Watch v"+code+
+                (phone>0&&code<phone?" – Update auf v"+phone+" erforderlich":
+                phone>0&&code==phone?" – mit Handy synchron":" – Version geprüft"));
+    }
+    private void requestWatchVersion(){
+        android.content.SharedPreferences p=getSharedPreferences(
+                "sanftwecker_watch_relay",MODE_PRIVATE);
+        long now=System.currentTimeMillis();
+        if(now-p.getLong("last_reminder_version_query",0L)<30_000L)return;
+        p.edit().putLong("last_reminder_version_query",now).apply();
+        try{
+            Wearable.getNodeClient(this).getConnectedNodes()
+                    .addOnSuccessListener(nodes->{
+                        if(nodes.isEmpty()){
+                            if(watchVersionLabel!=null)
+                                watchVersionLabel.setText("Galaxy Watch: nicht verbunden");
+                            return;
+                        }
+                        for(com.google.android.gms.wearable.Node node:nodes)
+                            Wearable.getMessageClient(this).sendMessage(node.getId(),
+                                    "/sanftwecker/update/v1/version-request",new byte[0]);
+                        uiHandler.postDelayed(this::renderWatchVersion,3000L);
+                    });
+        }catch(RuntimeException ignored){
+            // A disconnected or unsupported Watch must never block reminders.
+        }
+    }
     private void render(){
         list.removeAllViews();
         for(ReminderStore.Item item:ReminderStore.all(this)){
