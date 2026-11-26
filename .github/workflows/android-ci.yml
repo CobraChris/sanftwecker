@@ -62,6 +62,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v57 protected dual-device same-signer update gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v57-release-request.mjs
+          node --test tests/sanftwecker-v57-release-request.test.mjs
       - name: Verify v56 owner-only original-signer dual-device release gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v56-release-request.mjs
@@ -126,6 +130,8 @@ jobs:
         run: node --test tests/sanftwecker-navigation-polish.test.mjs
       - name: Verify permission wizard and alarm safety UI contracts
         run: node --test tests/setup-assistant-contract.test.mjs
+      - name: Verify v57 sticky Save, expert sections and complete alarm test UX
+        run: node --test tests/v57-alarm-editor-usability-contract.test.mjs
       - name: Verify compact alarm detail without functionality regressions
         run: node --test tests/alarm-detail-ux-contract.test.mjs
       - name: Verify instant alarm time save and accessible stop without bypass

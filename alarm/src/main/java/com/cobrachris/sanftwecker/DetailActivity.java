@@ -18,7 +18,7 @@ import java.util.*;
 public final class DetailActivity extends Activity {
     private static final int NOTIFY_REQ=18;
     private static final int TONE_PICKER_REQ=24;
-    private final String[] weekdays={"M","D","M","D","F","S","S"};
+    private final String[] weekdays={"Mo","Di","Mi","Do","Fr","Sa","So"};
     private final String[] weekdayNames={"Montag","Dienstag","Mittwoch",
             "Donnerstag","Freitag","Samstag","Sonntag"};
     private int id,hour,minute,selectedTone;
@@ -27,7 +27,9 @@ public final class DetailActivity extends Activity {
     private EditText name;
     private TextView clock,status,advanced,nextDisplay,timeSavedLabel,timeUndoAction;
     private LinearLayout timeUndoRow;
-    private TextView toneSummary,watchSummary,snoozeSummary,modeDescription;
+    private TextView toneSummary,watchSummary,snoozeSummary,vibrationSummary,modeDescription;
+    private TextView saveState,testDescription,plannedTest;
+    private Button cancelTestButton;
     private LinearLayout manualToneOptions;
     private Button tonePicker;
     private final TextView[] chips=new TextView[7];
@@ -50,13 +52,45 @@ public final class DetailActivity extends Activity {
     @Override public void onResume(){
         super.onResume();
         if(status!=null)diagnostics();
+        refreshTestControls();
     }
     private TextView label(String s,int size){return UiKit.label(this,s,size,UiKit.TEXT);}
+    private void placeCompactCard(LinearLayout root,View card){
+        LinearLayout.LayoutParams placement=new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        placement.bottomMargin=UiKit.dp(this,8);
+        root.addView(card,placement);
+    }
     private LinearLayout section(LinearLayout root,String title){
         LinearLayout card=UiKit.card(this);
         card.addView(UiKit.heading(this,title));
-        UiKit.placeCard(this,root,card);
+        placeCompactCard(root,card);
         return card;
+    }
+    /** Keeps advanced controls mounted and editable, but hidden until requested. */
+    private LinearLayout advancedOptions(LinearLayout root,String title){
+        LinearLayout group=UiKit.column(this);
+        TextView trigger=UiKit.label(this,title+"  ⌄",14,UiKit.BLUE);
+        trigger.setMinHeight(UiKit.dp(this,48));
+        trigger.setClickable(true);
+        trigger.setFocusable(true);
+        trigger.setContentDescription(title+" öffnen");
+        LinearLayout content=UiKit.column(this);
+        content.setVisibility(View.GONE);
+        trigger.setOnClickListener(v->{
+            boolean expanded=content.getVisibility()!=View.VISIBLE;
+            content.setVisibility(expanded?View.VISIBLE:View.GONE);
+            trigger.setText(title+(expanded?"  ⌃":"  ⌄"));
+            trigger.setContentDescription(title+(expanded?" schließen":" öffnen"));
+        });
+        group.addView(trigger);
+        group.addView(content);
+        root.addView(group);
+        return content;
+    }
+    private void help(LinearLayout into,String explanation){
+        LinearLayout body=advancedOptions(into,"Hinweise");
+        body.addView(UiKit.label(this,explanation,13,UiKit.MUTED));
     }
     private void rowSwitch(LinearLayout into,String text,Switch control){
         LinearLayout row=UiKit.row(this);
@@ -106,7 +140,7 @@ public final class DetailActivity extends Activity {
         });
         card.addView(header);
         card.addView(content);
-        UiKit.placeCard(this,root,card);
+        placeCompactCard(root,card);
         return content;
     }
 
@@ -116,9 +150,11 @@ public final class DetailActivity extends Activity {
         if(manualToneOptions!=null)
             manualToneOptions.setVisibility(gentle?View.GONE:View.VISIBLE);
         if(modeDescription!=null)modeDescription.setText(gentle
-                ?"Erste Minute sanfter Ton und leichte Watch-Impulse (falls aktiviert). "+
-                  "Danach kräftigere Watch-Impulse und Handyvibration."
-                :"Individuell: Tonstart und Lautstärkeanstieg selbst einstellen.");
+                ?"Minute 1 sanfter Ton und Watch-Impulse, danach kräftigere Watch- und Handyvibration."
+                :"Individuelle Ton- und Vibrationseinstellungen.");
+        if(testDescription!=null)testDescription.setText(gentle
+                ?"Start nach 30 Sek. · ab Minute 2 starke Vibration · Stopp jederzeit"
+                :"Start nach 30 Sek. · kurzer Ton- und Watch-Test · Stopp jederzeit");
         updateSummaries();
     }
 
@@ -126,6 +162,11 @@ public final class DetailActivity extends Activity {
         if(toneSummary!=null && selectedTone>=0 && selectedTone<ToneCatalog.LABELS.length)
             toneSummary.setText(ToneCatalog.LABELS[selectedTone]+
                     (cascade!=null&&cascade.isChecked()?" · sanfte 2-Stufen-Kaskade":" · individuell"));
+        if(vibrationSummary!=null && vibration!=null &&
+                vibration.getSelectedItemPosition()>=0)
+            vibrationSummary.setText(VibrationPresets.LABELS[
+                    Math.min(vibration.getSelectedItemPosition(),
+                            VibrationPresets.LABELS.length-1)]);
         if(watchSummary!=null && watch!=null && pulses!=null && interval!=null)
             watchSummary.setText(watch.isChecked()
                     ?"Aktiv · "+pulses.getProgress()+" Impulse · "+
@@ -235,7 +276,7 @@ public final class DetailActivity extends Activity {
         top.addView(daysGrid);
         nextDisplay=UiKit.label(this,"Noch nicht geplant",15,UiKit.MUTED);
         top.addView(nextDisplay);
-        UiKit.placeCard(this,root,top);
+        placeCompactCard(root,top);
 
         LinearLayout mode=section(root,"Weckmodus");
         mode.setPadding(UiKit.dp(this,16),UiKit.dp(this,12),
@@ -250,6 +291,31 @@ public final class DetailActivity extends Activity {
             changed();
         });
 
+        // One entry point to the existing full alarm/Watch schedule, not a
+        // new simulation. Any unsaved editor values require explicit approval.
+        LinearLayout testPanel=UiKit.card(this);
+        testPanel.setPadding(UiKit.dp(this,16),UiKit.dp(this,10),
+                UiKit.dp(this,16),UiKit.dp(this,10));
+        Button startTest=UiKit.button(this,"Weckablauf testen",false);
+        startTest.setContentDescription("Vollständigen Weckablauf auf Handy und Watch testen");
+        startTest.setOnClickListener(v->testAlarm());
+        testPanel.addView(startTest);
+        testDescription=UiKit.label(this,"",13,UiKit.MUTED);
+        testPanel.addView(testDescription);
+        plannedTest=UiKit.label(this,"",13,UiKit.BLUE);
+        plannedTest.setVisibility(View.GONE);
+        testPanel.addView(plannedTest);
+        cancelTestButton=UiKit.button(this,"Geplanten Test abbrechen",false);
+        cancelTestButton.setVisibility(View.GONE);
+        cancelTestButton.setOnClickListener(v->{
+            AlarmScheduler.cancelTest(this);
+            refreshTestControls();
+            diagnostics();
+            notice("Geplanter Wecktest abgebrochen.");
+        });
+        testPanel.addView(cancelTestButton);
+        placeCompactCard(root,testPanel);
+
         toneSummary=UiKit.label(this,"",14,UiKit.MUTED);
         LinearLayout music=foldSection(root,"Weckton & Lautstärke",toneSummary);
         tonePicker=UiKit.button(this,"Klingelton auswählen",false);
@@ -261,8 +327,11 @@ public final class DetailActivity extends Activity {
                     .putExtra(TonePickerActivity.EXTRA_SELECTED,selectedTone);
             startActivityForResult(choose,TONE_PICKER_REQ);
         });
+        volumeLabel=label("",15);music.addView(volumeLabel);
+        volume=slider(music,95);
+        LinearLayout advancedTone=advancedOptions(music,"Erweiterte Toneinstellungen");
         manualToneOptions=UiKit.column(this);
-        music.addView(manualToneOptions);
+        advancedTone.addView(manualToneOptions);
         Button recommended=UiKit.button(this,"Sanft & sicher: empfohlene Werte übernehmen",false);
         manualToneOptions.addView(recommended);
         recommended.setOnClickListener(v->new AlertDialog.Builder(this)
@@ -290,25 +359,19 @@ public final class DetailActivity extends Activity {
         delay=slider(manualToneOptions,30);
         rampLabel=label("",15);manualToneOptions.addView(rampLabel);
         ramp=slider(manualToneOptions,29);
-        volumeLabel=label("",15);music.addView(volumeLabel);
-        volume=slider(music,95);
         audibleWhenMuted=UiKit.toggle(this);
         audibleWhenMuted.setOnCheckedChangeListener((b,on)->changed());
-        rowSwitch(music,"Niedrigen Android-Weckerpegel beim Alarm anheben",audibleWhenMuted);
-        music.addView(UiKit.label(this,
-                "Optional, nur für diesen Wecker: Wenn die Android-Weckerlautstärke "+
-                "stumm oder sehr niedrig ist, wird sie während des Alarms "+
-                "vorübergehend auf etwa 75 % angehoben und danach wiederhergestellt. "+
-                "Der sanfte Tonanstieg bleibt aktiv. Das übergeht 'Nicht stören' nicht: "+
-                "Bitte Alarme und Sanftwecker in den Android-Ausnahmen erlauben.",
-                13,UiKit.MUTED));
+        rowSwitch(advancedTone,"Niedrigen Android-Weckerpegel anheben",audibleWhenMuted);
+        help(advancedTone,"Wenn die Android-Weckerlautstärke stumm oder sehr niedrig ist, "+
+                "wird sie für diesen Alarm vorübergehend auf etwa 75 % angehoben und "+
+                "anschließend wiederhergestellt. Der sanfte Tonanstieg bleibt aktiv. "+
+                "'Nicht stören' wird dadurch nicht umgangen.");
         Button preview=UiKit.button(this,"Tonprobe starten (20 Sek.)",false);
         music.addView(preview);
         preview.setOnClickListener(v->previewTone());
 
-        LinearLayout vibrationCard=foldSection(root,"Handy-Vibration",null);
-        vibrationCard.addView(UiKit.label(this,
-                "Handy-Vibrationsmuster (Watch-Impulse separat einstellen)",15,UiKit.MUTED));
+        vibrationSummary=UiKit.label(this,"",14,UiKit.MUTED);
+        LinearLayout vibrationCard=foldSection(root,"Handy-Vibration",vibrationSummary);
         vibration=new Spinner(this);
         vibration.setContentDescription("Vibrationsrhythmus auswählen");
         vibration.setMinimumHeight(UiKit.dp(this,48));
@@ -341,12 +404,9 @@ public final class DetailActivity extends Activity {
                 if(!isFinishing() && stopDialog.isShowing())stopDialog.dismiss();
             },PhoneVibration.MAX_PREVIEW_MS+200);
         });
-        vibrationCard.addView(UiKit.label(this,
-                "Vorschau: maximal 5 Sekunden, mit sichtbarem Stoppknopf. "+
-                "Im Alarm: kräftige Handyvibration bis zu 90 Sekunden. "+
-                "Sie endet sofort bei Stoppen/Schlummern; eine Vorschau dauert maximal 5 Sekunden. "+
-                "Die tatsächliche Stärke hängt von der Hardware ab.",
-                13,UiKit.MUTED));
+        help(vibrationCard,"Die Vorschau endet spätestens nach 5 Sekunden und lässt sich "+
+                "sofort stoppen. Im Alarm kann die kräftige Handyvibration bis zu "+
+                "90 Sekunden dauern. Die tatsächliche Stärke hängt von deinem Handy ab.");
 
         watchSummary=UiKit.label(this,"",14,UiKit.MUTED);
         LinearLayout wrist=foldSection(root,"Galaxy Watch",watchSummary);
@@ -361,32 +421,29 @@ public final class DetailActivity extends Activity {
             changed();
         });
         rowSwitch(wrist,"Uhr benachrichtigen",watch);
-        wrist.addView(UiKit.label(this,
-                "Watch-Vibration bei zweistufiger Kaskade (pro Wecker)",15,UiKit.MUTED));
+        LinearLayout watchFine=advancedOptions(wrist,"Watch-Feineinstellungen");
         watchIntensity=new Spinner(this);
         watchIntensity.setContentDescription("Watch-Intensität auswählen");
         watchIntensity.setMinimumHeight(UiKit.dp(this,48));
         watchIntensity.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item,WatchIntensity.LABELS));
-        wrist.addView(watchIntensity);
+        watchFine.addView(watchIntensity);
         watchIntensity.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
             public void onItemSelected(AdapterView<?> parent,View view,int pos,long key){
                 changed();
             }
             public void onNothingSelected(AdapterView<?> parent){}
         });
-        wrist.addView(UiKit.label(this,
-                "Sanft: leichter spürbarer Impuls, Normal: deutlicher Impuls, "+
-                "Intensiv: kräftig. Anzahl und Abstand stellst du unten ein. "+
-                "Nach 60 Sekunden beginnt die zweite Weckstufe. "+
-                "Nur nach Speichern aktiv; die Stärke hängt von der Uhr ab.",13,UiKit.MUTED));
-        pulsesLabel=label("",15);wrist.addView(pulsesLabel);
-        pulses=slider(wrist,12);
-        intervalLabel=label("",15);wrist.addView(intervalLabel);
-        interval=slider(wrist,WatchIntervals.maxProgress());
+        help(watchFine,"Sanft, Normal und Intensiv hängen von der Uhr ab. "+
+                "Impulszahl und Abstand bestimmen die erste Minute; ab Minute 2 "+
+                "beginnt die starke Kaskadenphase.");
+        pulsesLabel=label("",15);watchFine.addView(pulsesLabel);
+        pulses=slider(watchFine,12);
+        intervalLabel=label("",15);watchFine.addView(intervalLabel);
+        interval=slider(watchFine,WatchIntervals.maxProgress());
         Button repeatedWatch=UiKit.button(this,
                 "Voreinstellung: 12 Impulse · alle 5 Sek.",false);
-        wrist.addView(repeatedWatch);
+        watchFine.addView(repeatedWatch);
         repeatedWatch.setOnClickListener(v->{
             watch.setChecked(true);
             pulses.setProgress(12);
@@ -395,13 +452,10 @@ public final class DetailActivity extends Activity {
         });
         Button watchTest=UiKit.button(this,"Watch-Test senden",false);
         wrist.addView(watchTest);watchTest.setOnClickListener(v->watchTest());
-        wrist.addView(UiKit.label(this,"Du kannst 3, 5, 10 bis 120 Sekunden "+
-                "Abstand wählen. Sehr schnelle Impulse werden eventuell durch "+
-                "Android oder Samsung gedämpft oder zusammengefasst. "+
-                "Bei zweistufigen Kaskaden bestimmen Anzahl und Abstand die "+
-                "kurzen Impulse in Minute 1; danach folgt die kräftigere Phase. "+
-                "Die Musterstärke bleibt von der Hardware abhängig.",
-                13,UiKit.MUTED));
+        help(watchFine,"Impulse lassen sich mit einem Abstand von 3 bis 120 Sekunden "+
+                "einstellen. Schnelle Impulse können von Android oder Samsung gedämpft "+
+                "werden. Die starken Impulse beginnen bei der zweistufigen Kaskade "+
+                "nach 60 Sekunden.");
 
         snoozeSummary=UiKit.label(this,"",14,UiKit.MUTED);
         LinearLayout end=foldSection(root,"Schlummern & Stoppen",snoozeSummary);
@@ -415,17 +469,33 @@ public final class DetailActivity extends Activity {
         snooze=slider(end,29);
         stopLabel=label("",15);end.addView(stopLabel);
         autoStop=slider(end,29);
-        end.addView(UiKit.label(this,"Stoppen und Schlummern erscheinen beim Klingeln "+
-                "in der App und in der Android-Benachrichtigung.",13,UiKit.MUTED));
+        help(end,"Stoppen und Schlummern sind beim Klingeln über die App "+
+                "und die Android-Alarmbenachrichtigung erreichbar.");
 
+        // Persistent footer: scrolling never hides Save. No second Save button.
+        root.setPadding(root.getPaddingLeft(),root.getPaddingTop(),
+                root.getPaddingRight(),UiKit.dp(this,14));
+        LinearLayout shell=UiKit.column(this);
+        shell.setBackgroundColor(UiKit.BG);
+        ScrollView scrolling=UiKit.scroll(this,root);
+        shell.addView(scrolling,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        LinearLayout footer=UiKit.column(this);
+        footer.setPadding(UiKit.dp(this,18),UiKit.dp(this,4),
+                UiKit.dp(this,18),UiKit.dp(this,8));
+        footer.setBackgroundColor(UiKit.BG);
+        saveState=UiKit.label(this,"Änderungen noch nicht gespeichert",13,UiKit.BLUE);
+        saveState.setGravity(Gravity.CENTER_HORIZONTAL);
+        saveState.setVisibility(View.GONE);
+        footer.addView(saveState);
         Button bottom=UiKit.button(this,"Speichern",true);
-        root.addView(bottom);
+        footer.addView(bottom);
         bottom.setOnClickListener(v->{if(save())finish();});
-        // Diagnostics remain available through the overflow menu, never as
-        // permanent configuration controls or duplicate Save actions.
+        shell.addView(footer);
+        // Diagnostics remain in the overflow; no additional persistent controls.
         status=UiKit.label(this,"",13,UiKit.MUTED);
         advanced=UiKit.label(this,"",14,UiKit.MUTED);
-        setContentView(UiKit.scroll(this,root));
+        setContentView(shell);
     }
 
     private void changed(){
@@ -433,6 +503,21 @@ public final class DetailActivity extends Activity {
         try { dirty = !saved.sameConfiguration(read()); }
         catch (RuntimeException invalid) { dirty = true; }
         updateSummaries();
+        refreshDirtyUi();
+    }
+    private void refreshDirtyUi(){
+        if(saveState!=null)
+            saveState.setVisibility(dirty?View.VISIBLE:View.GONE);
+    }
+    private void refreshTestControls(){
+        if(cancelTestButton==null||plannedTest==null)return;
+        long when=AlarmScheduler.testWhen(this);
+        boolean scheduled=when>System.currentTimeMillis();
+        cancelTestButton.setVisibility(scheduled?View.VISIBLE:View.GONE);
+        plannedTest.setVisibility(scheduled?View.VISIBLE:View.GONE);
+        if(scheduled)plannedTest.setText("Geplant für "+
+                new java.text.SimpleDateFormat("HH:mm:ss",Locale.GERMANY)
+                        .format(new Date(when)));
     }
     private void showTime(){clock.setText(String.format(Locale.GERMANY,"%02d:%02d",hour,minute));}
 
@@ -555,6 +640,7 @@ public final class DetailActivity extends Activity {
         ramp.setEnabled(p.rampEnabled);
         pulses.setEnabled(p.watchPulses>0);interval.setEnabled(p.watchPulses>0);
         loading=false;dirty=false;clearTimeUndo();updateLabels();refreshModeUi();diagnostics();
+        refreshDirtyUi();refreshTestControls();
     }
 
     private AlarmProfile read(){
@@ -584,7 +670,8 @@ public final class DetailActivity extends Activity {
         if(old==null){notice("Wecker existiert nicht mehr.");return false;}
         try{
             AlarmRepository.put(this,update);AlarmScheduler.reschedule(this,id);
-            saved=update;dirty=false;clearTimeUndo();diagnostics();return true;
+            saved=update;dirty=false;clearTimeUndo();diagnostics();
+            refreshDirtyUi();return true;
         }catch(RuntimeException e){
             try{AlarmRepository.put(this,old);AlarmScheduler.reschedule(this,id);}
             catch(RuntimeException ignored){}
@@ -606,13 +693,29 @@ public final class DetailActivity extends Activity {
     }
 
     private void testAlarm(){
-        if(!save())return;
+        if(dirty){
+            new AlertDialog.Builder(this)
+                    .setTitle("Änderungen vor dem Test speichern?")
+                    .setMessage("Der echte Wecktest verwendet die gespeicherte Konfiguration. "+
+                            "Die noch offenen Einstellungen werden mit der Testfreigabe "+
+                            "dauerhaft übernommen, auch ein geänderter Ein-/Aus-Zustand. "+
+                            "Der Test selbst verändert den Schalter nicht.")
+                    .setNegativeButton("Abbrechen",null)
+                    .setPositiveButton("Speichern und testen",(dialog,which)->{
+                        if(save())scheduleAlarmTest();
+                    }).show();
+            return;
+        }
+        scheduleAlarmTest();
+    }
+    private void scheduleAlarmTest(){
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 !=PackageManager.PERMISSION_GRANTED){
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},NOTIFY_REQ);return;
         }
         try{
             long when=AlarmScheduler.test(this,id);
+            refreshTestControls();
             notice("Test geplant um "+new java.text.SimpleDateFormat("HH:mm:ss",
                     Locale.GERMANY).format(new Date(when))+". Bitte Handy sperren. "+
                     (saved.cascadeEnabled ?
