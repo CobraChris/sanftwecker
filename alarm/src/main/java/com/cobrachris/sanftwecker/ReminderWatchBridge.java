@@ -11,6 +11,7 @@ public final class ReminderWatchBridge {
     public static final String ESCALATE="/sanftwecker/reminder/v1/escalate";
     public static final String STOP="/sanftwecker/reminder/v1/stop";
     public static final String ACTION="/sanftwecker/reminder/v1/action";
+    public static final String ACK="/sanftwecker/reminder/v1/ack";
     private ReminderWatchBridge(){}
     private static void send(Context c,String path,ReminderStore.Item item){
         // Old Watch releases understand seven fields only. The eighth field
@@ -32,8 +33,12 @@ public final class ReminderWatchBridge {
                     if(START.equals(path)){
                         Wearable.getMessageClient(c).sendMessage(node.getId(),path,
                             detailed.getBytes(StandardCharsets.UTF_8))
-                            .addOnFailureListener(e->Log.w("Sanftwecker",
-                                    "Profile-based reminder delivery deferred",e));
+                            .addOnSuccessListener(sent->
+                                    AlarmRepository.diagnostic(c,"Erinnerung an Wear OS gesendet (noch nicht bestätigt): "+item.id))
+                            .addOnFailureListener(e->{
+                                AlarmRepository.diagnostic(c,"FEHLER: Erinnerung nicht an Wear OS übertragen");
+                                Log.w("Sanftwecker","Profile-based reminder delivery deferred",e);
+                            });
                         Wearable.getMessageClient(c).sendMessage(node.getId(),path,
                             shared.getBytes(StandardCharsets.UTF_8))
                             .addOnFailureListener(e->Log.w("Sanftwecker",
@@ -43,8 +48,14 @@ public final class ReminderWatchBridge {
                         payload.getBytes(StandardCharsets.UTF_8))
                         .addOnFailureListener(e->Log.w("Sanftwecker","Reminder Watch delivery deferred",e));
                 }
+                if(nodes.isEmpty())
+                    AlarmRepository.diagnostic(c,"Erinnerung: keine verbundene Galaxy Watch gefunden");
+            }).addOnFailureListener(error->{
+                AlarmRepository.diagnostic(c,"FEHLER: Galaxy-Watch-Verbindung nicht abfragbar");
+                Log.w("Sanftwecker","Reminder Watch node query failed",error);
             });
         }catch(RuntimeException e){
+            AlarmRepository.diagnostic(c,"FEHLER: Reminder-Watch-Übertragung nicht möglich");
             Log.w("Sanftwecker","Reminder Watch connection unavailable",e);
         }
     }
