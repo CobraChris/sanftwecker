@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V57_WITH_EXISTING_V56_CERTIFICATE",
+  "expected_version_code": 57,
+  "intent": "signed-native-wear-v57",
+  "request_id": "2026-11-26-v57-alarm-editor-ux-approved",
+  "source_sha": "e2537abaca007c2585db71c6a28866da70a6e085",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
