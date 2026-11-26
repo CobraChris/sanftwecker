@@ -74,7 +74,7 @@ test('watch cascade uses finite user-counted pulses and stops all callbacks',()=
     assert.match(bootstrap,/WatchCascade.safeInterval\(map.getInt\("watch_interval_seconds",5\)\)/);
     assert.match(phone,/data.putInt\("watch_pulses"/);
     assert.match(phone,/data.putInt\("watch_interval_seconds"/);
-    assert.match(ui,/Anzahl und Abstand die/);
+    assert.match(ui,/Impulszahl und Abstand bestimmen die erste Minute/);
 });
 
 
