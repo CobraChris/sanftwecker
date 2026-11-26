@@ -34,7 +34,7 @@ import java.util.Locale;
 
 /** Dark alarm list with arbitrary saved alarms, shortcuts and one-off actions. */
 public final class MainActivity extends Activity {
-    private final String[] dayNames = {"M","D","M","D","F","S","S"};
+    private final String[] dayNames = {"Mo","Di","Mi","Do","Fr","Sa","So"};
     private LinearLayout list;
     private TextView subheading;
     private TextView setupWarning;
