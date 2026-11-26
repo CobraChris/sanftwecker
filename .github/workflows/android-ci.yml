@@ -62,6 +62,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v58 protected dual-device same-signer update gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v58-release-request.mjs
+          node --test tests/sanftwecker-v58-release-request.test.mjs
       - name: Verify v57 protected dual-device same-signer update gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v57-release-request.mjs
@@ -100,6 +104,8 @@ jobs:
         run: node --test tests/v51-watch-update-one-step-ux.test.mjs
       - name: Verify shared reminder cascade, legacy persistence and Watch compatibility
         run: node --test tests/v53-shared-reminder-cascade-contract.test.mjs
+      - name: Verify reminder device phase delivery, Watch wake lock and receipt diagnostics
+        run: node --test tests/v58-reminder-device-stage-contract.test.mjs
       - name: Verify real shared Testwecker RingingService controls every reminder
         run: node --test tests/v56-direct-wake-output-contract.test.mjs
       - name: Verify identical Testwecker and reminder audio engine

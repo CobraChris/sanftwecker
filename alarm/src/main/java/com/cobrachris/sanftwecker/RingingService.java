@@ -288,10 +288,12 @@ public final class RingingService extends Service {
                                     WakeCascade.elapsedSinceAlarm(
                                             ringWhen,System.currentTimeMillis(),
                                             SystemClock.elapsedRealtime()-startedAt))){
-                        if(reminderActive)
-                            PhoneVibration.startReminder(this,strongMode,
+                        if(reminderActive){
+                            boolean started=PhoneVibration.startReminder(this,strongMode,
                                     reminderId,reminderDue);
-                        else PhoneVibration.start(this,strongMode);
+                            ReminderPlaybackStatus.phone(this,reminderId,reminderDue,
+                                    started?"STUFE_2_HANDY":"HANDYVIBRATION_BLOCKIERT");
+                        }else PhoneVibration.start(this,strongMode);
                         AlarmRepository.diagnostic(this,
                                 "Kaskade Phase 2: Handyvibration gestartet");
                     }
@@ -302,9 +304,18 @@ public final class RingingService extends Service {
             try {
                 beginAudio();
                 handler.post(gainTick);
+                if(reminderActive){
+                    ReminderPlaybackStatus.phone(this,reminderId,reminderDue,
+                            profile.cascadeEnabled?"STUFE_1_TON":"TON_AKTIV");
+                    AlarmRepository.diagnostic(this,
+                            "Erinnerung Phase 1 gestartet: "+reminderTitle+
+                            " / Uhrstart angefordert");
+                }
                 AlarmRepository.diagnostic(this, "AudioTrack initialisiert: " + profile.name);
             } catch (RuntimeException audioError) {
                 Log.e("Sanftwecker", "Audio unavailable, watch alerts still active", audioError);
+                if(reminderActive)
+                    ReminderPlaybackStatus.phone(this,reminderId,reminderDue,"TON_FEHLER");
                 AlarmRepository.diagnostic(this, "WARNUNG: Audio fehlgeschlagen; Watch-Impulse laufen");
             }
             if (!reminderActive && !toneOnlyPreview && pulseCount < profile.watchPulses)
@@ -316,6 +327,8 @@ public final class RingingService extends Service {
             }, ringDuration);
         } catch (RuntimeException e) {
             Log.e("Sanftwecker", "Could not launch foreground alarm", e);
+            if(reminderActive)
+                ReminderPlaybackStatus.phone(this,reminderId,reminderDue,"START_FEHLER");
             AlarmRepository.diagnostic(this, "FEHLER: Hintergrundalarm konnte nicht starten");
             // Retain the receiver-issued watch notification if foreground start failed.
             stopPlaying(false);

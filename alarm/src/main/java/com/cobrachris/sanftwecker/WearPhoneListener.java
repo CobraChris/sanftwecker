@@ -33,6 +33,27 @@ public final class WearPhoneListener extends WearableListenerService {
                 .putLong("verified_at",System.currentTimeMillis()).apply();
             return;
         }
+        if(ReminderWatchBridge.ACK.equals(event.getPath())){
+            String receipt=new String(event.getData(),StandardCharsets.UTF_8);
+            if(!receipt.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:"+
+                    "(STARTED|GENTLE|STRONG|START_ERROR|NO_VIBRATOR|VIBRATION_ERROR)"))
+                return;
+            String[] parts=receipt.split(":");
+            int id=Integer.parseInt(parts[0]);
+            long due=Long.parseLong(parts[1]);
+            ReminderStore.Item reminder=ReminderStore.get(this,id);
+            // Do not display stale Watch output from a previous occurrence.
+            if(reminder==null||reminder.done||reminder.dueAt!=due)return;
+            String phase=parts[2];
+            ReminderPlaybackStatus.watch(this,id,due,phase);
+            AlarmRepository.diagnostic(this,"Erinnerung Uhr bestätigt: "+phase+
+                    " (ID "+id+")");
+            getSharedPreferences("sanftwecker_reminder_watch_acks_v1",MODE_PRIVATE)
+                    .edit().putInt("id",id).putLong("due",due)
+                    .putString("phase",phase).putLong("at",System.currentTimeMillis())
+                    .apply();
+            return;
+        }
         if(ReminderWatchBridge.ACTION.equals(event.getPath())){
             String value=new String(event.getData(),StandardCharsets.UTF_8);
             if(!value.matches("[1-9][0-9]{0,3}:[1-9][0-9]{11,12}:(done|later|stop|later10|later30|later60|tomorrow)"))

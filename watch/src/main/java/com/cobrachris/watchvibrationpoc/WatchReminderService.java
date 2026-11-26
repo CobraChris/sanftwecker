@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -32,8 +33,11 @@ public final class WatchReminderService extends Service {
     public static final String CHOICE="com.cobrachris.sanftwecker.REMINDER_WATCH_CHOICE";
     private static final String CHANNEL="sanftwecker_watch_reminder_v1";
     private static final int NOTIFY_ID=49010;
+    private static final String ACK="/sanftwecker/reminder/v1/ack";
+    private static final long MAX_LOCK_MS=15*60_000L+5_000L;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private Vibrator motor;
+    private PowerManager.WakeLock wakeLock;
     private int id,intensity,pulses,interval,played,postponeMinutes=10,autoStopMinutes=3;
     private long due;
     private boolean cascade,strong;
@@ -41,7 +45,8 @@ public final class WatchReminderService extends Service {
         @Override public void run(){
             if(due<=0||played>=pulses||strong)return;
             if(!clockActive()){
-                vibrate(false);
+                boolean pulsed=vibrate(false);
+                if(played==0&&pulsed)sendAck("GENTLE");
                 played++;
             }
             if(played<pulses)
@@ -51,7 +56,9 @@ public final class WatchReminderService extends Service {
     // The actual WatchAlarmService repeats the strong WatchCascade waveform
     // continuously until stop; do the SAME, not 12 finite reminder pulses.
     private final Runnable strongPulse=()->{
-        if(due>0&&strong&&!clockActive())vibrate(true);
+        if(due>0&&strong&&!clockActive()){
+            if(vibrate(true))sendAck("STRONG");
+        }
     };
     private final Runnable localEscalate=()->{
         if(due>0&&cascade&&!strong){
@@ -92,10 +99,13 @@ public final class WatchReminderService extends Service {
     private boolean clockActive(){
         android.content.SharedPreferences p=getSharedPreferences(
             WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE);
-        return p.getInt("id",0)>0&&p.getLong("when",0)>0;
+        // A killed WatchAlarmService may leave the active preference behind;
+        // its true motor runtime is always capped at 15 minutes.
+        return WatchAlarmPriority.blocksReminder(p.getInt("id",0),
+                p.getLong("when",0L),System.currentTimeMillis());
     }
-    private void vibrate(boolean hard){
-        if(clockActive()||motor==null||!motor.hasVibrator())return;
+    private boolean vibrate(boolean hard){
+        if(clockActive()||motor==null||!motor.hasVibrator())return false;
         // Reuse the established Watch alarm patterns for every reminder.
         long[] timing=hard?WatchCascade.strongTimings(intensity):
                 WatchCascade.gentleTimings(intensity);
@@ -112,8 +122,11 @@ public final class WatchReminderService extends Service {
                     .setUsage(VibrationAttributes.USAGE_ALARM).build());
             else motor.vibrate(pattern,new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM).build());
+            return true;
         }catch(RuntimeException error){
             Log.w("SanftweckerWatch","Reminder vibration unavailable",error);
+            sendAck("VIBRATION_ERROR");
+            return false;
         }
     }
     private PendingIntent action(String which,int request){
@@ -166,8 +179,41 @@ public final class WatchReminderService extends Service {
         handler.removeCallbacks(autoEnd);
         handler.removeCallbacks(wakePriorityCheck);
         if(motor!=null&&!clockActive())try{motor.cancel();}catch(RuntimeException ignored){}
+        if(wakeLock!=null){
+            try{if(wakeLock.isHeld())wakeLock.release();}
+            catch(RuntimeException ignored){}
+            wakeLock=null;
+        }
         id=0;due=0;
         stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();
+    }
+    private void holdCpuForReminder(){
+        if(wakeLock!=null&&wakeLock.isHeld())wakeLock.release();
+        PowerManager manager=(PowerManager)getSystemService(POWER_SERVICE);
+        if(manager==null)return;
+        wakeLock=manager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                "Sanftwecker:WatchReminder");
+        // Same wake management as WatchAlarmService, never unbounded.
+        wakeLock.acquire(MAX_LOCK_MS);
+    }
+    /** Acknowledgement distinguishes "message sent" from actual Watch execution. */
+    private void sendAck(String phase){
+        if(id<=0||due<=0)return;
+        final String receipt=id+":"+due+":"+phase;
+        try{
+            Wearable.getNodeClient(this).getConnectedNodes()
+                    .addOnSuccessListener(nodes->{
+                        for(com.google.android.gms.wearable.Node node:nodes)
+                            Wearable.getMessageClient(this).sendMessage(node.getId(),ACK,
+                                    receipt.getBytes(StandardCharsets.UTF_8))
+                                    .addOnFailureListener(error->
+                                            Log.w("SanftweckerWatch","Reminder ACK failed",error));
+                    })
+                    .addOnFailureListener(error->
+                            Log.w("SanftweckerWatch","No node for reminder ACK",error));
+        }catch(RuntimeException error){
+            Log.w("SanftweckerWatch","Reminder ACK unavailable",error);
+        }
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         if(intent==null)return START_NOT_STICKY;
@@ -239,11 +285,20 @@ public final class WatchReminderService extends Service {
         autoStopMinutes=intent.getIntExtra("autostop",0);
         if(autoStopMinutes<1||autoStopMinutes>30)autoStopMinutes=3;
         strong=!cascade||WatchCascade.strong(due,System.currentTimeMillis());
-        try{show();}catch(RuntimeException ex){
-            Log.w("SanftweckerWatch","Reminder notification unavailable",ex);
-            stopSelf();
+        try{
+            show();
+            // The real WatchAlarmService keeps the CPU awake while haptics
+            // progress through the 60-second phase boundary. Without this,
+            // Android can suspend the reminder's Handler during screen-off.
+            holdCpuForReminder();
+            sendAck("STARTED");
+        }catch(RuntimeException ex){
+            Log.w("SanftweckerWatch","Reminder notification/wakelock unavailable",ex);
+            sendAck("START_ERROR");
+            stopLocal();
             return START_NOT_STICKY;
         }
+        if(motor==null||!motor.hasVibrator())sendAck("NO_VIBRATOR");
         if(strong)handler.post(strongPulse);else handler.post(pulse);
         handler.removeCallbacks(localEscalate);
         if(cascade&&!strong)
@@ -261,6 +316,11 @@ public final class WatchReminderService extends Service {
         handler.removeCallbacks(wakePriorityCheck);
         if(motor!=null&&!clockActive())
             try{motor.cancel();}catch(RuntimeException ignored){}
+        if(wakeLock!=null){
+            try{if(wakeLock.isHeld())wakeLock.release();}
+            catch(RuntimeException ignored){}
+            wakeLock=null;
+        }
         super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent){return null;}

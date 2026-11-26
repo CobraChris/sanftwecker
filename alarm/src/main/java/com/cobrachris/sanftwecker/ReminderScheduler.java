@@ -52,8 +52,15 @@ public final class ReminderScheduler {
             throw new SecurityException("Genaue Alarme für Erinnerungen nicht freigegeben");
         AlarmManager manager=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
         if(manager==null)throw new IllegalStateException("AlarmManager fehlt");
-        manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,
-            item.dueAt,pending(c,id,item.dueAt,FIRE));
+        // The user explicitly requested the SAME alarm-grade delivery as
+        // Testwecker. An alarm-clock occurrence receives the same Doze and
+        // foreground-start handling as AlarmScheduler.schedule().
+        // Android may show the next reminder in its next-alarm indicator.
+        PendingIntent open=PendingIntent.getActivity(c,320000+id,
+                new Intent(c,ReminderActivity.class),
+                PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        manager.setAlarmClock(new AlarmManager.AlarmClockInfo(item.dueAt,open),
+                pending(c,id,item.dueAt,FIRE));
     }
     public static void restore(Context c){
         for(ReminderStore.Item item:ReminderStore.all(c)){
