@@ -71,3 +71,15 @@ test('existing reminder data and actions are preserved',()=>{
     assert.match(recv,/ReminderToneService\.stop\(c,item\)/);
     assert.match(phone('ReminderScheduler'),/pending\(c,id,0,ESCALATE\)/);
 });
+
+test('reminder screen checks the actually installed Watch APK instead of assuming relay transfer equals installation',()=>{
+ const ui=phone('ReminderActivity'),receiver=phone('WearPhoneListener'),
+       listener=watch('SanftweckerWearListener');
+ assert.match(ui,/installed_watch_code/);
+ assert.match(ui,/installed_watch_checked/);
+ assert.match(ui,/\/sanftwecker\/update\/v1\/version-request/);
+ assert.match(ui,/Update auf v"\+phone\+" erforderlich/);
+ assert.match(ui,/ReminderPlaybackStatus\.summary\(this,item\.id,item\.dueAt\)/);
+ assert.match(receiver,/putLong\("installed_watch_code",watchCode\)/);
+ assert.match(listener,/\/sanftwecker\/update\/v1\/version-response/);
+});
