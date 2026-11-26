@@ -99,13 +99,10 @@ public final class WatchReminderService extends Service {
     private boolean clockActive(){
         android.content.SharedPreferences p=getSharedPreferences(
             WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE);
-        long when=p.getLong("when",0L);
-        if(p.getInt("id",0)<=0||when<=0)return false;
-        long elapsed=System.currentTimeMillis()-when;
-        // A killed WatchAlarmService may leave this preference behind.
-        // True clock alarms are capped at 15 min; a stale timestamp must
-        // never mute all reminders forever after a process crash.
-        return elapsed>=-60_000L&&elapsed<=15*60_000L;
+        // A killed WatchAlarmService may leave the active preference behind;
+        // its true motor runtime is always capped at 15 minutes.
+        return WatchAlarmPriority.blocksReminder(p.getInt("id",0),
+                p.getLong("when",0L),System.currentTimeMillis());
     }
     private boolean vibrate(boolean hard){
         if(clockActive()||motor==null||!motor.hasVibrator())return false;
