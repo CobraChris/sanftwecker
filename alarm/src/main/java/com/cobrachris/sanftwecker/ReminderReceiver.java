@@ -15,6 +15,9 @@ public final class ReminderReceiver extends BroadcastReceiver {
         ReminderStore.Item item=ReminderStore.get(c,id);
         if(item==null||item.done||due!=item.dueAt)return;
         if(ReminderScheduler.FIRE.equals(action)){
+            ReminderPlaybackStatus.fired(c,item.id,item.dueAt);
+            AlarmRepository.diagnostic(c,"Erinnerung ausgelöst: ID "+item.id+
+                    " / Zeitabweichung "+(System.currentTimeMillis()-due)+" ms");
             // Keep the persistent open-item notification as a safety fallback.
             // The actual full-screen alert now comes from RingingService,
             // exactly as for the reference Testwecker.
