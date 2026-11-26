@@ -27,6 +27,7 @@ public final class ReminderToneService {
         }catch(RuntimeException failure){
             // The notification must still offer its time-sensitive screen if
             // the foreground service was refused by the system.
+            ReminderPlaybackStatus.phone(c,item.id,item.dueAt,"START_GESPERRT");
             AlarmRepository.diagnostic(c,
                     "FEHLER: Weckerdienst für Erinnerung nicht gestartet: "+
                     failure.getClass().getSimpleName());
