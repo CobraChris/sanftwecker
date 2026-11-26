@@ -46,7 +46,7 @@ test('pending watch, tone and weekday edits stay unsaved and time can be undone'
   assert.match(detail,/if\(!dirty\)\{finish\(\);return;\}/);
   assert.match(detail,/Nur die übrigen Änderungen sind noch offen/);
   assert.match(detail,/AlarmRepository\.put\(this,update\);AlarmScheduler\.reschedule\(this,id\)/);
-  assert.match(detail,/clearTimeUndo\(\);diagnostics\(\);return true;/);
+  assert.match(detail,/clearTimeUndo\(\);diagnostics\(\);\s*refreshDirtyUi\(\);return true;/);
   assert.match(detail,/rowSwitch\(mode,"Sanft in 2 Stufen",cascade\)/);
   assert.match(detail,/watchTest\.setOnClickListener\(v->watchTest\(\)\)/);
 });
