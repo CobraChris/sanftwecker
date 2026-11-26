@@ -62,6 +62,10 @@ jobs:
         run: |
           node --check scripts/sanftwecker-v49-release-request.mjs
           node --test tests/sanftwecker-v49-release-request.test.mjs
+      - name: Verify v58 protected dual-device same-signer update gate (unsigned only)
+        run: |
+          node --check scripts/sanftwecker-v58-release-request.mjs
+          node --test tests/sanftwecker-v58-release-request.test.mjs
       - name: Verify v57 protected dual-device same-signer update gate (unsigned only)
         run: |
           node --check scripts/sanftwecker-v57-release-request.mjs
