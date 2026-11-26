@@ -288,12 +288,12 @@ public final class RingingService extends Service {
                                     WakeCascade.elapsedSinceAlarm(
                                             ringWhen,System.currentTimeMillis(),
                                             SystemClock.elapsedRealtime()-startedAt))){
-                        if(reminderActive)
-                            PhoneVibration.startReminder(this,strongMode,
+                        if(reminderActive){
+                            boolean started=PhoneVibration.startReminder(this,strongMode,
                                     reminderId,reminderDue);
-                        else PhoneVibration.start(this,strongMode);
-                        if(reminderActive)ReminderPlaybackStatus.phone(this,
-                                reminderId,reminderDue,"STUFE_2_HANDY");
+                            ReminderPlaybackStatus.phone(this,reminderId,reminderDue,
+                                    started?"STUFE_2_HANDY":"HANDYVIBRATION_BLOCKIERT");
+                        }else PhoneVibration.start(this,strongMode);
                         AlarmRepository.diagnostic(this,
                                 "Kaskade Phase 2: Handyvibration gestartet");
                     }
