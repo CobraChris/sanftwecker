@@ -45,6 +45,7 @@ public final class WearPhoneListener extends WearableListenerService {
             // Do not display stale Watch output from a previous occurrence.
             if(reminder==null||reminder.done||reminder.dueAt!=due)return;
             String phase=parts[2];
+            ReminderPlaybackStatus.watch(this,id,due,phase);
             AlarmRepository.diagnostic(this,"Erinnerung Uhr bestätigt: "+phase+
                     " (ID "+id+")");
             getSharedPreferences("sanftwecker_reminder_watch_acks_v1",MODE_PRIVATE)
