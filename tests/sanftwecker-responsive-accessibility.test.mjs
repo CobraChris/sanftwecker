@@ -9,7 +9,7 @@ const policy=read(base+'AlarmDetailLayoutPolicy.java');
 const kit=read(base+'UiKit.java');
 const home=read(base+'MainActivity.java');
 
-test('single-letter weekdays fit in one row at 360dp and wrap for narrow windows or larger text',()=>{
+test('unambiguous two-letter weekdays fit in one row at 360dp and wrap for narrow windows or larger text',()=>{
   assert.match(detail,/AlarmDetailLayoutPolicy\.weekdayColumns\(/);
   assert.match(detail,/getResources\(\)\.getConfiguration\(\)\.screenWidthDp/);
   assert.match(detail,/getResources\(\)\.getConfiguration\(\)\.fontScale/);
@@ -24,7 +24,7 @@ test('single-letter weekdays fit in one row at 360dp and wrap for narrow windows
   assert.match(policy,/MIN_TOUCH_TARGET_DP = 48/);
   assert.match(policy,/if\(safeScale <= 1\.3f\) return COMPACT_DAY_WIDTH_DP;/);
   assert.match(policy,/Math\.max\(MIN_TOUCH_TARGET_DP,/);
-  assert.match(detail,/weekdays=\{"M","D","M","D","F","S","S"\}/);
+  assert.match(detail,/weekdays=\{"Mo","Di","Mi","Do","Fr","Sa","So"\}/);
   assert.match(policy,/weekdayColumns\(int screenWidthDp, float fontScale\)/);
   assert.doesNotMatch(detail,/UiKit\.dp\(this,38\),1/);
 });
@@ -54,7 +54,10 @@ test('large text keeps edit actions and alarm time usable',()=>{
   assert.match(kit,/b\.setMinHeight\(dp\(c, 52\)\)/);
   assert.match(kit,/s\.setMinHeight\(dp\(c, 48\)\)/);
   assert.match(kit,/public static ScrollView scroll/);
-  assert.match(detail,/setContentView\(UiKit\.scroll\(this,root\)\)/);
+  assert.match(detail,/ScrollView scrolling=UiKit\.scroll\(this,root\)/);
+  assert.match(detail,/shell\.addView\(scrolling,new LinearLayout\.LayoutParams\(/);
+  assert.match(detail,/shell\.addView\(footer\)/);
+  assert.match(detail,/setContentView\(shell\)/);
 });
 
 test('no alarm features or safety controls were lost in the responsive pass',()=>{
