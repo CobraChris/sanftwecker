@@ -1,0 +1,8 @@
+{
+  "confirmation": "SIGN_PHONE_AND_WATCH_V58_WITH_EXISTING_V57_CERTIFICATE",
+  "expected_version_code": 58,
+  "intent": "signed-native-wear-v58",
+  "request_id": "2026-11-27-v58-reminder-wake-delivery-approved",
+  "source_sha": "8a86d1694a2120260a1150555f7426ec83ca9c60",
+  "watch_application_id": "com.cobrachris.sanftwecker"
+}
