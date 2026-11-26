@@ -301,8 +301,11 @@ public final class DetailActivity extends Activity {
                     .putExtra(TonePickerActivity.EXTRA_SELECTED,selectedTone);
             startActivityForResult(choose,TONE_PICKER_REQ);
         });
+        volumeLabel=label("",15);music.addView(volumeLabel);
+        volume=slider(music,95);
+        LinearLayout advancedTone=advancedOptions(music,"Erweiterte Toneinstellungen");
         manualToneOptions=UiKit.column(this);
-        music.addView(manualToneOptions);
+        advancedTone.addView(manualToneOptions);
         Button recommended=UiKit.button(this,"Sanft & sicher: empfohlene Werte übernehmen",false);
         manualToneOptions.addView(recommended);
         recommended.setOnClickListener(v->new AlertDialog.Builder(this)
@@ -330,25 +333,19 @@ public final class DetailActivity extends Activity {
         delay=slider(manualToneOptions,30);
         rampLabel=label("",15);manualToneOptions.addView(rampLabel);
         ramp=slider(manualToneOptions,29);
-        volumeLabel=label("",15);music.addView(volumeLabel);
-        volume=slider(music,95);
         audibleWhenMuted=UiKit.toggle(this);
         audibleWhenMuted.setOnCheckedChangeListener((b,on)->changed());
-        rowSwitch(music,"Niedrigen Android-Weckerpegel beim Alarm anheben",audibleWhenMuted);
-        music.addView(UiKit.label(this,
-                "Optional, nur für diesen Wecker: Wenn die Android-Weckerlautstärke "+
-                "stumm oder sehr niedrig ist, wird sie während des Alarms "+
-                "vorübergehend auf etwa 75 % angehoben und danach wiederhergestellt. "+
-                "Der sanfte Tonanstieg bleibt aktiv. Das übergeht 'Nicht stören' nicht: "+
-                "Bitte Alarme und Sanftwecker in den Android-Ausnahmen erlauben.",
-                13,UiKit.MUTED));
+        rowSwitch(advancedTone,"Niedrigen Android-Weckerpegel anheben",audibleWhenMuted);
+        help(advancedTone,"Wenn die Android-Weckerlautstärke stumm oder sehr niedrig ist, "+
+                "wird sie für diesen Alarm vorübergehend auf etwa 75 % angehoben und "+
+                "anschließend wiederhergestellt. Der sanfte Tonanstieg bleibt aktiv. "+
+                "'Nicht stören' wird dadurch nicht umgangen.");
         Button preview=UiKit.button(this,"Tonprobe starten (20 Sek.)",false);
         music.addView(preview);
         preview.setOnClickListener(v->previewTone());
 
-        LinearLayout vibrationCard=foldSection(root,"Handy-Vibration",null);
-        vibrationCard.addView(UiKit.label(this,
-                "Handy-Vibrationsmuster (Watch-Impulse separat einstellen)",15,UiKit.MUTED));
+        vibrationSummary=UiKit.label(this,"",14,UiKit.MUTED);
+        LinearLayout vibrationCard=foldSection(root,"Handy-Vibration",vibrationSummary);
         vibration=new Spinner(this);
         vibration.setContentDescription("Vibrationsrhythmus auswählen");
         vibration.setMinimumHeight(UiKit.dp(this,48));
@@ -381,12 +378,9 @@ public final class DetailActivity extends Activity {
                 if(!isFinishing() && stopDialog.isShowing())stopDialog.dismiss();
             },PhoneVibration.MAX_PREVIEW_MS+200);
         });
-        vibrationCard.addView(UiKit.label(this,
-                "Vorschau: maximal 5 Sekunden, mit sichtbarem Stoppknopf. "+
-                "Im Alarm: kräftige Handyvibration bis zu 90 Sekunden. "+
-                "Sie endet sofort bei Stoppen/Schlummern; eine Vorschau dauert maximal 5 Sekunden. "+
-                "Die tatsächliche Stärke hängt von der Hardware ab.",
-                13,UiKit.MUTED));
+        help(vibrationCard,"Die Vorschau endet spätestens nach 5 Sekunden und lässt sich "+
+                "sofort stoppen. Im Alarm kann die kräftige Handyvibration bis zu "+
+                "90 Sekunden dauern. Die tatsächliche Stärke hängt von deinem Handy ab.");
 
         watchSummary=UiKit.label(this,"",14,UiKit.MUTED);
         LinearLayout wrist=foldSection(root,"Galaxy Watch",watchSummary);
@@ -401,32 +395,29 @@ public final class DetailActivity extends Activity {
             changed();
         });
         rowSwitch(wrist,"Uhr benachrichtigen",watch);
-        wrist.addView(UiKit.label(this,
-                "Watch-Vibration bei zweistufiger Kaskade (pro Wecker)",15,UiKit.MUTED));
+        LinearLayout watchFine=advancedOptions(wrist,"Watch-Feineinstellungen");
         watchIntensity=new Spinner(this);
         watchIntensity.setContentDescription("Watch-Intensität auswählen");
         watchIntensity.setMinimumHeight(UiKit.dp(this,48));
         watchIntensity.setAdapter(new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item,WatchIntensity.LABELS));
-        wrist.addView(watchIntensity);
+        watchFine.addView(watchIntensity);
         watchIntensity.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
             public void onItemSelected(AdapterView<?> parent,View view,int pos,long key){
                 changed();
             }
             public void onNothingSelected(AdapterView<?> parent){}
         });
-        wrist.addView(UiKit.label(this,
-                "Sanft: leichter spürbarer Impuls, Normal: deutlicher Impuls, "+
-                "Intensiv: kräftig. Anzahl und Abstand stellst du unten ein. "+
-                "Nach 60 Sekunden beginnt die zweite Weckstufe. "+
-                "Nur nach Speichern aktiv; die Stärke hängt von der Uhr ab.",13,UiKit.MUTED));
-        pulsesLabel=label("",15);wrist.addView(pulsesLabel);
-        pulses=slider(wrist,12);
-        intervalLabel=label("",15);wrist.addView(intervalLabel);
-        interval=slider(wrist,WatchIntervals.maxProgress());
+        help(watchFine,"Sanft, Normal und Intensiv hängen von der Uhr ab. "+
+                "Impulszahl und Abstand bestimmen die erste Minute; ab Minute 2 "+
+                "beginnt die starke Kaskadenphase.");
+        pulsesLabel=label("",15);watchFine.addView(pulsesLabel);
+        pulses=slider(watchFine,12);
+        intervalLabel=label("",15);watchFine.addView(intervalLabel);
+        interval=slider(watchFine,WatchIntervals.maxProgress());
         Button repeatedWatch=UiKit.button(this,
                 "Voreinstellung: 12 Impulse · alle 5 Sek.",false);
-        wrist.addView(repeatedWatch);
+        watchFine.addView(repeatedWatch);
         repeatedWatch.setOnClickListener(v->{
             watch.setChecked(true);
             pulses.setProgress(12);
@@ -435,13 +426,10 @@ public final class DetailActivity extends Activity {
         });
         Button watchTest=UiKit.button(this,"Watch-Test senden",false);
         wrist.addView(watchTest);watchTest.setOnClickListener(v->watchTest());
-        wrist.addView(UiKit.label(this,"Du kannst 3, 5, 10 bis 120 Sekunden "+
-                "Abstand wählen. Sehr schnelle Impulse werden eventuell durch "+
-                "Android oder Samsung gedämpft oder zusammengefasst. "+
-                "Bei zweistufigen Kaskaden bestimmen Anzahl und Abstand die "+
-                "kurzen Impulse in Minute 1; danach folgt die kräftigere Phase. "+
-                "Die Musterstärke bleibt von der Hardware abhängig.",
-                13,UiKit.MUTED));
+        help(watchFine,"Impulse lassen sich mit einem Abstand von 3 bis 120 Sekunden "+
+                "einstellen. Schnelle Impulse können von Android oder Samsung gedämpft "+
+                "werden. Die starken Impulse beginnen bei der zweistufigen Kaskade "+
+                "nach 60 Sekunden.");
 
         snoozeSummary=UiKit.label(this,"",14,UiKit.MUTED);
         LinearLayout end=foldSection(root,"Schlummern & Stoppen",snoozeSummary);
@@ -455,8 +443,8 @@ public final class DetailActivity extends Activity {
         snooze=slider(end,29);
         stopLabel=label("",15);end.addView(stopLabel);
         autoStop=slider(end,29);
-        end.addView(UiKit.label(this,"Stoppen und Schlummern erscheinen beim Klingeln "+
-                "in der App und in der Android-Benachrichtigung.",13,UiKit.MUTED));
+        help(end,"Stoppen und Schlummern sind beim Klingeln über die App "+
+                "und die Android-Alarmbenachrichtigung erreichbar.");
 
         Button bottom=UiKit.button(this,"Speichern",true);
         root.addView(bottom);
