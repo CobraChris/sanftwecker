@@ -33,9 +33,12 @@ public final class ReminderWatchBridge {
                     if(START.equals(path)){
                         Wearable.getMessageClient(c).sendMessage(node.getId(),path,
                             detailed.getBytes(StandardCharsets.UTF_8))
-                            .addOnSuccessListener(sent->
-                                    AlarmRepository.diagnostic(c,"Erinnerung an Wear OS gesendet (noch nicht bestätigt): "+item.id))
+                            .addOnSuccessListener(sent->{
+                                ReminderPlaybackStatus.watchSent(c,item.id,item.dueAt);
+                                AlarmRepository.diagnostic(c,"Erinnerung an Wear OS gesendet (noch nicht bestätigt): "+item.id);
+                            })
                             .addOnFailureListener(e->{
+                                ReminderPlaybackStatus.watch(c,item.id,item.dueAt,"SEND_ERROR");
                                 AlarmRepository.diagnostic(c,"FEHLER: Erinnerung nicht an Wear OS übertragen");
                                 Log.w("Sanftwecker","Profile-based reminder delivery deferred",e);
                             });
@@ -48,13 +51,17 @@ public final class ReminderWatchBridge {
                         payload.getBytes(StandardCharsets.UTF_8))
                         .addOnFailureListener(e->Log.w("Sanftwecker","Reminder Watch delivery deferred",e));
                 }
-                if(nodes.isEmpty())
+                if(nodes.isEmpty()){
+                    ReminderPlaybackStatus.watch(c,item.id,item.dueAt,"NICHT_VERBUNDEN");
                     AlarmRepository.diagnostic(c,"Erinnerung: keine verbundene Galaxy Watch gefunden");
+                }
             }).addOnFailureListener(error->{
+                ReminderPlaybackStatus.watch(c,item.id,item.dueAt,"VERBINDUNGSFEHLER");
                 AlarmRepository.diagnostic(c,"FEHLER: Galaxy-Watch-Verbindung nicht abfragbar");
                 Log.w("Sanftwecker","Reminder Watch node query failed",error);
             });
         }catch(RuntimeException e){
+            ReminderPlaybackStatus.watch(c,item.id,item.dueAt,"VERBINDUNGSFEHLER");
             AlarmRepository.diagnostic(c,"FEHLER: Reminder-Watch-Übertragung nicht möglich");
             Log.w("Sanftwecker","Reminder Watch connection unavailable",e);
         }
