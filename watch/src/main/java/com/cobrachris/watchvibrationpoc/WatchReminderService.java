@@ -45,8 +45,8 @@ public final class WatchReminderService extends Service {
         @Override public void run(){
             if(due<=0||played>=pulses||strong)return;
             if(!clockActive()){
-                vibrate(false);
-                if(played==0)sendAck("GENTLE");
+                boolean pulsed=vibrate(false);
+                if(played==0&&pulsed)sendAck("GENTLE");
                 played++;
             }
             if(played<pulses)
@@ -57,8 +57,7 @@ public final class WatchReminderService extends Service {
     // continuously until stop; do the SAME, not 12 finite reminder pulses.
     private final Runnable strongPulse=()->{
         if(due>0&&strong&&!clockActive()){
-            vibrate(true);
-            sendAck("STRONG");
+            if(vibrate(true))sendAck("STRONG");
         }
     };
     private final Runnable localEscalate=()->{
@@ -102,8 +101,8 @@ public final class WatchReminderService extends Service {
             WatchAlarmService.ACTIVE_PREF,MODE_PRIVATE);
         return p.getInt("id",0)>0&&p.getLong("when",0)>0;
     }
-    private void vibrate(boolean hard){
-        if(clockActive()||motor==null||!motor.hasVibrator())return;
+    private boolean vibrate(boolean hard){
+        if(clockActive()||motor==null||!motor.hasVibrator())return false;
         // Reuse the established Watch alarm patterns for every reminder.
         long[] timing=hard?WatchCascade.strongTimings(intensity):
                 WatchCascade.gentleTimings(intensity);
@@ -120,8 +119,11 @@ public final class WatchReminderService extends Service {
                     .setUsage(VibrationAttributes.USAGE_ALARM).build());
             else motor.vibrate(pattern,new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM).build());
+            return true;
         }catch(RuntimeException error){
             Log.w("SanftweckerWatch","Reminder vibration unavailable",error);
+            sendAck("VIBRATION_ERROR");
+            return false;
         }
     }
     private PendingIntent action(String which,int request){
