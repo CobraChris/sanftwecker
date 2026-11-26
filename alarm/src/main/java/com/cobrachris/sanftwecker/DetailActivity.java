@@ -698,7 +698,8 @@ public final class DetailActivity extends Activity {
                     .setTitle("Änderungen vor dem Test speichern?")
                     .setMessage("Der echte Wecktest verwendet die gespeicherte Konfiguration. "+
                             "Die noch offenen Einstellungen werden mit der Testfreigabe "+
-                            "dauerhaft übernommen. Der Wecker wird nicht zusätzlich aktiviert.")
+                            "dauerhaft übernommen, auch ein geänderter Ein-/Aus-Zustand. "+
+                            "Der Test selbst verändert den Schalter nicht.")
                     .setNegativeButton("Abbrechen",null)
                     .setPositiveButton("Speichern und testen",(dialog,which)->{
                         if(save())scheduleAlarmTest();
