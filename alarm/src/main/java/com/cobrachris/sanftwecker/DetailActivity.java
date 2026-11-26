@@ -18,7 +18,7 @@ import java.util.*;
 public final class DetailActivity extends Activity {
     private static final int NOTIFY_REQ=18;
     private static final int TONE_PICKER_REQ=24;
-    private final String[] weekdays={"M","D","M","D","F","S","S"};
+    private final String[] weekdays={"Mo","Di","Mi","Do","Fr","Sa","So"};
     private final String[] weekdayNames={"Montag","Dienstag","Mittwoch",
             "Donnerstag","Freitag","Samstag","Sonntag"};
     private int id,hour,minute,selectedTone;
@@ -27,7 +27,9 @@ public final class DetailActivity extends Activity {
     private EditText name;
     private TextView clock,status,advanced,nextDisplay,timeSavedLabel,timeUndoAction;
     private LinearLayout timeUndoRow;
-    private TextView toneSummary,watchSummary,snoozeSummary,modeDescription;
+    private TextView toneSummary,watchSummary,snoozeSummary,vibrationSummary,modeDescription;
+    private TextView saveState,testDescription;
+    private Button cancelTestButton;
     private LinearLayout manualToneOptions;
     private Button tonePicker;
     private final TextView[] chips=new TextView[7];
@@ -52,11 +54,42 @@ public final class DetailActivity extends Activity {
         if(status!=null)diagnostics();
     }
     private TextView label(String s,int size){return UiKit.label(this,s,size,UiKit.TEXT);}
+    private void placeCompactCard(LinearLayout root,View card){
+        LinearLayout.LayoutParams placement=new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        placement.bottomMargin=UiKit.dp(this,8);
+        root.addView(card,placement);
+    }
     private LinearLayout section(LinearLayout root,String title){
         LinearLayout card=UiKit.card(this);
         card.addView(UiKit.heading(this,title));
-        UiKit.placeCard(this,root,card);
+        placeCompactCard(root,card);
         return card;
+    }
+    /** Keeps advanced controls mounted and editable, but hidden until requested. */
+    private LinearLayout advancedOptions(LinearLayout root,String title){
+        LinearLayout group=UiKit.column(this);
+        TextView trigger=UiKit.label(this,title+"  ⌄",14,UiKit.BLUE);
+        trigger.setMinHeight(UiKit.dp(this,48));
+        trigger.setClickable(true);
+        trigger.setFocusable(true);
+        trigger.setContentDescription(title+" öffnen");
+        LinearLayout content=UiKit.column(this);
+        content.setVisibility(View.GONE);
+        trigger.setOnClickListener(v->{
+            boolean expanded=content.getVisibility()!=View.VISIBLE;
+            content.setVisibility(expanded?View.VISIBLE:View.GONE);
+            trigger.setText(title+(expanded?"  ⌃":"  ⌄"));
+            trigger.setContentDescription(title+(expanded?" schließen":" öffnen"));
+        });
+        group.addView(trigger);
+        group.addView(content);
+        root.addView(group);
+        return content;
+    }
+    private void help(LinearLayout into,String explanation){
+        LinearLayout body=advancedOptions(into,"Hinweise");
+        body.addView(UiKit.label(this,explanation,13,UiKit.MUTED));
     }
     private void rowSwitch(LinearLayout into,String text,Switch control){
         LinearLayout row=UiKit.row(this);
@@ -106,7 +139,7 @@ public final class DetailActivity extends Activity {
         });
         card.addView(header);
         card.addView(content);
-        UiKit.placeCard(this,root,card);
+        placeCompactCard(root,card);
         return content;
     }
 
@@ -116,9 +149,11 @@ public final class DetailActivity extends Activity {
         if(manualToneOptions!=null)
             manualToneOptions.setVisibility(gentle?View.GONE:View.VISIBLE);
         if(modeDescription!=null)modeDescription.setText(gentle
-                ?"Erste Minute sanfter Ton und leichte Watch-Impulse (falls aktiviert). "+
-                  "Danach kräftigere Watch-Impulse und Handyvibration."
-                :"Individuell: Tonstart und Lautstärkeanstieg selbst einstellen.");
+                ?"Minute 1 sanfter Ton und Watch-Impulse, danach kräftigere Watch- und Handyvibration."
+                :"Individuelle Ton- und Vibrationseinstellungen.");
+        if(testDescription!=null)testDescription.setText(gentle
+                ?"Start nach 30 Sek. · ab Minute 2 starke Vibration · Stopp jederzeit"
+                :"Start nach 30 Sek. · kurzer Ton- und Watch-Test · Stopp jederzeit");
         updateSummaries();
     }
 
@@ -126,6 +161,11 @@ public final class DetailActivity extends Activity {
         if(toneSummary!=null && selectedTone>=0 && selectedTone<ToneCatalog.LABELS.length)
             toneSummary.setText(ToneCatalog.LABELS[selectedTone]+
                     (cascade!=null&&cascade.isChecked()?" · sanfte 2-Stufen-Kaskade":" · individuell"));
+        if(vibrationSummary!=null && vibration!=null &&
+                vibration.getSelectedItemPosition()>=0)
+            vibrationSummary.setText(VibrationPresets.LABELS[
+                    Math.min(vibration.getSelectedItemPosition(),
+                            VibrationPresets.LABELS.length-1)]);
         if(watchSummary!=null && watch!=null && pulses!=null && interval!=null)
             watchSummary.setText(watch.isChecked()
                     ?"Aktiv · "+pulses.getProgress()+" Impulse · "+
@@ -235,7 +275,7 @@ public final class DetailActivity extends Activity {
         top.addView(daysGrid);
         nextDisplay=UiKit.label(this,"Noch nicht geplant",15,UiKit.MUTED);
         top.addView(nextDisplay);
-        UiKit.placeCard(this,root,top);
+        placeCompactCard(root,top);
 
         LinearLayout mode=section(root,"Weckmodus");
         mode.setPadding(UiKit.dp(this,16),UiKit.dp(this,12),
