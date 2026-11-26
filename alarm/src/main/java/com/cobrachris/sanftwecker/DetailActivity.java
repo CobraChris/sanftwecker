@@ -28,7 +28,7 @@ public final class DetailActivity extends Activity {
     private TextView clock,status,advanced,nextDisplay,timeSavedLabel,timeUndoAction;
     private LinearLayout timeUndoRow;
     private TextView toneSummary,watchSummary,snoozeSummary,vibrationSummary,modeDescription;
-    private TextView saveState,testDescription;
+    private TextView saveState,testDescription,plannedTest;
     private Button cancelTestButton;
     private LinearLayout manualToneOptions;
     private Button tonePicker;
@@ -52,6 +52,7 @@ public final class DetailActivity extends Activity {
     @Override public void onResume(){
         super.onResume();
         if(status!=null)diagnostics();
+        refreshTestControls();
     }
     private TextView label(String s,int size){return UiKit.label(this,s,size,UiKit.TEXT);}
     private void placeCompactCard(LinearLayout root,View card){
@@ -290,6 +291,31 @@ public final class DetailActivity extends Activity {
             changed();
         });
 
+        // One entry point to the existing full alarm/Watch schedule, not a
+        // new simulation. Any unsaved editor values require explicit approval.
+        LinearLayout testPanel=UiKit.card(this);
+        testPanel.setPadding(UiKit.dp(this,16),UiKit.dp(this,10),
+                UiKit.dp(this,16),UiKit.dp(this,10));
+        Button startTest=UiKit.button(this,"Weckablauf testen",false);
+        startTest.setContentDescription("Vollständigen Weckablauf auf Handy und Watch testen");
+        startTest.setOnClickListener(v->testAlarm());
+        testPanel.addView(startTest);
+        testDescription=UiKit.label(this,"",13,UiKit.MUTED);
+        testPanel.addView(testDescription);
+        plannedTest=UiKit.label(this,"",13,UiKit.BLUE);
+        plannedTest.setVisibility(View.GONE);
+        testPanel.addView(plannedTest);
+        cancelTestButton=UiKit.button(this,"Geplanten Test abbrechen",false);
+        cancelTestButton.setVisibility(View.GONE);
+        cancelTestButton.setOnClickListener(v->{
+            AlarmScheduler.cancelTest(this);
+            refreshTestControls();
+            diagnostics();
+            notice("Geplanter Wecktest abgebrochen.");
+        });
+        testPanel.addView(cancelTestButton);
+        placeCompactCard(root,testPanel);
+
         toneSummary=UiKit.label(this,"",14,UiKit.MUTED);
         LinearLayout music=foldSection(root,"Weckton & Lautstärke",toneSummary);
         tonePicker=UiKit.button(this,"Klingelton auswählen",false);
@@ -446,14 +472,30 @@ public final class DetailActivity extends Activity {
         help(end,"Stoppen und Schlummern sind beim Klingeln über die App "+
                 "und die Android-Alarmbenachrichtigung erreichbar.");
 
+        // Persistent footer: scrolling never hides Save. No second Save button.
+        root.setPadding(root.getPaddingLeft(),root.getPaddingTop(),
+                root.getPaddingRight(),UiKit.dp(this,14));
+        LinearLayout shell=UiKit.column(this);
+        shell.setBackgroundColor(UiKit.BG);
+        ScrollView scrolling=UiKit.scroll(this,root);
+        shell.addView(scrolling,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        LinearLayout footer=UiKit.column(this);
+        footer.setPadding(UiKit.dp(this,18),UiKit.dp(this,4),
+                UiKit.dp(this,18),UiKit.dp(this,8));
+        footer.setBackgroundColor(UiKit.BG);
+        saveState=UiKit.label(this,"Änderungen noch nicht gespeichert",13,UiKit.BLUE);
+        saveState.setGravity(Gravity.CENTER_HORIZONTAL);
+        saveState.setVisibility(View.GONE);
+        footer.addView(saveState);
         Button bottom=UiKit.button(this,"Speichern",true);
-        root.addView(bottom);
+        footer.addView(bottom);
         bottom.setOnClickListener(v->{if(save())finish();});
-        // Diagnostics remain available through the overflow menu, never as
-        // permanent configuration controls or duplicate Save actions.
+        shell.addView(footer);
+        // Diagnostics remain in the overflow; no additional persistent controls.
         status=UiKit.label(this,"",13,UiKit.MUTED);
         advanced=UiKit.label(this,"",14,UiKit.MUTED);
-        setContentView(UiKit.scroll(this,root));
+        setContentView(shell);
     }
 
     private void changed(){
@@ -461,6 +503,21 @@ public final class DetailActivity extends Activity {
         try { dirty = !saved.sameConfiguration(read()); }
         catch (RuntimeException invalid) { dirty = true; }
         updateSummaries();
+        refreshDirtyUi();
+    }
+    private void refreshDirtyUi(){
+        if(saveState!=null)
+            saveState.setVisibility(dirty?View.VISIBLE:View.GONE);
+    }
+    private void refreshTestControls(){
+        if(cancelTestButton==null||plannedTest==null)return;
+        long when=AlarmScheduler.testWhen(this);
+        boolean scheduled=when>System.currentTimeMillis();
+        cancelTestButton.setVisibility(scheduled?View.VISIBLE:View.GONE);
+        plannedTest.setVisibility(scheduled?View.VISIBLE:View.GONE);
+        if(scheduled)plannedTest.setText("Geplant für "+
+                new java.text.SimpleDateFormat("HH:mm:ss",Locale.GERMANY)
+                        .format(new Date(when)));
     }
     private void showTime(){clock.setText(String.format(Locale.GERMANY,"%02d:%02d",hour,minute));}
 
@@ -583,6 +640,7 @@ public final class DetailActivity extends Activity {
         ramp.setEnabled(p.rampEnabled);
         pulses.setEnabled(p.watchPulses>0);interval.setEnabled(p.watchPulses>0);
         loading=false;dirty=false;clearTimeUndo();updateLabels();refreshModeUi();diagnostics();
+        refreshDirtyUi();refreshTestControls();
     }
 
     private AlarmProfile read(){
@@ -612,7 +670,8 @@ public final class DetailActivity extends Activity {
         if(old==null){notice("Wecker existiert nicht mehr.");return false;}
         try{
             AlarmRepository.put(this,update);AlarmScheduler.reschedule(this,id);
-            saved=update;dirty=false;clearTimeUndo();diagnostics();return true;
+            saved=update;dirty=false;clearTimeUndo();diagnostics();
+            refreshDirtyUi();return true;
         }catch(RuntimeException e){
             try{AlarmRepository.put(this,old);AlarmScheduler.reschedule(this,id);}
             catch(RuntimeException ignored){}
@@ -634,13 +693,28 @@ public final class DetailActivity extends Activity {
     }
 
     private void testAlarm(){
-        if(!save())return;
+        if(dirty){
+            new AlertDialog.Builder(this)
+                    .setTitle("Änderungen vor dem Test speichern?")
+                    .setMessage("Der echte Wecktest verwendet die gespeicherte Konfiguration. "+
+                            "Die noch offenen Einstellungen werden mit der Testfreigabe "+
+                            "dauerhaft übernommen. Der Wecker wird nicht zusätzlich aktiviert.")
+                    .setNegativeButton("Abbrechen",null)
+                    .setPositiveButton("Speichern und testen",(dialog,which)->{
+                        if(save())scheduleAlarmTest();
+                    }).show();
+            return;
+        }
+        scheduleAlarmTest();
+    }
+    private void scheduleAlarmTest(){
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 !=PackageManager.PERMISSION_GRANTED){
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},NOTIFY_REQ);return;
         }
         try{
             long when=AlarmScheduler.test(this,id);
+            refreshTestControls();
             notice("Test geplant um "+new java.text.SimpleDateFormat("HH:mm:ss",
                     Locale.GERMANY).format(new Date(when))+". Bitte Handy sperren. "+
                     (saved.cascadeEnabled ?
